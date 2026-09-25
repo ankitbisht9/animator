@@ -1,0 +1,34 @@
+{
+  "expect": [
+    "UNKNOWN_SOLVER"
+  ],
+  "scene": {
+    "dsl_version": "1.0",
+    "id": "bad",
+    "title": "Bad",
+    "duration": 5,
+    "narration": {
+      "beats": [
+        {
+          "id": "b1",
+          "text": "x"
+        }
+      ]
+    },
+    "objects": [
+      {
+        "id": "ball",
+        "type": "circle",
+        "place": {
+          "slot": "stage.center"
+        }
+      }
+    ],
+    "timeline": [
+      {
+        "action": "run_solver",
+        "target": "physics"
+      }
+    ]
+  }
+}

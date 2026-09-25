@@ -1,0 +1,98 @@
+/**
+ * Projection of the canonical DSL JSON Schema into the LLM-facing schema that
+ * OpenAI strict Structured Outputs accepts:
+ *   - every object: all properties required, additionalProperties: false;
+ *     originally-optional properties become nullable (null = "use the default")
+ *   - oneOf -> anyOf, const -> single-value enum
+ *   - range/length/pattern/format/default keywords removed (the engine validates them)
+ *   - `x-llm` metadata replaces a node (e.g. ColorRef -> enum of theme roles)
+ * `lift()` maps the LLM form back to canonical (drops nulls, fills defaults).
+ */
+import { z } from "zod";
+import { sceneSchema } from "./scene";
+
+type Json = { [k: string]: unknown };
+
+const DROP = new Set([
+  "default",
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "minLength",
+  "maxLength",
+  "pattern",
+  "format",
+  "minItems",
+  "maxItems",
+  "multipleOf",
+  "title",
+  "$schema",
+  "id",
+]);
+
+const isObj = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
+
+const SCALARS = new Set(["string", "number", "integer", "boolean"]);
+
+function nullable(schema: Json): Json {
+  if (typeof schema.type === "string" && SCALARS.has(schema.type) && !schema.anyOf && !schema.$ref) {
+    const out: Json = { ...schema, type: [schema.type, "null"] };
+    if (Array.isArray(schema.enum)) out.enum = [...schema.enum, null];
+    return out;
+  }
+  return { anyOf: [schema, { type: "null" }] };
+}
+
+function strictify(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(strictify);
+  if (!isObj(node)) return node;
+  const override = node["x-llm"];
+  if (isObj(override))
+    return strictify({ ...override, ...(node.description ? { description: node.description } : {}) });
+
+  const out: Json = {};
+  for (const [k, v] of Object.entries(node)) {
+    if (DROP.has(k) || k.startsWith("x-")) continue;
+    if (k === "oneOf") out.anyOf = strictify(v);
+    else if (k === "const") out.enum = [v];
+    else if (k === "properties" || k === "$defs") {
+      out[k] = Object.fromEntries(Object.entries(v as Json).map(([pk, pv]) => [pk, strictify(pv)]));
+    } else out[k] = strictify(v);
+  }
+  if (out.type === "object" || out.properties) {
+    const props = (out.properties as Json | undefined) ?? {};
+    const required = new Set((node.required as string[] | undefined) ?? []);
+    for (const key of Object.keys(props)) {
+      if (!required.has(key)) props[key] = nullable(props[key] as Json);
+    }
+    out.type = "object";
+    out.properties = props;
+    out.required = Object.keys(props);
+    out.additionalProperties = false;
+  }
+  return out;
+}
+
+/** Canonical DSL JSON Schema (draft 2020-12, input form: fields with defaults are optional). */
+export function canonicalJsonSchema(): Json {
+  const raw = z.toJSONSchema(sceneSchema(), { io: "input", target: "draft-2020-12", unrepresentable: "any" }) as Json;
+  // The Scene schema carries a meta id, so Zod emits the root as a $ref into $defs.
+  // Strict mode requires an object root: inline it.
+  const ref = raw.$ref;
+  if (typeof ref === "string") {
+    const defs = { ...(raw.$defs as Record<string, Json>) };
+    const name = ref.replace("#/$defs/", "");
+    const root = defs[name];
+    delete defs[name];
+    return { $schema: raw.$schema, ...root, $defs: defs };
+  }
+  return raw;
+}
+
+/** LLM-facing, strict-mode compatible JSON Schema. */
+export function llmJsonSchema(): Json {
+  const canonical = canonicalJsonSchema();
+  const strict = strictify(canonical) as Json;
+  return { $schema: "https://json-schema.org/draft/2020-12/schema", ...strict };
+}

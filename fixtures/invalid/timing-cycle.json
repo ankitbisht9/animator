@@ -1,0 +1,47 @@
+{
+  "expect": [
+    "TIMING_CYCLE"
+  ],
+  "scene": {
+    "dsl_version": "1.0",
+    "id": "bad",
+    "title": "Bad",
+    "duration": 5,
+    "narration": {
+      "beats": [
+        {
+          "id": "b1",
+          "text": "x"
+        }
+      ]
+    },
+    "objects": [
+      {
+        "id": "ball",
+        "type": "circle",
+        "place": {
+          "slot": "stage.center"
+        }
+      }
+    ],
+    "timeline": [
+      {
+        "id": "a",
+        "action": "create",
+        "target": "ball",
+        "start": {
+          "after": "b"
+        }
+      },
+      {
+        "id": "b",
+        "action": "fade",
+        "target": "ball",
+        "to": 1,
+        "start": {
+          "after": "a"
+        }
+      }
+    ]
+  }
+}

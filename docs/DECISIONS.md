@@ -106,6 +106,32 @@ needed.
 
 ---
 
+## ADR-007 Spike: OpenAI strict Structured Outputs viability
+
+**Setup.** The LLM-facing schema is *generated* from the canonical Zod DSL by a projection
+(`packages/engine/src/dsl/llm-schema.ts`): every property required (optional becomes nullable, `null` =
+default), `additionalProperties: false` everywhere, `oneOf` -> `anyOf`, `const` -> single-value enum,
+range/length/pattern/format/default keywords removed (the engine validates them), and `x-llm`
+overrides (color references become an enum of theme roles). `lift()` maps it back (drop nulls, expand
+shorthand, apply defaults) and is idempotent.
+
+**Static result** (`packages/engine/scripts/spikes/strict_schema_check.ts`, run against the full schema
+with every component registered at the time): object root, all objects strict, only supported keywords,
+492 properties (limit 5000), max object nesting 4 (limit 10), 5,483 schema characters (limit 120,000),
+300 enum values (limit 1000). These limits are the previously documented ones; OpenAI's docs pages
+fetched on 2026-09-25 did not restate them, so the live probe is the real test.
+
+**Live result.** Pending: no API key yet. `uv run python scripts/spikes/openai_strict_probe.py` sends one
+strict request with the generated schema and reports acceptance, refusal, truncation and usage.
+
+**Decision.** Single-call Stage 3 in strict mode. Field order is chosen for generation quality (strict
+mode generates in schema order): scene intent and narration before objects, objects before the
+timeline, and `id`/`type`/`params` first within an object. Fallbacks if the live probe fails: split Stage
+3 into 3a (objects, layout) and 3b (timeline), then non-strict JSON + engine validation + the correction
+loop. Refusals and `status: incomplete` always count as failed attempts.
+
+---
+
 ## ADR-008 Component specs live in the engine; renderers live in `components`
 
 **Decision.** The spec's single `defineComponent({...})` contract is split in two halves joined by
@@ -152,3 +178,42 @@ a separate `packages/expr`. It is a Pratt parser over a whitelisted grammar (num
 `+ - * / ^ %`, parentheses, whitelisted functions). No `eval`, no `Function`. Length and depth are limited.
 
 **Why.** It has no consumers outside the engine; one package fewer to version.
+
+---
+
+## ADR-013 Objects are declared once; actions refer to them
+
+**Decision.** Every object lives in `objects`. `create` refers to an object id instead of carrying an inline
+`objectSpec`. An object whose first presence event is a revealing action (`create`, `show`, `draw`,
+`write`, `transform.into`, a `label`) starts hidden; otherwise it is visible from the start. `label` and
+`group` actions synthesize their objects.
+
+**Why.** An inline spec duplicates the whole object union inside the action union, roughly doubling the
+LLM-facing schema. One place per object also makes identity checks trivial.
+
+---
+
+## ADR-014 Channels, not one track per action
+
+**Decision.** Each object has independent channels (`x y rotation scale opacity`, `presence` with an
+entrance/exit style, `draw`, `reveal`, per-term reveal, `emph` with a highlight style, colors,
+`params.*`, `morph`). Actions compile to segments on channels (`tween`, `color` in OKLab, `step`, `keys`,
+`solver`, `expr`, `follow`, `sampled`, `presence`, `pulse`). Overlapping segments on one channel are a
+`TRACK_CONFLICT`. Entrance, exit and emphasis effects apply about the visual center and never move
+layout geometry: anchors, followers and placement use the effect-free matrix, so an arrow attached to a
+popping block does not wobble.
+
+A tween starts from the channel's value at the action's start, read from the scene compiled so far.
+Dynamic segments (`expr`, `follow`) get their end value computed at compile time, so playback never
+evaluates a moment other than the one being drawn. Camera follow is smoothed at compile time and
+baked into samples.
+
+---
+
+## ADR-015 Timing and normalization rules
+
+**Decision.** Actions without `start` run after the previous action (`lift` makes this explicit). `follow`
+and `bind` without a duration last until the scene ends. Beats without `at` (and without a cue naming
+them) are spread evenly between their anchored neighbours. Write-on durations scale with text length
+(0.035 s per character, clamped). The only silent repairs are clamping object opacity, sorting keyframes
+and trimming times to 3 decimals, each reported as a `normalization` issue.

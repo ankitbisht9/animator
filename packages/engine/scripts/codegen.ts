@@ -1,11 +1,13 @@
 /**
  * Writes the generated contracts (JSON Schemas, catalog, version manifest) and
- * generated docs. Output is committed; CI runs `make codegen` and fails on drift.
+ * generated docs. Output is committed; CI runs `make check-codegen` and fails on drift.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { canonicalJsonSchema, llmJsonSchema } from "../src/dsl/llm-schema";
 import { DSL_VERSION, ENGINE_VERSION, PROTOCOL_VERSION } from "../src/version";
+import { componentsMarkdown, dslMarkdown } from "./docs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -22,3 +24,7 @@ write(
   "contracts/engine.json",
   json({ protocolVersion: PROTOCOL_VERSION, engineVersion: ENGINE_VERSION, dslVersion: DSL_VERSION }),
 );
+write("contracts/dsl.schema.json", json(canonicalJsonSchema()));
+write("contracts/dsl.llm.schema.json", json(llmJsonSchema()));
+write("docs/DSL.md", dslMarkdown());
+write("docs/COMPONENTS.md", componentsMarkdown());

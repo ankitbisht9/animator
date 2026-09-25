@@ -1,0 +1,4900 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "dsl_version": {
+      "type": "string",
+      "enum": [
+        "1.0"
+      ]
+    },
+    "id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "educational_purpose": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "duration": {
+      "type": "number",
+      "description": "Seconds"
+    },
+    "theme": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "educational_clean",
+        "educational_clean_dark",
+        null
+      ]
+    },
+    "layout": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "stage_with_caption",
+        "stage_with_equation",
+        "split",
+        "title_card",
+        "no_title",
+        null
+      ]
+    },
+    "background": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Background"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "camera": {
+      "anyOf": [
+        {
+          "description": "Initial camera; omitted = continue from the previous scene",
+          "$ref": "#/$defs/CameraInit"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "transition_in": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TransitionIn"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "narration": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "beats": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Beat"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "beats"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cues": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Cue"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "values": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SceneValue"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "objects": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Object"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "solvers": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Solver"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "timeline": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Action"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "interactions": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Checkpoint"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "captions": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "dsl_version",
+    "id",
+    "title",
+    "educational_purpose",
+    "duration",
+    "theme",
+    "layout",
+    "background",
+    "camera",
+    "transition_in",
+    "narration",
+    "cues",
+    "values",
+    "objects",
+    "solvers",
+    "timeline",
+    "interactions",
+    "captions",
+    "seed"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "Background": {
+      "type": "object",
+      "properties": {
+        "style": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "plain",
+            "gradient",
+            "grid",
+            "dots",
+            "paper",
+            null
+          ]
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColorRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "style",
+        "color"
+      ]
+    },
+    "ColorRef": {
+      "type": "string",
+      "enum": [
+        "background",
+        "background.light",
+        "background.dark",
+        "background.soft",
+        "surface",
+        "surface.light",
+        "surface.dark",
+        "surface.soft",
+        "surface_alt",
+        "surface_alt.light",
+        "surface_alt.dark",
+        "surface_alt.soft",
+        "text",
+        "text.light",
+        "text.dark",
+        "text.soft",
+        "muted",
+        "muted.light",
+        "muted.dark",
+        "muted.soft",
+        "accent",
+        "accent.light",
+        "accent.dark",
+        "accent.soft",
+        "highlight",
+        "highlight.light",
+        "highlight.dark",
+        "highlight.soft",
+        "object_a",
+        "object_a.light",
+        "object_a.dark",
+        "object_a.soft",
+        "object_b",
+        "object_b.light",
+        "object_b.dark",
+        "object_b.soft",
+        "object_c",
+        "object_c.light",
+        "object_c.dark",
+        "object_c.soft",
+        "fluid",
+        "fluid.light",
+        "fluid.dark",
+        "fluid.soft",
+        "glass",
+        "glass.light",
+        "glass.dark",
+        "glass.soft",
+        "grid",
+        "grid.light",
+        "grid.dark",
+        "grid.soft",
+        "shadow",
+        "shadow.light",
+        "shadow.dark",
+        "shadow.soft",
+        "force_gravity",
+        "force_gravity.light",
+        "force_gravity.dark",
+        "force_gravity.soft",
+        "force_buoyant",
+        "force_buoyant.light",
+        "force_buoyant.dark",
+        "force_buoyant.soft",
+        "force_normal",
+        "force_normal.light",
+        "force_normal.dark",
+        "force_normal.soft",
+        "force_applied",
+        "force_applied.light",
+        "force_applied.dark",
+        "force_applied.soft",
+        "velocity",
+        "velocity.light",
+        "velocity.dark",
+        "velocity.soft",
+        "pressure",
+        "pressure.light",
+        "pressure.dark",
+        "pressure.soft",
+        "positive",
+        "positive.light",
+        "positive.dark",
+        "positive.soft",
+        "negative",
+        "negative.light",
+        "negative.dark",
+        "negative.soft"
+      ],
+      "description": "A theme color role (e.g. 'fluid', 'force_buoyant', 'object_a'), optionally with a variant suffix '.light', '.dark' or '.soft'. Never raw hex."
+    },
+    "CameraInit": {
+      "type": "object",
+      "properties": {
+        "center": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Vec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "zoom": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "center",
+        "zoom"
+      ]
+    },
+    "Vec": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "additionalProperties": false,
+      "description": "A point in scene pixels (1600x900 canvas, y down)."
+    },
+    "TransitionIn": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "continue",
+            "cut",
+            "fade",
+            "wipe",
+            null
+          ]
+        },
+        "duration": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "keep": {
+          "anyOf": [
+            {
+              "description": "With cut/fade/wipe: objects that stay on stage",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "duration",
+        "keep"
+      ]
+    },
+    "Beat": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string",
+          "description": "Narration sentence (shown as the caption). **bold** emphasizes."
+        },
+        "at": {
+          "anyOf": [
+            {
+              "description": "Start of the beat; defaults to an even split between known beats",
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "text",
+        "at"
+      ],
+      "additionalProperties": false
+    },
+    "Cue": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Seconds, or 'cue:<id>', 'beat:<id>' (beat start) or 'beat_end:<id>'"
+        },
+        "beat": {
+          "description": "Beat this cue marks the start of",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "at",
+        "beat"
+      ],
+      "additionalProperties": false
+    },
+    "SceneValue": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "value": {
+          "description": "A given input number",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "expr": {
+          "description": "Or an expression computed by the engine",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "value",
+        "expr",
+        "unit",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    "Object": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Object_circle"
+        },
+        {
+          "$ref": "#/$defs/Object_ellipse"
+        },
+        {
+          "$ref": "#/$defs/Object_group"
+        },
+        {
+          "$ref": "#/$defs/Object_image"
+        },
+        {
+          "$ref": "#/$defs/Object_line"
+        },
+        {
+          "$ref": "#/$defs/Object_path"
+        },
+        {
+          "$ref": "#/$defs/Object_polygon"
+        },
+        {
+          "$ref": "#/$defs/Object_rectangle"
+        },
+        {
+          "$ref": "#/$defs/Object_text"
+        }
+      ]
+    },
+    "Object_circle": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "circle"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "radius": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "radius"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A filled circle. Origin is its center."
+    },
+    "Place": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "slot": {
+              "type": "string",
+              "description": "Layout slot, e.g. 'stage.center', 'stage.left', 'title_bar', 'equation_panel'"
+            },
+            "anchor": {
+              "description": "Which of this object's anchors sits on the slot center (default 'center')",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "offset": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Vec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "slot",
+            "anchor",
+            "offset"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "relativeTo": {
+              "type": "string"
+            },
+            "side": {
+              "type": "string",
+              "enum": [
+                "above",
+                "below",
+                "left",
+                "right",
+                "center",
+                "inside_top",
+                "inside_bottom",
+                "inside_left",
+                "inside_right"
+              ]
+            },
+            "gap": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "align": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "start",
+                "center",
+                "end",
+                null
+              ]
+            },
+            "follow": {
+              "description": "Keep following the reference object as it moves",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "relativeTo",
+            "side",
+            "gap",
+            "align",
+            "follow"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "at": {
+              "type": "string",
+              "description": "Pin to another object's anchor"
+            },
+            "anchor": {
+              "description": "Which of this object's anchors is pinned (default 'center')",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "offset": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Vec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "follow": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "at",
+            "anchor",
+            "offset",
+            "follow"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "anchor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "anchor"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Where an object goes. Prefer a layout slot or placement relative to another object; raw x/y is an escape hatch."
+    },
+    "Style": {
+      "type": "object",
+      "properties": {
+        "fill": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColorRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stroke": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColorRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColorRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "strokeWidth": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shadow": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "dashed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "fill",
+        "stroke",
+        "text",
+        "strokeWidth",
+        "shadow",
+        "dashed"
+      ]
+    },
+    "Object_ellipse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "ellipse"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "rx": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "ry": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "rx",
+                "ry"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A filled ellipse. Origin is its center."
+    },
+    "Object_group": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "group"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false,
+              "required": []
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "An invisible container. Objects whose `parent` is this group move, scale and fade with it. Its bounds are the union of its children."
+    },
+    "Object_image": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "image"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "asset": {
+                  "type": "string"
+                },
+                "width": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "height": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "alt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "asset",
+                "width",
+                "height",
+                "alt"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "Placeholder for a local image asset (by asset id). No external URLs. v1 has no asset library, so this renders a labelled placeholder."
+    },
+    "Object_line": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "line"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "$ref": "#/$defs/Point"
+                },
+                "to": {
+                  "$ref": "#/$defs/Point"
+                },
+                "dashed": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "from",
+                "to",
+                "dashed"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A straight line between two points. Endpoints may be anchor references that follow their objects."
+    },
+    "Point": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Vec"
+        },
+        {
+          "type": "string",
+          "description": "Another object's anchor, e.g. 'block.center' or 'tank.water_surface'"
+        }
+      ]
+    },
+    "Object_path": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "path"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "d": {
+                  "type": "string"
+                },
+                "closed": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "d",
+                "closed"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A vector path from SVG path data (M L H V C S Q T A Z only), in coordinates relative to the object origin. Validated by a strict parser."
+    },
+    "Object_polygon": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "polygon"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "points": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/Vec"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sides": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "radius": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "points",
+                "sides",
+                "radius"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A closed polygon: either explicit `points` (relative to the origin) or a regular polygon from `sides` and `radius`."
+    },
+    "Object_rectangle": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "rectangle"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "width": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "height": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "cornerRadius": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "width",
+                "height",
+                "cornerRadius"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A rectangle, optionally with rounded corners. Origin is its center."
+    },
+    "Object_text": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "text"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/Binding"
+                    }
+                  ]
+                },
+                "size": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "title",
+                            "heading",
+                            "body",
+                            "label",
+                            "caption",
+                            "small"
+                          ]
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ],
+                      "description": "Named size from the theme type scale, or pixels on the 1600x900 canvas"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "weight": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "regular",
+                    "semibold",
+                    "bold",
+                    null
+                  ]
+                },
+                "align": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "left",
+                    "center",
+                    "right",
+                    null
+                  ]
+                },
+                "maxWidth": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "lineHeight": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "text",
+                "size",
+                "weight",
+                "align",
+                "maxWidth",
+                "lineHeight"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "Text rendered in the theme font. Use **double asterisks** for emphasis. `text` may be a binding to show computed values. Origin is the center of the text box."
+    },
+    "Binding": {
+      "type": "object",
+      "properties": {
+        "bind": {
+          "type": "string",
+          "description": "Expression over solver outputs and scene values, e.g. 'buoy.buoyantForce' or 'rho_w * g'"
+        },
+        "format": {
+          "description": "Number format, e.g. '0.0 N', '#,##0 kg', '0.00 m/s'",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "bind",
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "Solver": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BuoyancySolver"
+        },
+        {
+          "$ref": "#/$defs/FluidFlowSolver"
+        },
+        {
+          "$ref": "#/$defs/ProjectileSolver"
+        },
+        {
+          "$ref": "#/$defs/PendulumSolver"
+        },
+        {
+          "$ref": "#/$defs/SpringMassSolver"
+        }
+      ]
+    },
+    "BuoyancySolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "buoyancy"
+          ]
+        },
+        "container": {
+          "type": "string",
+          "description": "A container object holding the fluid"
+        },
+        "body": {
+          "type": "string",
+          "description": "A block or ball that enters the fluid"
+        },
+        "bodyDensity": {
+          "description": "kg/m^3. Defaults to the density of the body's material",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fluidDensity": {
+          "description": "kg/m^3",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "mode": {
+          "description": "drop: released and settles; lower: lowered on a string to holdDepth; hold: held still at holdDepth",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "drop",
+            "lower",
+            "hold",
+            null
+          ]
+        },
+        "holdDepth": {
+          "description": "For lower/hold: fraction of the body's height submerged at the end",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "g": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unitsPerMeter": {
+          "description": "Scene pixels per meter",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "catchContainer": {
+          "description": "Container that collects overflow (for an overflow/Eureka can)",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scale": {
+          "description": "A spring_scale that reads the apparent weight",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "container",
+        "body",
+        "bodyDensity",
+        "fluidDensity",
+        "mode",
+        "holdDepth",
+        "g",
+        "unitsPerMeter",
+        "catchContainer",
+        "scale"
+      ],
+      "additionalProperties": false
+    },
+    "FluidFlowSolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "fluid_flow"
+          ]
+        },
+        "pipe": {
+          "type": "string",
+          "description": "A pipe object with named sections"
+        },
+        "fluidDensity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "flowRate": {
+          "type": "number",
+          "description": "Volumetric flow rate Q in m^3/s"
+        },
+        "inletPressure": {
+          "type": "number",
+          "description": "Pressure at the first section in Pa"
+        },
+        "g": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unitsPerMeter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "pipe",
+        "fluidDensity",
+        "flowRate",
+        "inletPressure",
+        "g",
+        "unitsPerMeter"
+      ],
+      "additionalProperties": false
+    },
+    "ProjectileSolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "projectile"
+          ]
+        },
+        "body": {
+          "type": "string"
+        },
+        "speed": {
+          "type": "number",
+          "description": "Launch speed in m/s"
+        },
+        "angle": {
+          "type": "number",
+          "description": "Launch angle in degrees above horizontal"
+        },
+        "g": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "drag": {
+          "description": "Linear drag coefficient per second",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unitsPerMeter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "groundY": {
+          "description": "Scene y of the ground; defaults to the launch height",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "body",
+        "speed",
+        "angle",
+        "g",
+        "drag",
+        "unitsPerMeter",
+        "groundY"
+      ],
+      "additionalProperties": false
+    },
+    "PendulumSolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "pendulum"
+          ]
+        },
+        "pendulum": {
+          "type": "string",
+          "description": "A pendulum object"
+        },
+        "length": {
+          "type": "number",
+          "description": "Length in meters"
+        },
+        "angle": {
+          "type": "number",
+          "description": "Initial angle in degrees from vertical"
+        },
+        "g": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "damping": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "pendulum",
+        "length",
+        "angle",
+        "g",
+        "damping"
+      ],
+      "additionalProperties": false
+    },
+    "SpringMassSolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "spring_mass"
+          ]
+        },
+        "spring": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "stiffness": {
+          "type": "number",
+          "description": "k in N/m"
+        },
+        "mass": {
+          "type": "number",
+          "description": "kg"
+        },
+        "amplitude": {
+          "type": "number",
+          "description": "Initial displacement in meters"
+        },
+        "damping": {
+          "description": "c in N·s/m",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unitsPerMeter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "spring",
+        "body",
+        "stiffness",
+        "mass",
+        "amplitude",
+        "damping",
+        "unitsPerMeter"
+      ],
+      "additionalProperties": false
+    },
+    "Action": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "create"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "style": {
+              "description": "Entrance animation; 'auto' picks one suited to the component",
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "auto",
+                "fade",
+                "pop",
+                "grow",
+                "draw",
+                "write",
+                "slide_up",
+                "slide_down",
+                "slide_left",
+                "slide_right",
+                "zoom",
+                "none",
+                null
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "style"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "remove"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "style": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "fade",
+                "shrink",
+                "slide_up",
+                "slide_down",
+                "slide_left",
+                "slide_right",
+                "none",
+                null
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "style"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "show"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "hide"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "move"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "to": {
+              "anyOf": [
+                {
+                  "description": "Destination (slot, relative placement, anchor pin or raw x/y)",
+                  "$ref": "#/$defs/Place"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "by": {
+              "anyOf": [
+                {
+                  "description": "Relative displacement in pixels",
+                  "$ref": "#/$defs/Vec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "path": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "straight",
+                "arc",
+                null
+              ]
+            },
+            "arcHeight": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "to",
+            "by",
+            "path",
+            "arcHeight"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "scale"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "to": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "rotate"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "to": {
+              "description": "Absolute angle in degrees (clockwise)",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "by": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "to",
+            "by"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "fade"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "to": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "color_change"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "property": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "fill",
+                "stroke",
+                "text",
+                null
+              ]
+            },
+            "to": {
+              "$ref": "#/$defs/ColorRef"
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "property",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "draw"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "reverse": {
+              "description": "Un-draw instead of draw",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "reverse"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "write"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "terms": {
+              "anyOf": [
+                {
+                  "description": "Equation part ids to reveal, in order",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "by": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "char",
+                "word",
+                "term",
+                null
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "terms",
+            "by"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "transform"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "changes": {
+              "anyOf": [
+                {
+                  "description": "Animate params to new values (numbers and colors interpolate)",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "param",
+                      "to"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "into": {
+              "description": "Replace this object by another (crossfade and fit)",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "changes",
+            "into"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "morph"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "into": {
+              "type": "string",
+              "description": "A path/shape object whose outline this object morphs into"
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "into"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "highlight"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "style": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "pulse",
+                "glow",
+                "box",
+                "underline",
+                "circle",
+                "flash",
+                "shake",
+                "color",
+                null
+              ]
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ColorRef"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "terms": {
+              "anyOf": [
+                {
+                  "description": "For equations: which parts to highlight",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "style",
+            "color",
+            "terms"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "label"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "text": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/$defs/Binding"
+                }
+              ]
+            },
+            "labelId": {
+              "description": "Id of the created label object (default '<action id>_label')",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "side": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "above",
+                "below",
+                "left",
+                "right",
+                "center",
+                "inside_top",
+                "inside_bottom",
+                "inside_left",
+                "inside_right",
+                null
+              ]
+            },
+            "gap": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "style": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "plain",
+                "pill",
+                "tag",
+                null
+              ]
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ColorRef"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "leader": {
+              "description": "Draw a leader line from the label to the target",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "text",
+            "labelId",
+            "side",
+            "gap",
+            "style",
+            "color",
+            "leader"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "follow"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "leader": {
+              "type": "string"
+            },
+            "anchor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "offset": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Vec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "leader",
+            "anchor",
+            "offset"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "group"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the group; a new group object is created if needed"
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "members"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "ungroup"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "run_solver"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Solver id"
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "bind"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "property": {
+              "type": "string"
+            },
+            "bind": {
+              "type": "string",
+              "description": "Expression; may use t (seconds since action start)"
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "property",
+            "bind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "camera_move"
+              ]
+            },
+            "center": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Vec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "zoom": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "focus": {
+              "anyOf": [
+                {
+                  "description": "Frame these objects",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "padding": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "follow": {
+              "description": "Keep this object centered for the duration",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "center",
+            "zoom",
+            "focus",
+            "padding",
+            "follow"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "cut"
+              ]
+            },
+            "center": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Vec"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "zoom": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "center",
+            "zoom"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "transition"
+              ]
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "fade_through",
+                "wipe",
+                "flash"
+              ]
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ColorRef"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "style",
+            "color"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "animate"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "description": "Id of the object this action affects"
+            },
+            "property": {
+              "type": "string"
+            },
+            "keyframes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "time": {
+                    "type": "number",
+                    "description": "Seconds after the action start"
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "easing": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/Easing"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "time",
+                  "value",
+                  "easing"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action",
+            "target",
+            "property",
+            "keyframes"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Start"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "easing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Easing"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "wait"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "start",
+            "duration",
+            "easing",
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Start": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "Seconds, or 'cue:<id>', 'beat:<id>' (beat start) or 'beat_end:<id>'"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "after": {
+          "description": "Start when this action ends",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "with": {
+          "description": "Start together with this action",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delay": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "description": "When the action starts. Use exactly one of at / after / with.",
+      "required": [
+        "at",
+        "after",
+        "with",
+        "delay"
+      ]
+    },
+    "Easing": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "linear",
+            "ease_in",
+            "ease_out",
+            "ease_in_out",
+            "ease_in_quad",
+            "ease_out_quad",
+            "ease_in_out_quad",
+            "ease_in_expo",
+            "ease_out_expo",
+            "ease_in_out_sine",
+            "back_in",
+            "back_out",
+            "back_in_out",
+            "bounce_out",
+            "elastic_out",
+            "spring",
+            "smooth",
+            "step"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "cubic_bezier": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "CSS cubic-bezier control points [x1, y1, x2, y2]"
+            }
+          },
+          "required": [
+            "cubic_bezier"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Checkpoint": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Seconds, or 'cue:<id>', 'beat:<id>' (beat start) or 'beat_end:<id>'"
+        },
+        "question": {
+          "type": "string"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "answer": {
+          "type": "integer",
+          "description": "Index of the correct choice"
+        },
+        "explain": {
+          "type": "string",
+          "description": "Shown after answering"
+        }
+      },
+      "required": [
+        "id",
+        "at",
+        "question",
+        "choices",
+        "answer",
+        "explain"
+      ],
+      "additionalProperties": false,
+      "description": "A quick question that pauses the player (not part of exported video)."
+    }
+  }
+}

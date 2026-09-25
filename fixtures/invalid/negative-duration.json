@@ -1,0 +1,19 @@
+{
+  "expect": [
+    "SCHEMA"
+  ],
+  "scene": {
+    "dsl_version": "1.0",
+    "id": "bad",
+    "title": "Bad",
+    "duration": -1,
+    "narration": {
+      "beats": [
+        {
+          "id": "b1",
+          "text": "x"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "expect": [
+    "PATH_INVALID"
+  ],
+  "scene": {
+    "dsl_version": "1.0",
+    "id": "bad",
+    "title": "Bad",
+    "duration": 5,
+    "narration": {
+      "beats": [
+        {
+          "id": "b1",
+          "text": "x"
+        }
+      ]
+    },
+    "objects": [
+      {
+        "id": "p",
+        "type": "path",
+        "params": {
+          "d": "M0 0 L 10"
+        }
+      }
+    ]
+  }
+}

@@ -6,7 +6,7 @@ update here.
 | Phase | Status |
 |---|---|
 | 0 Foundations | done |
-| 1 DSL and timeline core | not started |
+| 1 DSL and timeline core | done |
 | 2 Evaluation engine + SVG slice | not started |
 | 3 Tier 1 components, layout, camera | not started |
 | 4 Solvers, bindings, SceneState, worker protocol | not started |
@@ -27,8 +27,8 @@ update here.
   - (a) export throughput + determinism: 34.7 fps with 4 browsers at 1080p; found and fixed
     paint-history non-determinism (ADR-006).
   - (b) MathJax SVG: deterministic across runs and processes, ~2 ms/expression warm (ADR-005).
-  - (c) OpenAI strict Structured Outputs: runs against the real LLM-facing schema generated in
-    Phase 1 (ADR-007).
+  - (c) OpenAI strict Structured Outputs: the generated LLM-facing schema passes every documented
+    strict-mode rule (ADR-007). The live probe is written and skips until an API key is set.
 - Tests: 6 TS (JSON-RPC dispatcher), 11 Python (handshake, crash, timeout, restart budget, protocol
   mismatch, missing bundle, API health).
 
@@ -36,3 +36,22 @@ update here.
 
 - `uv` 0.12 and GNU make 4.4 were installed for the current user (`~/.local/bin`, winget).
 - Model IDs and prices in `.env` / `config/pricing.json` were read from OpenAI's docs on 2026-09-25.
+
+## Phase 1: DSL and timeline core
+
+- Canonical Scene DSL in Zod (`packages/engine/src/dsl`): scene, objects (one variant per registered
+  component), 25 action types, 5 solver declarations, cues, beats, values, checkpoints. `dsl_version` 1.0.
+- Generated contracts: `contracts/dsl.schema.json` (canonical) and `contracts/dsl.llm.schema.json`
+  (strict-mode projection). `lift()` maps LLM output to canonical form (idempotent).
+- Generated docs: `docs/DSL.md`, `docs/COMPONENTS.md`.
+- Time model: relative timing (`at` seconds/cue/beat, `after`, `with`, `delay`), cycle detection, beat
+  distribution, scene-overrun detection.
+- Action compiler to per-object channels and segments; conflict detection; groups; morph point
+  correspondence; camera focus/follow (baked); transitions.
+- Interpolation (numbers, OKLab colors, keyframes), 18 easings + cubic-bezier, analytic spring.
+- Core evaluator (`evaluate(compiled, t)`), expression language, number formatting, strict path
+  parser, deterministic text layout from bundled Lexend + TeX-font symbol tables, themes.
+- Semantic validation with machine-readable issues and "did you mean" suggestions; invalid-DSL corpus
+  (`fixtures/invalid`, 23 cases).
+- Tests: 71 engine tests incl. fast-check properties (evaluate purity, tween continuity/endpoints, easing
+  monotonicity, PRNG purity) and compile determinism.

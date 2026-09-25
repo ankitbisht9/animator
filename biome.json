@@ -31,7 +31,8 @@
         "noParameterAssign": "off"
       },
       "suspicious": {
-        "noExplicitAny": "error"
+        "noExplicitAny": "error",
+        "useIterableCallbackReturn": "off"
       },
       "security": {
         "noDangerouslySetInnerHtml": "error"

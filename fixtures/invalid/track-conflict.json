@@ -1,0 +1,56 @@
+{
+  "expect": [
+    "TRACK_CONFLICT"
+  ],
+  "scene": {
+    "dsl_version": "1.0",
+    "id": "bad",
+    "title": "Bad",
+    "duration": 5,
+    "narration": {
+      "beats": [
+        {
+          "id": "b1",
+          "text": "x"
+        }
+      ]
+    },
+    "objects": [
+      {
+        "id": "ball",
+        "type": "circle",
+        "place": {
+          "slot": "stage.center"
+        }
+      }
+    ],
+    "timeline": [
+      {
+        "id": "m1",
+        "action": "move",
+        "target": "ball",
+        "by": {
+          "x": 10,
+          "y": 0
+        },
+        "start": {
+          "at": 0
+        },
+        "duration": 2
+      },
+      {
+        "id": "m2",
+        "action": "move",
+        "target": "ball",
+        "by": {
+          "x": 0,
+          "y": 10
+        },
+        "start": {
+          "at": 1
+        },
+        "duration": 2
+      }
+    ]
+  }
+}

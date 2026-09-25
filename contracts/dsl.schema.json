@@ -1,0 +1,3363 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "dsl_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,47}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "educational_purpose": {
+      "type": "string",
+      "maxLength": 400
+    },
+    "duration": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 120,
+      "description": "Seconds"
+    },
+    "theme": {
+      "default": "educational_clean",
+      "type": "string",
+      "enum": [
+        "educational_clean",
+        "educational_clean_dark"
+      ]
+    },
+    "layout": {
+      "default": "stage_with_caption",
+      "type": "string",
+      "enum": [
+        "stage_with_caption",
+        "stage_with_equation",
+        "split",
+        "title_card",
+        "no_title"
+      ]
+    },
+    "background": {
+      "default": {},
+      "$ref": "#/$defs/Background"
+    },
+    "camera": {
+      "description": "Initial camera; omitted = continue from the previous scene",
+      "$ref": "#/$defs/CameraInit"
+    },
+    "transition_in": {
+      "default": {},
+      "$ref": "#/$defs/TransitionIn"
+    },
+    "narration": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "beats": {
+          "default": [],
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Beat"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "cues": {
+      "default": [],
+      "maxItems": 40,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Cue"
+      }
+    },
+    "values": {
+      "default": [],
+      "maxItems": 40,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SceneValue"
+      }
+    },
+    "objects": {
+      "default": [],
+      "maxItems": 60,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Object"
+      }
+    },
+    "solvers": {
+      "default": [],
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Solver"
+      }
+    },
+    "timeline": {
+      "default": [],
+      "maxItems": 150,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Action"
+      }
+    },
+    "interactions": {
+      "default": [],
+      "maxItems": 5,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Checkpoint"
+      }
+    },
+    "captions": {
+      "default": true,
+      "type": "boolean"
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    }
+  },
+  "required": [
+    "dsl_version",
+    "id",
+    "title",
+    "duration"
+  ],
+  "additionalProperties": false,
+  "title": "Scene",
+  "$defs": {
+    "Background": {
+      "type": "object",
+      "properties": {
+        "style": {
+          "default": "gradient",
+          "type": "string",
+          "enum": [
+            "plain",
+            "gradient",
+            "grid",
+            "dots",
+            "paper"
+          ]
+        },
+        "color": {
+          "$ref": "#/$defs/ColorRef"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ColorRef": {
+      "type": "string",
+      "maxLength": 32,
+      "description": "A theme color role (e.g. 'fluid', 'force_buoyant', 'object_a'), optionally with a variant suffix '.light', '.dark' or '.soft'. Never raw hex.",
+      "x-llm": {
+        "type": "string",
+        "enum": [
+          "background",
+          "background.light",
+          "background.dark",
+          "background.soft",
+          "surface",
+          "surface.light",
+          "surface.dark",
+          "surface.soft",
+          "surface_alt",
+          "surface_alt.light",
+          "surface_alt.dark",
+          "surface_alt.soft",
+          "text",
+          "text.light",
+          "text.dark",
+          "text.soft",
+          "muted",
+          "muted.light",
+          "muted.dark",
+          "muted.soft",
+          "accent",
+          "accent.light",
+          "accent.dark",
+          "accent.soft",
+          "highlight",
+          "highlight.light",
+          "highlight.dark",
+          "highlight.soft",
+          "object_a",
+          "object_a.light",
+          "object_a.dark",
+          "object_a.soft",
+          "object_b",
+          "object_b.light",
+          "object_b.dark",
+          "object_b.soft",
+          "object_c",
+          "object_c.light",
+          "object_c.dark",
+          "object_c.soft",
+          "fluid",
+          "fluid.light",
+          "fluid.dark",
+          "fluid.soft",
+          "glass",
+          "glass.light",
+          "glass.dark",
+          "glass.soft",
+          "grid",
+          "grid.light",
+          "grid.dark",
+          "grid.soft",
+          "shadow",
+          "shadow.light",
+          "shadow.dark",
+          "shadow.soft",
+          "force_gravity",
+          "force_gravity.light",
+          "force_gravity.dark",
+          "force_gravity.soft",
+          "force_buoyant",
+          "force_buoyant.light",
+          "force_buoyant.dark",
+          "force_buoyant.soft",
+          "force_normal",
+          "force_normal.light",
+          "force_normal.dark",
+          "force_normal.soft",
+          "force_applied",
+          "force_applied.light",
+          "force_applied.dark",
+          "force_applied.soft",
+          "velocity",
+          "velocity.light",
+          "velocity.dark",
+          "velocity.soft",
+          "pressure",
+          "pressure.light",
+          "pressure.dark",
+          "pressure.soft",
+          "positive",
+          "positive.light",
+          "positive.dark",
+          "positive.soft",
+          "negative",
+          "negative.light",
+          "negative.dark",
+          "negative.soft"
+        ]
+      }
+    },
+    "CameraInit": {
+      "type": "object",
+      "properties": {
+        "center": {
+          "$ref": "#/$defs/Vec"
+        },
+        "zoom": {
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 6
+        }
+      },
+      "additionalProperties": false
+    },
+    "Vec": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "additionalProperties": false,
+      "description": "A point in scene pixels (1600x900 canvas, y down)."
+    },
+    "TransitionIn": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "default": "continue",
+          "type": "string",
+          "enum": [
+            "continue",
+            "cut",
+            "fade",
+            "wipe"
+          ]
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "keep": {
+          "description": "With cut/fade/wipe: objects that stay on stage",
+          "maxItems": 30,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,47}$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Beat": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "description": "Narration sentence (shown as the caption). **bold** emphasizes."
+        },
+        "at": {
+          "description": "Start of the beat; defaults to an even split between known beats",
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            {
+              "type": "string",
+              "pattern": "^(cue|beat|beat_end):[a-z][a-z0-9_]*$"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "Cue": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            {
+              "type": "string",
+              "pattern": "^(cue|beat|beat_end):[a-z][a-z0-9_]*$"
+            }
+          ],
+          "description": "Seconds, or 'cue:<id>', 'beat:<id>' (beat start) or 'beat_end:<id>'"
+        },
+        "beat": {
+          "description": "Beat this cue marks the start of",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        }
+      },
+      "required": [
+        "id",
+        "at"
+      ],
+      "additionalProperties": false
+    },
+    "SceneValue": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "value": {
+          "description": "A given input number",
+          "type": "number"
+        },
+        "expr": {
+          "description": "Or an expression computed by the engine",
+          "type": "string",
+          "maxLength": 240
+        },
+        "unit": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "Object": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Object_circle"
+        },
+        {
+          "$ref": "#/$defs/Object_ellipse"
+        },
+        {
+          "$ref": "#/$defs/Object_group"
+        },
+        {
+          "$ref": "#/$defs/Object_image"
+        },
+        {
+          "$ref": "#/$defs/Object_line"
+        },
+        {
+          "$ref": "#/$defs/Object_path"
+        },
+        {
+          "$ref": "#/$defs/Object_polygon"
+        },
+        {
+          "$ref": "#/$defs/Object_rectangle"
+        },
+        {
+          "$ref": "#/$defs/Object_text"
+        }
+      ]
+    },
+    "Object_circle": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "circle"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "radius": {
+              "default": 50,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 800
+            }
+          },
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "A filled circle. Origin is its center."
+    },
+    "Place": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "slot": {
+              "type": "string",
+              "maxLength": 48,
+              "description": "Layout slot, e.g. 'stage.center', 'stage.left', 'title_bar', 'equation_panel'"
+            },
+            "anchor": {
+              "description": "Which of this object's anchors sits on the slot center (default 'center')",
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,31}$"
+            },
+            "offset": {
+              "$ref": "#/$defs/Vec"
+            }
+          },
+          "required": [
+            "slot"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "relativeTo": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "side": {
+              "type": "string",
+              "enum": [
+                "above",
+                "below",
+                "left",
+                "right",
+                "center",
+                "inside_top",
+                "inside_bottom",
+                "inside_left",
+                "inside_right"
+              ]
+            },
+            "gap": {
+              "type": "number",
+              "minimum": -400,
+              "maximum": 800
+            },
+            "align": {
+              "type": "string",
+              "enum": [
+                "start",
+                "center",
+                "end"
+              ]
+            },
+            "follow": {
+              "description": "Keep following the reference object as it moves",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "relativeTo",
+            "side"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "at": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}\\.[a-z][a-z0-9_]{0,31}$",
+              "description": "Pin to another object's anchor"
+            },
+            "anchor": {
+              "description": "Which of this object's anchors is pinned (default 'center')",
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,31}$"
+            },
+            "offset": {
+              "$ref": "#/$defs/Vec"
+            },
+            "follow": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "anchor": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,31}$"
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Where an object goes. Prefer a layout slot or placement relative to another object; raw x/y is an escape hatch."
+    },
+    "Style": {
+      "type": "object",
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/ColorRef"
+        },
+        "stroke": {
+          "$ref": "#/$defs/ColorRef"
+        },
+        "text": {
+          "$ref": "#/$defs/ColorRef"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 40
+        },
+        "shadow": {
+          "type": "boolean"
+        },
+        "dashed": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Object_ellipse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "ellipse"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "rx": {
+              "default": 80,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 800
+            },
+            "ry": {
+              "default": 50,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 800
+            }
+          },
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "A filled ellipse. Origin is its center."
+    },
+    "Object_group": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "group"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "An invisible container. Objects whose `parent` is this group move, scale and fade with it. Its bounds are the union of its children."
+    },
+    "Object_image": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "image"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "asset": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]{1,64}$"
+            },
+            "width": {
+              "default": 240,
+              "type": "number",
+              "minimum": 8,
+              "maximum": 1600
+            },
+            "height": {
+              "default": 160,
+              "type": "number",
+              "minimum": 8,
+              "maximum": 900
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          "required": [
+            "asset"
+          ],
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "Placeholder for a local image asset (by asset id). No external URLs. v1 has no asset library, so this renders a labelled placeholder."
+    },
+    "Object_line": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "line"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "from": {
+              "$ref": "#/$defs/Point"
+            },
+            "to": {
+              "$ref": "#/$defs/Point"
+            },
+            "dashed": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "A straight line between two points. Endpoints may be anchor references that follow their objects."
+    },
+    "Point": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Vec"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}\\.[a-z][a-z0-9_]{0,31}$",
+          "description": "Another object's anchor, e.g. 'block.center' or 'tank.water_surface'"
+        }
+      ]
+    },
+    "Object_path": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "path"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "d": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000
+            },
+            "closed": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "d"
+          ],
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "A vector path from SVG path data (M L H V C S Q T A Z only), in coordinates relative to the object origin. Validated by a strict parser."
+    },
+    "Object_polygon": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "polygon"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "points": {
+              "minItems": 3,
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Vec"
+              }
+            },
+            "sides": {
+              "default": 6,
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 12
+            },
+            "radius": {
+              "default": 60,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 800
+            }
+          },
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "A closed polygon: either explicit `points` (relative to the origin) or a regular polygon from `sides` and `radius`."
+    },
+    "Object_rectangle": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "rectangle"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "width": {
+              "default": 200,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1600
+            },
+            "height": {
+              "default": 120,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 900
+            },
+            "cornerRadius": {
+              "default": 0,
+              "type": "number",
+              "minimum": 0,
+              "maximum": 400
+            }
+          },
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "A rectangle, optionally with rounded corners. Origin is its center."
+    },
+    "Object_text": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "text"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "text": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 400
+                },
+                {
+                  "$ref": "#/$defs/Binding"
+                }
+              ]
+            },
+            "size": {
+              "default": "body",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "title",
+                    "heading",
+                    "body",
+                    "label",
+                    "caption",
+                    "small"
+                  ]
+                },
+                {
+                  "type": "number",
+                  "minimum": 8,
+                  "maximum": 220
+                }
+              ],
+              "description": "Named size from the theme type scale, or pixels on the 1600x900 canvas"
+            },
+            "weight": {
+              "default": "regular",
+              "type": "string",
+              "enum": [
+                "regular",
+                "semibold",
+                "bold"
+              ]
+            },
+            "align": {
+              "default": "center",
+              "type": "string",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            },
+            "maxWidth": {
+              "type": "number",
+              "minimum": 40,
+              "maximum": 1600
+            },
+            "lineHeight": {
+              "type": "number",
+              "minimum": 0.9,
+              "maximum": 2.5
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "Text rendered in the theme font. Use **double asterisks** for emphasis. `text` may be a binding to show computed values. Origin is the center of the text box."
+    },
+    "Binding": {
+      "type": "object",
+      "properties": {
+        "bind": {
+          "type": "string",
+          "maxLength": 240,
+          "description": "Expression over solver outputs and scene values, e.g. 'buoy.buoyantForce' or 'rho_w * g'"
+        },
+        "format": {
+          "description": "Number format, e.g. '0.0 N', '#,##0 kg', '0.00 m/s'",
+          "type": "string",
+          "maxLength": 32
+        }
+      },
+      "required": [
+        "bind"
+      ],
+      "additionalProperties": false
+    },
+    "Solver": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/BuoyancySolver"
+        },
+        {
+          "$ref": "#/$defs/FluidFlowSolver"
+        },
+        {
+          "$ref": "#/$defs/ProjectileSolver"
+        },
+        {
+          "$ref": "#/$defs/PendulumSolver"
+        },
+        {
+          "$ref": "#/$defs/SpringMassSolver"
+        }
+      ]
+    },
+    "BuoyancySolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "buoyancy"
+        },
+        "container": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "description": "A container object holding the fluid"
+        },
+        "body": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "description": "A block or ball that enters the fluid"
+        },
+        "bodyDensity": {
+          "description": "kg/m^3. Defaults to the density of the body's material",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 25000
+        },
+        "fluidDensity": {
+          "default": 1000,
+          "description": "kg/m^3",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 25000
+        },
+        "mode": {
+          "default": "drop",
+          "description": "drop: released and settles; lower: lowered on a string to holdDepth; hold: held still at holdDepth",
+          "type": "string",
+          "enum": [
+            "drop",
+            "lower",
+            "hold"
+          ]
+        },
+        "holdDepth": {
+          "default": 1,
+          "description": "For lower/hold: fraction of the body's height submerged at the end",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "g": {
+          "default": 9.81,
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 30
+        },
+        "unitsPerMeter": {
+          "default": 400,
+          "description": "Scene pixels per meter",
+          "type": "number",
+          "minimum": 10,
+          "maximum": 5000
+        },
+        "catchContainer": {
+          "description": "Container that collects overflow (for an overflow/Eureka can)",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "scale": {
+          "description": "A spring_scale that reads the apparent weight",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "container",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "FluidFlowSolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "fluid_flow"
+        },
+        "pipe": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "description": "A pipe object with named sections"
+        },
+        "fluidDensity": {
+          "default": 1000,
+          "type": "number",
+          "minimum": 1,
+          "maximum": 25000
+        },
+        "flowRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Volumetric flow rate Q in m^3/s"
+        },
+        "inletPressure": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000000,
+          "description": "Pressure at the first section in Pa"
+        },
+        "g": {
+          "default": 9.81,
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 30
+        },
+        "unitsPerMeter": {
+          "default": 400,
+          "type": "number",
+          "minimum": 10,
+          "maximum": 5000
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "pipe",
+        "flowRate",
+        "inletPressure"
+      ],
+      "additionalProperties": false
+    },
+    "ProjectileSolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "projectile"
+        },
+        "body": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "speed": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 500,
+          "description": "Launch speed in m/s"
+        },
+        "angle": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "Launch angle in degrees above horizontal"
+        },
+        "g": {
+          "default": 9.81,
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 30
+        },
+        "drag": {
+          "default": 0,
+          "description": "Linear drag coefficient per second",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "unitsPerMeter": {
+          "default": 60,
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "groundY": {
+          "description": "Scene y of the ground; defaults to the launch height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "body",
+        "speed",
+        "angle"
+      ],
+      "additionalProperties": false
+    },
+    "PendulumSolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "pendulum"
+        },
+        "pendulum": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$",
+          "description": "A pendulum object"
+        },
+        "length": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 100,
+          "description": "Length in meters"
+        },
+        "angle": {
+          "type": "number",
+          "minimum": -170,
+          "maximum": 170,
+          "description": "Initial angle in degrees from vertical"
+        },
+        "g": {
+          "default": 9.81,
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 30
+        },
+        "damping": {
+          "default": 0,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "pendulum",
+        "length",
+        "angle"
+      ],
+      "additionalProperties": false
+    },
+    "SpringMassSolver": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "spring_mass"
+        },
+        "spring": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "body": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "stiffness": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 1000000,
+          "description": "k in N/m"
+        },
+        "mass": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 100000,
+          "description": "kg"
+        },
+        "amplitude": {
+          "type": "number",
+          "minimum": -10,
+          "maximum": 10,
+          "description": "Initial displacement in meters"
+        },
+        "damping": {
+          "default": 0,
+          "description": "c in N·s/m",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "unitsPerMeter": {
+          "default": 400,
+          "type": "number",
+          "minimum": 10,
+          "maximum": 5000
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "spring",
+        "body",
+        "stiffness",
+        "mass",
+        "amplitude"
+      ],
+      "additionalProperties": false
+    },
+    "Action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "create"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "style": {
+              "description": "Entrance animation; 'auto' picks one suited to the component",
+              "type": "string",
+              "enum": [
+                "auto",
+                "fade",
+                "pop",
+                "grow",
+                "draw",
+                "write",
+                "slide_up",
+                "slide_down",
+                "slide_left",
+                "slide_right",
+                "zoom",
+                "none"
+              ]
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "remove"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "fade",
+                "shrink",
+                "slide_up",
+                "slide_down",
+                "slide_left",
+                "slide_right",
+                "none"
+              ]
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "show"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "hide"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "move"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "to": {
+              "description": "Destination (slot, relative placement, anchor pin or raw x/y)",
+              "$ref": "#/$defs/Place"
+            },
+            "by": {
+              "description": "Relative displacement in pixels",
+              "$ref": "#/$defs/Vec"
+            },
+            "path": {
+              "type": "string",
+              "enum": [
+                "straight",
+                "arc"
+              ]
+            },
+            "arcHeight": {
+              "type": "number",
+              "minimum": -600,
+              "maximum": 600
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "scale"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "to": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 20
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "rotate"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "to": {
+              "description": "Absolute angle in degrees (clockwise)",
+              "type": "number",
+              "minimum": -3600,
+              "maximum": 3600
+            },
+            "by": {
+              "type": "number",
+              "minimum": -3600,
+              "maximum": 3600
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "fade"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "to": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "color_change"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "property": {
+              "type": "string",
+              "enum": [
+                "fill",
+                "stroke",
+                "text"
+              ]
+            },
+            "to": {
+              "$ref": "#/$defs/ColorRef"
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "draw"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "reverse": {
+              "description": "Un-draw instead of draw",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "write"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "terms": {
+              "description": "Equation part ids to reveal, in order",
+              "maxItems": 24,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,47}$"
+              }
+            },
+            "by": {
+              "type": "string",
+              "enum": [
+                "char",
+                "word",
+                "term"
+              ]
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "transform"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "changes": {
+              "description": "Animate params to new values (numbers and colors interpolate)",
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "param": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,31}$"
+                  },
+                  "to": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "param",
+                  "to"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "into": {
+              "description": "Replace this object by another (crossfade and fit)",
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "morph"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "into": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "A path/shape object whose outline this object morphs into"
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "into"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "highlight"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "pulse",
+                "glow",
+                "box",
+                "underline",
+                "circle",
+                "flash",
+                "shake",
+                "color"
+              ]
+            },
+            "color": {
+              "$ref": "#/$defs/ColorRef"
+            },
+            "terms": {
+              "description": "For equations: which parts to highlight",
+              "maxItems": 24,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,47}$"
+              }
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "label"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "text": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 400
+                },
+                {
+                  "$ref": "#/$defs/Binding"
+                }
+              ]
+            },
+            "labelId": {
+              "description": "Id of the created label object (default '<action id>_label')",
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "side": {
+              "type": "string",
+              "enum": [
+                "above",
+                "below",
+                "left",
+                "right",
+                "center",
+                "inside_top",
+                "inside_bottom",
+                "inside_left",
+                "inside_right"
+              ]
+            },
+            "gap": {
+              "type": "number",
+              "minimum": -200,
+              "maximum": 400
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "plain",
+                "pill",
+                "tag"
+              ]
+            },
+            "color": {
+              "$ref": "#/$defs/ColorRef"
+            },
+            "leader": {
+              "description": "Draw a leader line from the label to the target",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "text"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "follow"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "leader": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "anchor": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,31}$"
+            },
+            "offset": {
+              "$ref": "#/$defs/Vec"
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "leader"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "group"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the group; a new group object is created if needed"
+            },
+            "members": {
+              "minItems": 1,
+              "maxItems": 30,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,47}$"
+              }
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "members"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "ungroup"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "run_solver"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Solver id"
+            }
+          },
+          "required": [
+            "action",
+            "target"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "bind"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "property": {
+              "type": "string",
+              "pattern": "^(x|y|rotation|scale|opacity|params\\.[a-zA-Z][a-zA-Z0-9_]*)$"
+            },
+            "bind": {
+              "type": "string",
+              "maxLength": 240,
+              "description": "Expression; may use t (seconds since action start)"
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "property",
+            "bind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "camera_move"
+            },
+            "center": {
+              "$ref": "#/$defs/Vec"
+            },
+            "zoom": {
+              "type": "number",
+              "minimum": 0.25,
+              "maximum": 6
+            },
+            "focus": {
+              "description": "Frame these objects",
+              "maxItems": 10,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,47}$"
+              }
+            },
+            "padding": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 600
+            },
+            "follow": {
+              "description": "Keep this object centered for the duration",
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "cut"
+            },
+            "center": {
+              "$ref": "#/$defs/Vec"
+            },
+            "zoom": {
+              "type": "number",
+              "minimum": 0.25,
+              "maximum": 6
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "transition"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "fade_through",
+                "wipe",
+                "flash"
+              ]
+            },
+            "color": {
+              "$ref": "#/$defs/ColorRef"
+            }
+          },
+          "required": [
+            "action",
+            "style"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "animate"
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$",
+              "description": "Id of the object this action affects"
+            },
+            "property": {
+              "type": "string",
+              "pattern": "^(x|y|rotation|scale|opacity|fill|stroke|text|params\\.[a-zA-Z][a-zA-Z0-9_]*)$"
+            },
+            "keyframes": {
+              "minItems": 1,
+              "maxItems": 60,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "time": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 120,
+                    "description": "Seconds after the action start"
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      }
+                    ]
+                  },
+                  "easing": {
+                    "$ref": "#/$defs/Easing"
+                  }
+                },
+                "required": [
+                  "time",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "property",
+            "keyframes"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "start": {
+              "$ref": "#/$defs/Start"
+            },
+            "duration": {
+              "description": "Seconds; defaults to the theme's motion duration",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "easing": {
+              "$ref": "#/$defs/Easing"
+            },
+            "action": {
+              "type": "string",
+              "const": "wait"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Start": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            {
+              "type": "string",
+              "pattern": "^(cue|beat|beat_end):[a-z][a-z0-9_]*$"
+            }
+          ],
+          "description": "Seconds, or 'cue:<id>', 'beat:<id>' (beat start) or 'beat_end:<id>'"
+        },
+        "after": {
+          "description": "Start when this action ends",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "with": {
+          "description": "Start together with this action",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "delay": {
+          "type": "number",
+          "minimum": -30,
+          "maximum": 60
+        }
+      },
+      "additionalProperties": false,
+      "description": "When the action starts. Use exactly one of at / after / with."
+    },
+    "Easing": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "linear",
+            "ease_in",
+            "ease_out",
+            "ease_in_out",
+            "ease_in_quad",
+            "ease_out_quad",
+            "ease_in_out_quad",
+            "ease_in_expo",
+            "ease_out_expo",
+            "ease_in_out_sine",
+            "back_in",
+            "back_out",
+            "back_in_out",
+            "bounce_out",
+            "elastic_out",
+            "spring",
+            "smooth",
+            "step"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "cubic_bezier": {
+              "minItems": 4,
+              "maxItems": 4,
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "CSS cubic-bezier control points [x1, y1, x2, y2]"
+            }
+          },
+          "required": [
+            "cubic_bezier"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Checkpoint": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            {
+              "type": "string",
+              "pattern": "^(cue|beat|beat_end):[a-z][a-z0-9_]*$"
+            }
+          ],
+          "description": "Seconds, or 'cue:<id>', 'beat:<id>' (beat start) or 'beat_end:<id>'"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200
+        },
+        "choices": {
+          "minItems": 2,
+          "maxItems": 4,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "answer": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Index of the correct choice"
+        },
+        "explain": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Shown after answering"
+        }
+      },
+      "required": [
+        "id",
+        "at",
+        "question",
+        "choices",
+        "answer",
+        "explain"
+      ],
+      "additionalProperties": false,
+      "description": "A quick question that pauses the player (not part of exported video)."
+    }
+  }
+}
