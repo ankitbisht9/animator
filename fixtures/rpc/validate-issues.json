@@ -1,0 +1,171 @@
+{
+  "description": "Semantic errors come back as structured issues with paths and suggestions.",
+  "method": "scene.validate",
+  "params": {
+    "scene": {
+      "dsl_version": "1.0",
+      "id": "bad_refs",
+      "title": "Bad references",
+      "duration": 5,
+      "narration": {
+        "beats": [
+          {
+            "id": "b1",
+            "text": "Oops."
+          }
+        ]
+      },
+      "objects": [
+        {
+          "id": "tank",
+          "type": "container",
+          "place": {
+            "slot": "stage.center"
+          },
+          "style": {
+            "fill": "blue"
+          }
+        },
+        {
+          "id": "lbl",
+          "type": "label",
+          "params": {
+            "text": "water"
+          },
+          "place": {
+            "relativeTo": "tnak",
+            "side": "left"
+          }
+        }
+      ],
+      "timeline": [
+        {
+          "action": "create",
+          "target": "blok"
+        }
+      ]
+    },
+    "prevState": null
+  },
+  "result": {
+    "ok": false,
+    "issues": [
+      {
+        "code": "COLOR_NOT_ALLOWED",
+        "path": "/objects/0/style/fill",
+        "message": "'blue' is not a theme color role.",
+        "severity": "error",
+        "source": "semantic",
+        "suggestion": "Use a color role such as 'accent', 'fluid' or 'force_buoyant'."
+      },
+      {
+        "code": "UNKNOWN_OBJECT",
+        "path": "/objects/1/place/relativeTo",
+        "message": "No object with id 'tnak'.",
+        "severity": "error",
+        "source": "semantic",
+        "suggestion": "Did you mean 'tank'?"
+      },
+      {
+        "code": "UNKNOWN_OBJECT",
+        "path": "/timeline/0/target",
+        "message": "No object with id 'blok'.",
+        "severity": "error",
+        "source": "semantic",
+        "suggestion": "Declare it in `objects` first."
+      }
+    ],
+    "scene": {
+      "dsl_version": "1.0",
+      "id": "bad_refs",
+      "title": "Bad references",
+      "duration": 5,
+      "theme": "educational_clean",
+      "layout": "stage_with_caption",
+      "background": {
+        "style": "gradient"
+      },
+      "transition_in": {
+        "type": "continue"
+      },
+      "narration": {
+        "beats": [
+          {
+            "id": "b1",
+            "text": "Oops."
+          }
+        ]
+      },
+      "cues": [],
+      "values": [],
+      "objects": [
+        {
+          "id": "tank",
+          "type": "container",
+          "params": {
+            "shape": "tank",
+            "width": 420,
+            "height": 360,
+            "level": 0.55,
+            "wall": 8,
+            "fluid": "fluid",
+            "glass": "glass",
+            "ticks": false,
+            "spoutLevel": 0.75,
+            "ripple": 0,
+            "rippleX": 0,
+            "outflow": 0,
+            "bubbles": true,
+            "unitsPerMeter": 400
+          },
+          "place": {
+            "slot": "stage.center"
+          },
+          "rotation": 0,
+          "scale": 1,
+          "opacity": 1,
+          "style": {
+            "fill": "blue"
+          },
+          "layer": "main",
+          "z": 0,
+          "persist": true
+        },
+        {
+          "id": "lbl",
+          "type": "label",
+          "params": {
+            "text": "water",
+            "style": "pill",
+            "color": "text",
+            "size": "label",
+            "weight": "semibold"
+          },
+          "place": {
+            "relativeTo": "tnak",
+            "side": "left"
+          },
+          "rotation": 0,
+          "scale": 1,
+          "opacity": 1,
+          "layer": "main",
+          "z": 0,
+          "persist": true
+        }
+      ],
+      "solvers": [],
+      "timeline": [
+        {
+          "id": "a1",
+          "start": {
+            "at": 0
+          },
+          "action": "create",
+          "target": "blok"
+        }
+      ],
+      "interactions": [],
+      "captions": true
+    }
+  }
+}

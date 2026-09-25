@@ -479,6 +479,7 @@ Anchors (plus box anchors): `water_surface`, `water_center`, `floor`, `rim`, `ri
 | `rippleX` | number |  | `0` |  |
 | `outflow` | number |  | `0` | overflow_can only: strength of the stream pouring from the spout (driven by the buoyancy solver) |
 | `bubbles` | boolean |  | `true` | Gentle ambient bubbles |
+| `mark` | number |  |  | Dashed line at this fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right |
 | `unitsPerMeter` | number |  | `400` |  |
 
 ```json

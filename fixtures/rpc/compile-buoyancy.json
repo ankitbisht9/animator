@@ -1,0 +1,228 @@
+{
+  "description": "A floating block: the end state carries the settled block and the raised water level.",
+  "method": "scene.compile",
+  "omit": [
+    "compiled"
+  ],
+  "params": {
+    "scene": {
+      "dsl_version": "1.0",
+      "id": "float_demo",
+      "title": "Float demo",
+      "duration": 6,
+      "narration": {
+        "beats": [
+          {
+            "id": "b1",
+            "text": "The wooden block floats."
+          }
+        ]
+      },
+      "objects": [
+        {
+          "id": "tank",
+          "type": "container",
+          "params": {
+            "width": 420,
+            "height": 300,
+            "level": 0.5,
+            "wall": 10,
+            "unitsPerMeter": 1000
+          },
+          "place": {
+            "x": 800,
+            "y": 460
+          }
+        },
+        {
+          "id": "blk",
+          "type": "block",
+          "params": {
+            "width": 100,
+            "height": 100,
+            "material": "wood"
+          },
+          "place": {
+            "relativeTo": "tank",
+            "side": "above",
+            "gap": 20
+          }
+        }
+      ],
+      "solvers": [
+        {
+          "id": "buoy",
+          "type": "buoyancy",
+          "container": "tank",
+          "body": "blk",
+          "unitsPerMeter": 1000
+        }
+      ],
+      "timeline": [
+        {
+          "id": "run",
+          "action": "run_solver",
+          "target": "buoy",
+          "start": {
+            "at": 1
+          },
+          "duration": 4
+        }
+      ]
+    },
+    "prevState": null
+  },
+  "result": {
+    "ok": true,
+    "issues": [],
+    "endState": {
+      "sceneId": "float_demo",
+      "sceneIndex": 0,
+      "time": 6,
+      "themeId": "educational_clean",
+      "camera": {
+        "cx": 800,
+        "cy": 450,
+        "zoom": 1
+      },
+      "objects": {
+        "tank": {
+          "id": "tank",
+          "type": "container",
+          "params": {
+            "shape": "tank",
+            "width": 420,
+            "height": 300,
+            "level": 0.512931,
+            "wall": 10,
+            "fluid": "fluid",
+            "glass": "glass",
+            "ticks": false,
+            "spoutLevel": 0.75,
+            "ripple": 0,
+            "rippleX": 0,
+            "outflow": 0,
+            "bubbles": true,
+            "unitsPerMeter": 1000
+          },
+          "x": 800,
+          "y": 460,
+          "rotation": 0,
+          "scale": 1,
+          "opacity": 1,
+          "visible": true,
+          "fill": "#f08a24",
+          "stroke": "#1c2541",
+          "text": "#1c2541",
+          "strokeWidth": 4,
+          "shadow": true,
+          "dashed": false,
+          "layer": "main",
+          "z": 0,
+          "persist": true,
+          "decorative": false,
+          "lifecycle": "active",
+          "bbox": {
+            "x": 590,
+            "y": 310,
+            "w": 420,
+            "h": 300
+          }
+        },
+        "blk": {
+          "id": "blk",
+          "type": "block",
+          "params": {
+            "width": 100,
+            "height": 100,
+            "material": "wood",
+            "face": "none",
+            "cornerRadius": 10
+          },
+          "x": 800,
+          "y": 461.25,
+          "rotation": 0,
+          "scale": 1,
+          "opacity": 1,
+          "visible": true,
+          "fill": "#f08a24",
+          "stroke": "#1c2541",
+          "text": "#1c2541",
+          "strokeWidth": 4,
+          "shadow": true,
+          "dashed": false,
+          "layer": "main",
+          "z": 0,
+          "persist": true,
+          "decorative": false,
+          "lifecycle": "active",
+          "bbox": {
+            "x": 750,
+            "y": 411.25,
+            "w": 100,
+            "h": 100
+          }
+        }
+      },
+      "registry": {
+        "tank": {
+          "type": "container",
+          "createdIn": "float_demo",
+          "lastScene": "float_demo",
+          "lifecycle": "active"
+        },
+        "blk": {
+          "type": "block",
+          "createdIn": "float_demo",
+          "lastScene": "float_demo",
+          "lifecycle": "active"
+        }
+      },
+      "solvers": {
+        "buoy": {
+          "weight": 5.886,
+          "mass": 0.6,
+          "bodyVolume": 0.001,
+          "bodyVolumeCm3": 1000,
+          "bodyDensity": 600,
+          "fluidDensity": 1000,
+          "g": 9.81,
+          "equilibriumFraction": 0.6,
+          "floats": 1,
+          "bodyY": 461.25,
+          "level": 0.5129,
+          "buoyantForce": 5.886,
+          "apparentWeight": 0,
+          "netForce": 0,
+          "submergedVolume": 0.0006,
+          "submergedVolumeCm3": 600,
+          "displacedVolume": 0.0006,
+          "displacedMass": 0.6,
+          "displacedWeight": 5.886,
+          "submergedFraction": 0.6,
+          "submergedDepth": 0.06,
+          "submergedPx": 60,
+          "levelRise": 0.0038,
+          "levelRiseCm": 0.375,
+          "spilledVolume": 0,
+          "spilledVolumeCm3": 0,
+          "spilledWeight": 0,
+          "ripple": 0,
+          "rippleX": 0,
+          "outflow": 0
+        }
+      },
+      "values": {}
+    },
+    "stateSummary": "Previous scene: float_demo. Camera center (800, 450), zoom 1.\nObjects on stage (reuse these ids; do not redeclare them):\n- tank (container, visible) at x=800, y=460, size 420x300\n- blk (block, visible) at x=800, y=461, size 100x100\nSolver results from the previous scene:\n- buoy: weight=5.886, mass=0.6, bodyVolume=0.001, bodyVolumeCm3=1000, bodyDensity=600, fluidDensity=1000, g=9.81, equilibriumFraction=0.6",
+    "duration": 6,
+    "beats": [
+      {
+        "id": "b1",
+        "text": "The wooden block floats.",
+        "start": 0,
+        "end": 6
+      }
+    ]
+  }
+}

@@ -273,6 +273,19 @@ export function ContainerR({ o, theme, t, seed }: RenderProps) {
         opacity={0.3}
       />
       {ticks}
+      {typeof p.mark === "number" && (
+        <line
+          x1={fmt(x0 + 4)}
+          y1={fmt(floor - p.mark * (floor - top))}
+          x2={fmt(x1 - 4)}
+          y2={fmt(floor - p.mark * (floor - top))}
+          stroke={darken(glass, 0.35)}
+          strokeWidth={2.5}
+          strokeDasharray="10 8"
+          strokeLinecap="round"
+          opacity={0.9}
+        />
+      )}
     </g>
   );
 }

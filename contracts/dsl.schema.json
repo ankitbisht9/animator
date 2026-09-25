@@ -2469,6 +2469,12 @@
               "description": "Gentle ambient bubbles",
               "type": "boolean"
             },
+            "mark": {
+              "description": "Dashed line at this fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
             "unitsPerMeter": {
               "default": 400,
               "type": "number",

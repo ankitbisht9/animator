@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from animator.config import Settings
 
+from .client import EngineClient
 from .errors import (
     EngineError,
     EngineRpcError,
@@ -33,6 +34,7 @@ def pool_from_settings(settings: Settings, *, extra_env: dict[str, str] | None =
 
 
 __all__ = [
+    "EngineClient",
     "EngineError",
     "EngineRpcError",
     "EngineUnavailable",

@@ -9,7 +9,7 @@ update here.
 | 1 DSL and timeline core | done |
 | 2 Evaluation engine + SVG slice | done |
 | 3 Tier 1 components, layout, camera | done |
-| 4 Solvers, bindings, SceneState, worker protocol | not started |
+| 4 Solvers, bindings, SceneState, worker protocol | done |
 | 5 Hand-authored Archimedes, **Gate A** | not started |
 
 ## Phase 0: Foundations
@@ -91,3 +91,18 @@ update here.
 - Tests: 86 engine (geometry, continuity physics of flow, tabular readouts, TeX allowlist, anchor following,
   relative placement, camera focus, each layout rule), 28 components (25 SVG golden frames), browser pixel
   determinism and PNG goldens for both fixture lessons.
+
+## Phase 4: Solvers, data binding, SceneState, worker protocol
+
+- Solvers (ADR-019): buoyancy (drop / lower / hold, overflow and catch container, spring-scale reading),
+  fluid flow (continuity + Bernoulli, per-section outputs), projectile (RK4, optional drag), pendulum (RK4),
+  spring-mass (analytic). Outputs bindable as `<solver>.<output>`; attached channels drive objects
+  (body y, water level, ripples, outflow, catch level, scale reading).
+- Narration vs physics check (`NARRATION_CONTRADICTS_SOLVER`).
+- SceneState at any time, WorldRegistry, continuity checks (identity type change, identity drift, abrupt
+  disappearance), clean-stage transitions with `keep`.
+- Full worker protocol (ADR-020) with Zod-validated params, compile cache, debug CLI
+  (`engine validate|compile|state|sample|schema|catalog`).
+- Generated contracts: `protocol.schema.json`, `catalog.json`, Pydantic models; typed `EngineClient`.
+- Tests: 105 engine (solver physics vs closed forms, continuity), 12 worker, 10 Python contract tests (live vs
+  committed contracts, 4 golden RPC fixtures, invalid params, continuity over RPC).

@@ -76,7 +76,8 @@ async def test_golden_frames(session: RenderSession, lesson: str) -> None:
     update = os.environ.get("UPDATE_GOLDENS") == "1"
     if not update and not GOLDEN_DIR.exists():
         pytest.skip(
-            f"no golden frames for platform '{sys.platform}' yet (generated in the pinned Docker env, Phase 6)"
+            f"no golden frames for platform '{sys.platform}' yet "
+            "(generated in the pinned Docker env, Phase 6)"
         )
     failures = []
     for frame in FRAMES[lesson]:

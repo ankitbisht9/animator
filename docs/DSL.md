@@ -634,3 +634,8 @@ Type: `"regular"` \| `"semibold"` \| `"bold"`
 
 **Solvers** (outputs are bindable as `<solver id>.<output>`):
 
+- `buoyancy`: `buoyantForce` (N), `weight` (N), `apparentWeight` (N), `netForce` (N), `submergedVolume` (m³), `submergedVolumeCm3` (cm³), `displacedVolume` (m³), `displacedMass` (kg), `displacedWeight` (N), `submergedFraction` (), `submergedDepth` (m), `submergedPx` (px), `level` (), `levelRise` (m), `levelRiseCm` (cm), `spilledVolume` (m³), `spilledVolumeCm3` (cm³), `spilledWeight` (N), `bodyVolume` (m³), `bodyVolumeCm3` (cm³), `mass` (kg), `bodyDensity` (kg/m³), `fluidDensity` (kg/m³), `g` (m/s²), `equilibriumFraction` (), `floats` ()
+- `fluid_flow`: `Q` (m³/s), `rho` (kg/m³), `g` (m/s²), `p_in` (Pa), `v_max` (m/s), `p_min` (Pa), `pressureDrop` (Pa), `ramp` ()
+- `projectile`: `x` (px), `y` (px), `vx` (m/s), `vy` (m/s), `speed` (m/s), `height` (m), `distance` (m), `flightTime` (s), `range` (m), `maxHeight` (m), `speed0` (m/s), `angle` (°), `g` (m/s²)
+- `pendulum`: `angle` (°), `omega` (rad/s), `speed` (m/s), `height` (m), `kinetic` (J/kg), `potential` (J/kg), `period` (s), `length` (m), `g` (m/s²)
+- `spring_mass`: `displacement` (m), `y` (px), `velocity` (m/s), `force` (N), `kinetic` (J), `potential` (J), `period` (s), `omega` (rad/s), `frequency` (Hz), `stiffness` (N/m), `mass` (kg)

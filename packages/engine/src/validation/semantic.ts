@@ -12,7 +12,7 @@ import { EXPR_CONSTANTS, exprRefs, parseExpr } from "../expr/expr";
 import { getLayout } from "../layout/templates";
 import { BOX_ANCHORS } from "../math/rect";
 import type { SceneState } from "../scene-state/types";
-import { getSolver } from "../solvers/registry";
+import { getSolver } from "../solvers";
 import { unsupportedChars } from "../text/layout";
 import { isColorRef, type Theme } from "../theme/theme";
 import { getTheme } from "../theme/themes";
@@ -177,14 +177,18 @@ export function validateSemantics(scene: SceneT, prev?: SceneState | null): Vali
     }
   };
 
+  const outputNames = (sid: string): string[] => {
+    const def = scene.solvers.find((s) => s.id === sid);
+    const impl = def ? getSolver(def.type) : undefined;
+    if (!def || !impl) return [];
+    return [...impl.outputs.map((o) => o.name), ...(impl.dynamicOutputs?.(def, scene) ?? [])];
+  };
+
   const knownIdent = (name: string): boolean => {
     if (name === "t" || Object.hasOwn(EXPR_CONSTANTS, name) || valueIds.has(name)) return true;
     const dot = name.indexOf(".");
     if (dot < 0) return false;
-    const sid = name.slice(0, dot);
-    const def = scene.solvers.find((s) => s.id === sid);
-    const impl = def ? getSolver(def.type) : undefined;
-    return !!impl && impl.outputs.some((o) => o.name === name.slice(dot + 1));
+    return outputNames(name.slice(0, dot)).includes(name.slice(dot + 1));
   };
 
   const checkExpr = (src: string, where: string) => {
@@ -194,10 +198,9 @@ export function validateSemantics(scene: SceneT, prev?: SceneState | null): Vali
         if (!knownIdent(name)) {
           const dot = name.indexOf(".");
           const sid = dot > 0 ? name.slice(0, dot) : "";
-          const def = scene.solvers.find((s) => s.id === sid);
-          const impl = def ? getSolver(def.type) : undefined;
-          const options = impl
-            ? impl.outputs.map((o) => `${sid}.${o.name}`)
+          const names = outputNames(sid);
+          const options = names.length
+            ? names.map((o) => `${sid}.${o}`)
             : [...valueIds, ...[...solverIds].map((s) => `${s}.<output>`)];
           issues.push(
             issue("EXPR_UNKNOWN_IDENT", where, `Unknown identifier '${name}' in expression.`, {

@@ -1,0 +1,962 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "$ref": "#/$defs/VersionResult"
+    },
+    "health": {
+      "$ref": "#/$defs/HealthResult"
+    },
+    "schemaGetParams": {
+      "$ref": "#/$defs/SchemaGetParams"
+    },
+    "schemaGetResult": {
+      "$ref": "#/$defs/SchemaGetResult"
+    },
+    "catalog": {
+      "$ref": "#/$defs/CatalogResult"
+    },
+    "liftParams": {
+      "$ref": "#/$defs/LiftParams"
+    },
+    "liftResult": {
+      "$ref": "#/$defs/LiftResult"
+    },
+    "sceneParams": {
+      "$ref": "#/$defs/SceneParams"
+    },
+    "validateResult": {
+      "$ref": "#/$defs/ValidateResult"
+    },
+    "compileResult": {
+      "$ref": "#/$defs/CompileResult"
+    },
+    "stateAtParams": {
+      "$ref": "#/$defs/StateAtParams"
+    },
+    "stateAtResult": {
+      "$ref": "#/$defs/StateAtResult"
+    },
+    "sampleParams": {
+      "$ref": "#/$defs/SampleParams"
+    },
+    "sampleResult": {
+      "$ref": "#/$defs/SampleResult"
+    }
+  },
+  "title": "EngineProtocol",
+  "$defs": {
+    "VersionResult": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "type": "string"
+        },
+        "engineVersion": {
+          "type": "string"
+        },
+        "dslVersion": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "engineVersion",
+        "dslVersion"
+      ],
+      "additionalProperties": false,
+      "title": "VersionResult"
+    },
+    "HealthResult": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "uptimeMs": {
+          "type": "number"
+        },
+        "rssBytes": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "ok",
+        "uptimeMs",
+        "rssBytes"
+      ],
+      "additionalProperties": false,
+      "title": "HealthResult"
+    },
+    "SchemaGetParams": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "default": "llm",
+          "type": "string",
+          "enum": [
+            "canonical",
+            "llm"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "title": "SchemaGetParams"
+    },
+    "SchemaGetResult": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "canonical",
+            "llm"
+          ]
+        },
+        "schema": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "kind",
+        "schema"
+      ],
+      "additionalProperties": false,
+      "title": "SchemaGetResult"
+    },
+    "CatalogResult": {
+      "type": "object",
+      "properties": {
+        "engineVersion": {
+          "type": "string"
+        },
+        "dslVersion": {
+          "type": "string"
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ComponentInfo"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "easings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "colorRoles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "colorVariants": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "layouts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "slots": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "slots"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "solvers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SolverInfo"
+          }
+        },
+        "themes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "entranceStyles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exitStyles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "highlightStyles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limits": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "engineVersion",
+        "dslVersion",
+        "components",
+        "actions",
+        "easings",
+        "colorRoles",
+        "colorVariants",
+        "layouts",
+        "solvers",
+        "themes",
+        "entranceStyles",
+        "exitStyles",
+        "highlightStyles",
+        "limits"
+      ],
+      "additionalProperties": false,
+      "title": "CatalogResult"
+    },
+    "ComponentInfo": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {},
+          "description": "JSON Schema of the params"
+        },
+        "anchors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dynamicAnchors": {
+          "type": "boolean"
+        },
+        "entrance": {
+          "type": "string"
+        },
+        "draw": {
+          "type": "boolean"
+        },
+        "write": {
+          "type": "boolean"
+        },
+        "labelLike": {
+          "type": "boolean"
+        },
+        "decorative": {
+          "type": "boolean"
+        },
+        "worldSpace": {
+          "type": "boolean"
+        },
+        "semanticRoles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        }
+      },
+      "required": [
+        "type",
+        "category",
+        "description",
+        "params",
+        "anchors",
+        "dynamicAnchors",
+        "entrance",
+        "draw",
+        "write",
+        "labelLike",
+        "decorative",
+        "worldSpace",
+        "semanticRoles",
+        "examples"
+      ],
+      "additionalProperties": false,
+      "title": "ComponentInfo"
+    },
+    "SolverInfo": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "unit": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "unit",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "dynamicOutputs": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "outputs",
+        "dynamicOutputs"
+      ],
+      "additionalProperties": false,
+      "title": "SolverInfo"
+    },
+    "LiftParams": {
+      "type": "object",
+      "properties": {
+        "scene": {
+          "description": "A scene in LLM-facing or canonical form (it is lifted first)"
+        }
+      },
+      "required": [
+        "scene"
+      ],
+      "additionalProperties": false,
+      "title": "LiftParams"
+    },
+    "LiftResult": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "scene": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationIssue"
+          }
+        }
+      },
+      "required": [
+        "ok",
+        "issues"
+      ],
+      "additionalProperties": false,
+      "title": "LiftResult"
+    },
+    "ValidationIssue": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "suggestion": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning",
+            "info"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "schema",
+            "semantic",
+            "layout",
+            "critic",
+            "visual",
+            "normalization"
+          ]
+        },
+        "time": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "code",
+        "path",
+        "message",
+        "severity",
+        "source"
+      ],
+      "additionalProperties": false,
+      "title": "ValidationIssue"
+    },
+    "SceneParams": {
+      "type": "object",
+      "properties": {
+        "scene": {
+          "description": "A scene in LLM-facing or canonical form (it is lifted first)"
+        },
+        "prevState": {
+          "description": "End state of the previous scene (continuity)",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SceneState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "scene"
+      ],
+      "additionalProperties": false,
+      "title": "SceneParams"
+    },
+    "SceneState": {
+      "type": "object",
+      "properties": {
+        "sceneId": {
+          "type": "string"
+        },
+        "sceneIndex": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "time": {
+          "type": "number"
+        },
+        "themeId": {
+          "type": "string"
+        },
+        "camera": {
+          "type": "object",
+          "properties": {
+            "cx": {
+              "type": "number"
+            },
+            "cy": {
+              "type": "number"
+            },
+            "zoom": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "cx",
+            "cy",
+            "zoom"
+          ]
+        },
+        "objects": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/ObjectState"
+          }
+        },
+        "registry": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "createdIn": {
+                "type": "string"
+              },
+              "lastScene": {
+                "type": "string"
+              },
+              "lifecycle": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "hidden",
+                  "removed"
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "createdIn",
+              "lastScene",
+              "lifecycle"
+            ]
+          }
+        },
+        "solvers": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "values": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "sceneId",
+        "sceneIndex",
+        "time",
+        "themeId",
+        "camera",
+        "objects",
+        "registry",
+        "solvers",
+        "values"
+      ],
+      "title": "SceneState"
+    },
+    "ObjectState": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "rotation": {
+          "type": "number"
+        },
+        "scale": {
+          "type": "number"
+        },
+        "opacity": {
+          "type": "number"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "fill": {
+          "type": "string"
+        },
+        "stroke": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "strokeWidth": {
+          "type": "number"
+        },
+        "shadow": {
+          "type": "boolean"
+        },
+        "dashed": {
+          "type": "boolean"
+        },
+        "layer": {
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "type": "number"
+        },
+        "persist": {
+          "type": "boolean"
+        },
+        "decorative": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": "string"
+        },
+        "followPlace": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "metadata": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "active",
+            "hidden",
+            "removed"
+          ]
+        },
+        "bbox": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "w": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "w",
+            "h"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "x",
+        "y",
+        "rotation",
+        "scale",
+        "opacity",
+        "visible",
+        "fill",
+        "stroke",
+        "text",
+        "strokeWidth",
+        "shadow",
+        "dashed",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "lifecycle",
+        "bbox"
+      ],
+      "title": "ObjectState"
+    },
+    "ValidateResult": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationIssue"
+          }
+        },
+        "scene": {
+          "description": "Canonical scene, when it lifted",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "ok",
+        "issues"
+      ],
+      "additionalProperties": false,
+      "title": "ValidateResult"
+    },
+    "CompileResult": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationIssue"
+          }
+        },
+        "compiled": {
+          "description": "CompiledScene (opaque to Python)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "endState": {
+          "$ref": "#/$defs/SceneState"
+        },
+        "stateSummary": {
+          "description": "Compact end-state summary for the next LLM call",
+          "type": "string"
+        },
+        "duration": {
+          "type": "number"
+        },
+        "beats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "text",
+              "start",
+              "end"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "ok",
+        "issues"
+      ],
+      "additionalProperties": false,
+      "title": "CompileResult"
+    },
+    "StateAtParams": {
+      "type": "object",
+      "properties": {
+        "scene": {
+          "description": "A scene in LLM-facing or canonical form (it is lifted first)"
+        },
+        "prevState": {
+          "description": "End state of the previous scene (continuity)",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SceneState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "t": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "scene",
+        "t"
+      ],
+      "additionalProperties": false,
+      "title": "StateAtParams"
+    },
+    "StateAtResult": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationIssue"
+          }
+        },
+        "state": {
+          "$ref": "#/$defs/SceneState"
+        }
+      },
+      "required": [
+        "ok",
+        "issues"
+      ],
+      "additionalProperties": false,
+      "title": "StateAtResult"
+    },
+    "SampleParams": {
+      "type": "object",
+      "properties": {
+        "scene": {
+          "description": "A scene in LLM-facing or canonical form (it is lifted first)"
+        },
+        "prevState": {
+          "description": "End state of the previous scene (continuity)",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SceneState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "times": {
+          "minItems": 1,
+          "maxItems": 240,
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "required": [
+        "scene",
+        "times"
+      ],
+      "additionalProperties": false,
+      "title": "SampleParams"
+    },
+    "SampleResult": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationIssue"
+          }
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "description": "FrameState per requested time"
+        }
+      },
+      "required": [
+        "ok",
+        "issues",
+        "frames"
+      ],
+      "additionalProperties": false,
+      "title": "SampleResult"
+    }
+  }
+}

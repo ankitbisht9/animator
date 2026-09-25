@@ -23,7 +23,7 @@ import { center, type Rect, unionAll } from "../math/rect";
 import type { Vec2 } from "../math/vec";
 import { validateContinuity } from "../scene-state/state";
 import type { SceneState } from "../scene-state/types";
-import { getSolver } from "../solvers/registry";
+import { getSolver } from "../solvers";
 import { stripMarkup } from "../text/layout";
 import { motionDefault, resolveColor, type Theme } from "../theme/theme";
 import { getTheme } from "../theme/themes";
@@ -522,6 +522,10 @@ class Compiler {
     this.scene.solvers.forEach((def, i) => {
       const out = this.runSolverAt(def, 0, i);
       if (!out) return;
+      // A solver that runs later is re-evaluated at its start with the scene as it is then;
+      // only report problems from this t=0 pass for solvers that never run.
+      if (!this.scene.timeline.some((a) => a.action === "run_solver" && a.target === def.id))
+        this.issues.push(...out.issues);
       this.cs.solvers.push({
         id: def.id,
         type: def.type,
@@ -1245,6 +1249,12 @@ class Compiler {
     for (const att of out.attach) {
       const o = this.obj(att.object);
       if (!o) continue;
+      // Before the run starts, attached channels show the solver's initial state
+      // (e.g. a spring scale already reads the weight of the body it holds).
+      const target = this.channelOf(o, att.channel);
+      const first = out.channels[att.source]?.[0];
+      if (first !== undefined && !target.segs.some((sg) => sg.t0 < start))
+        target.base = first * (att.gain ?? 1) + (att.offset ?? 0);
       this.addSeg(
         this.channelOf(o, att.channel),
         {
@@ -1393,7 +1403,40 @@ class Compiler {
     }
   }
 
+  /**
+   * Narration must not contradict the physics: if every buoyancy solver in the
+   * scene says "sinks", a narration that only talks about floating is an error
+   * (and vice versa). Mixed or negated statements are left to the LLM critic.
+   */
+  private checkNarrationAgainstSolvers() {
+    const states = this.cs.solvers.filter((x) => x.type === "buoyancy").map((x) => String(x.outcome.state ?? ""));
+    if (!states.length) return;
+    const allSink = states.every((x) => x === "sinks");
+    const allFloat = states.every((x) => x === "floats");
+    const negated = (word: string) =>
+      new RegExp(String.raw`\b(not|never|won't|doesn't|does not|cannot|can't|didn't)\s+(\w+\s+)?${word}`);
+    this.scene.narration.beats.forEach((b, i) => {
+      const text = b.text.toLowerCase().replace(/\*\*/g, "");
+      const saysFloat = /\bfloat(s|ing|ed)?\b/.test(text) && !negated("float").test(text);
+      const saysSink = /\b(sink(s|ing)?|sank|sunk)\b/.test(text) && !negated("sink").test(text);
+      if ((allSink && saysFloat && !saysSink) || (allFloat && saysSink && !saysFloat)) {
+        this.issues.push(
+          issue(
+            "NARRATION_CONTRADICTS_SOLVER",
+            `/narration/beats/${i}/text`,
+            `The narration says the body ${saysFloat ? "floats" : "sinks"}, but with these densities it ${allSink ? "sinks" : "floats"}.`,
+            {
+              suggestion:
+                "Fix the narration, or change bodyDensity/fluidDensity (or the material) so the physics matches.",
+            },
+          ),
+        );
+      }
+    });
+  }
+
   private finishMeta() {
+    this.checkNarrationAgainstSolvers();
     this.cs.cues = this.timing.cues;
     this.cs.beats = this.timing.beats;
     this.cs.interactions = this.scene.interactions.map((q, i) => ({

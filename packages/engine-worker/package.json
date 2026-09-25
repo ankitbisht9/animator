@@ -12,7 +12,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@animator/engine": "workspace:*"
+    "@animator/engine": "workspace:*",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "26.6.2",

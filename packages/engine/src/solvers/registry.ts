@@ -3,6 +3,7 @@
  * moment it starts -> sampled channels (in solver-local physical time), constant
  * outputs, and attachments that drive object channels from those samples.
  */
+import type { SceneT } from "../dsl/scene";
 import type { SolverDefT } from "../dsl/solvers";
 import type { EvalContext } from "../evaluate/evaluate";
 import type { Theme } from "../theme/theme";
@@ -43,6 +44,8 @@ export interface SolverImpl {
   type: SolverDefT["type"];
   /** Output names available to bindings as `<solver id>.<name>`. */
   outputs: readonly { name: string; unit: string; description: string }[];
+  /** Extra output names that depend on the scene (e.g. one per pipe section). */
+  dynamicOutputs?: (def: SolverDefT, scene: SceneT) => string[];
   /** Default run duration in scene seconds (when the action gives none). */
   naturalDuration(def: SolverDefT): number;
   /** Object ids the solver reads/writes (for reference validation). */

@@ -14,8 +14,8 @@ import type { Lifecycle, ObjectState, RegistryEntry, SceneState } from "./types"
 
 const r = (v: number) => roundTo(v, 4);
 
-export function sceneEndState(cs: CompiledScene, prev: SceneState | null, index = 0): SceneState {
-  const T = cs.duration;
+export function sceneEndState(cs: CompiledScene, prev: SceneState | null, index = 0, at?: number): SceneState {
+  const T = Math.max(0, Math.min(cs.duration, at ?? cs.duration));
   const ctx = evaluateObjects(cs, T);
   const objects: Record<string, ObjectState> = {};
   const registry: Record<string, RegistryEntry> = { ...(prev?.registry ?? {}) };
@@ -97,7 +97,8 @@ export function sceneEndState(cs: CompiledScene, prev: SceneState | null, index 
   const cam = cameraAt(cs, T, ctx.env);
   return {
     sceneId: cs.id,
-    t: index,
+    sceneIndex: index,
+    time: roundTo(T, 6),
     themeId: cs.themeId,
     camera: { cx: r(cam.cx), cy: r(cam.cy), zoom: r(cam.zoom) },
     objects,

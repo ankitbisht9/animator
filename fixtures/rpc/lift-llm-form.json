@@ -1,0 +1,132 @@
+{
+  "description": "LLM-facing form (strict schema: nulls for defaults) lifts to canonical form with defaults and action ids.",
+  "method": "scene.lift",
+  "params": {
+    "scene": {
+      "dsl_version": "1.0",
+      "id": "lift_demo",
+      "title": "Lift demo",
+      "educational_purpose": null,
+      "duration": 4,
+      "theme": null,
+      "layout": null,
+      "background": null,
+      "camera": null,
+      "transition_in": null,
+      "narration": {
+        "beats": [
+          {
+            "id": "b1",
+            "text": "A ball appears.",
+            "at": null
+          }
+        ]
+      },
+      "cues": null,
+      "values": null,
+      "objects": [
+        {
+          "id": "ball",
+          "type": "ball",
+          "params": {
+            "radius": 40,
+            "material": null,
+            "face": null
+          },
+          "place": {
+            "slot": "stage.center",
+            "anchor": null,
+            "offset": null
+          },
+          "rotation": null,
+          "scale": null,
+          "opacity": null,
+          "style": null,
+          "layer": null,
+          "z": null,
+          "persist": null,
+          "decorative": null,
+          "parent": null,
+          "metadata": null
+        }
+      ],
+      "solvers": null,
+      "timeline": [
+        {
+          "id": null,
+          "action": "create",
+          "target": "ball",
+          "start": null,
+          "duration": null,
+          "easing": null,
+          "style": "pop"
+        }
+      ],
+      "interactions": null,
+      "captions": null,
+      "seed": null
+    }
+  },
+  "result": {
+    "ok": true,
+    "scene": {
+      "dsl_version": "1.0",
+      "id": "lift_demo",
+      "title": "Lift demo",
+      "duration": 4,
+      "theme": "educational_clean",
+      "layout": "stage_with_caption",
+      "background": {
+        "style": "gradient"
+      },
+      "transition_in": {
+        "type": "continue"
+      },
+      "narration": {
+        "beats": [
+          {
+            "id": "b1",
+            "text": "A ball appears."
+          }
+        ]
+      },
+      "cues": [],
+      "values": [],
+      "objects": [
+        {
+          "id": "ball",
+          "type": "ball",
+          "params": {
+            "radius": 40,
+            "material": "plastic",
+            "face": "none"
+          },
+          "place": {
+            "slot": "stage.center"
+          },
+          "rotation": 0,
+          "scale": 1,
+          "opacity": 1,
+          "layer": "main",
+          "z": 0,
+          "persist": true
+        }
+      ],
+      "solvers": [],
+      "timeline": [
+        {
+          "id": "a1",
+          "start": {
+            "at": 0
+          },
+          "action": "create",
+          "target": "ball",
+          "style": "pop"
+        }
+      ],
+      "interactions": [],
+      "captions": true
+    },
+    "issues": []
+  }
+}

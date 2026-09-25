@@ -276,3 +276,40 @@ warnings go to the critics.
 resolve during evaluation to the referenced object's layout bounds, matrix and params, so the particles
 use the pipe's exact geometry. Particle positions are a pure function of `t`: a travel-time table built from
 continuity (speed ∝ 1/width²) is inverted per particle with a seeded phase and lane.
+
+---
+
+## ADR-019 Buoyancy: exact statics, stylized kinematics
+
+**Decision.** At every sample the buoyancy solver computes the exact static state for the body's current
+height: the water level from volume conservation (`A·L − V_sub(L − b) = V_water`, solved by bisection),
+submerged volume (box or spherical cap), buoyant force `ρ_f·V_sub·g`, apparent weight, and overflow into a
+catch container. The path the body takes is stylized for teaching: a short fall, then a damped bob that ends
+exactly at equilibrium (floating), a gentle sink to the floor, or a smooth lowering on a spring scale.
+Ripples fade out before the run ends so end states are calm.
+
+**Why.** A rigid-body engine would drop the block into the water in a fraction of a second and would not give
+clean buoyancy. Here every displayed number is physically exact for the picture on screen, and the motion
+has time to be understood. The container is treated as square in plan (depth = inner width) and a block's
+depth equals its width; `unitsPerMeter` converts pixels to meters in one place.
+
+Checked against closed forms in tests: floating fraction `ρ_b/ρ_f`, `F_b = W` at rest, level rise `V_sub/A`,
+spilled weight equals buoyant force (Archimedes), spring-scale drop equals `F_b`, and the same for the
+projectile range, pendulum and spring periods, and Bernoulli's energy balance.
+
+---
+
+## ADR-020 Worker protocol details
+
+**Decision.** Methods: `version`, `health.ping`, `schema.get`, `catalog.get`, `scene.lift`, `scene.validate`,
+`scene.compile`, `scene.stateAt`, `scene.sample`. Every scene method lifts first (so LLM-facing and canonical
+input are both accepted), carries `prevState` for continuity, and reports scene problems as structured
+issues in a normal result; JSON-RPC errors are reserved for malformed requests (`-32602`) and engine faults.
+`scene.compile` returns the compiled scene (opaque to Python), the engine-computed end state and a compact
+state summary for the next LLM call. Compilation is cached in the worker by a content hash (an optimization
+only; calls stay stateless and idempotent).
+
+Message schemas are Zod in `packages/engine/src/protocol`, exported to `contracts/protocol.schema.json`, and
+turned into Pydantic models (`contracts/python`, datamodel-code-generator with a pinned formatter). Contract
+tests assert that live worker answers equal the committed contracts and replay golden request/response
+fixtures from `fixtures/rpc`.

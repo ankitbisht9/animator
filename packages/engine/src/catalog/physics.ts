@@ -80,6 +80,12 @@ export const container = defineComponentSpec({
       .default(0)
       .describe("overflow_can only: strength of the stream pouring from the spout (driven by the buoyancy solver)"),
     bubbles: z.boolean().default(true).describe("Gentle ambient bubbles"),
+    mark: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe("Dashed line at this fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right"),
     unitsPerMeter: z.number().min(10).max(5000).default(400),
   }),
   geometry: (p) => {
@@ -96,6 +102,12 @@ export const container = defineComponentSpec({
       inner_right: { x: i.x1, y: l.surfaceY },
     };
     if (l.spout) anchors.spout = { x: l.spout.x1, y: l.spout.tipY };
+    if (typeof p.mark === "number") {
+      const my = i.floor - p.mark * (i.floor - i.top);
+      anchors.mark = { x: 0, y: my };
+      anchors.mark_left = { x: i.x0, y: my };
+      anchors.mark_right = { x: i.x1, y: my };
+    }
     return { bbox: l.bbox, anchors };
   },
   anchors: [
@@ -109,6 +121,7 @@ export const container = defineComponentSpec({
     "inner_right",
     "spout",
   ],
+  dynamicAnchors: (p) => (typeof p.mark === "number" ? ["mark", "mark_left", "mark_right"] : []),
   entrance: "pop",
   colorParams: ["fluid", "glass"],
   semanticRoles: ["container", "fluid"],

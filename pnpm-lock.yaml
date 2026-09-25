@@ -125,6 +125,9 @@ importers:
       '@animator/engine':
         specifier: workspace:*
         version: link:../engine
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/node':
         specifier: 26.6.2

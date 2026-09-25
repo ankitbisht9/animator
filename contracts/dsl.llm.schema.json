@@ -3636,6 +3636,13 @@
                     "null"
                   ]
                 },
+                "mark": {
+                  "description": "Dashed line at this fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
                 "unitsPerMeter": {
                   "type": [
                     "number",
@@ -3658,6 +3665,7 @@
                 "rippleX",
                 "outflow",
                 "bubbles",
+                "mark",
                 "unitsPerMeter"
               ]
             },

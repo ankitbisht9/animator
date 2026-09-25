@@ -44,8 +44,10 @@ export interface RegistryEntry {
 
 export interface SceneState {
   sceneId: string;
-  /** Index of the scene in its lesson (0-based), informational. */
-  t: number;
+  /** Index of the scene in its lesson (0-based). */
+  sceneIndex: number;
+  /** Scene-local time this state was taken at (the scene duration for an end state). */
+  time: number;
   themeId: string;
   camera: { cx: number; cy: number; zoom: number };
   objects: Record<string, ObjectState>;

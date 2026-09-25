@@ -60,6 +60,8 @@ def gen_protocol_models() -> None:
             "--use-schema-description",
             "--use-field-description",
             "--disable-timestamp",
+            "--formatters",
+            "ruff-format",
             "--enum-field-as-literal",
             "all",
             "--use-title-as-name",
