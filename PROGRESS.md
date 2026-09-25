@@ -135,7 +135,13 @@ update here.
   <t> [ids]` (object boxes and values at a time), `scripts/render_keyframes.py` (PNG stills via the real
   render page).
 - `make export-demo` now says plainly that MP4 export arrives in Phase 6.
-- Tests: 113 engine (new: every fixture lesson compiles with no issues, connector crossing, readout
+- Found while running the project for review:
+  - `make dev` failed on Windows: uvicorn's reload mode picks an event loop that cannot start the engine
+    worker subprocess. `animator.api.loop:loop_factory` fixes it (test added).
+  - opentype.js's `toPathData` glued "393" and "-0" into "3930", so regular `e`/`é` and semibold `d`
+    rendered as solid blobs (the browser stops drawing a path at the first error). Glyph outlines are
+    now written by our own serializer, and a test parses every glyph strictly.
+- Tests: 117 engine (new: every fixture lesson compiles with no issues, connector crossing, readout
   width, one-shot bursts), 12 worker, 40 components (12 new
-  Archimedes SVG golden frames), 3 web, 21 Python, 6 browser e2e (12 new Archimedes PNG goldens, pixel
+  Archimedes SVG golden frames), 3 web, 22 Python, 6 browser e2e (12 new Archimedes PNG goldens, pixel
   determinism across the whole lesson).

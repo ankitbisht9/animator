@@ -56,6 +56,10 @@ designed to improve reading fluency, which serves the struggling readers this pr
 **Trade-off.** No complex shaping (ligatures, RTL). Characters outside the bundled set are a validation
 issue rather than silently substituted.
 
+**Amended in Phase 5.** Glyph outlines are written by our own integer serializer in `build-fonts.ts`,
+not opentype.js's `toPathData`, which corrupted glyphs whose coordinates round to -0. A test parses
+every glyph in every table with the engine's strict path parser.
+
 ---
 
 ## ADR-005 Spike: MathJax SVG determinism

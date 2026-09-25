@@ -14,6 +14,9 @@ const procs = [
       "--reload",
       "--reload-dir",
       "apps/api/src",
+      // The engine worker is a subprocess; keep a loop that can spawn one (see animator/api/loop.py).
+      "--loop",
+      "animator.api.loop:loop_factory",
       "--port",
       process.env.API_PORT ?? "8000",
     ],

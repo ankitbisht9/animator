@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { layoutText, parseRuns, stripMarkup, unsupportedChars } from "../src";
+import { layoutText, parsePath, parseRuns, stripMarkup, unsupportedChars } from "../src";
+import lexend400 from "../src/text/fonts/lexend-400.json";
+import lexend600 from "../src/text/fonts/lexend-600.json";
+import lexend700 from "../src/text/fonts/lexend-700.json";
+import symbols from "../src/text/fonts/symbols.json";
 
 describe("text layout", () => {
   it("is deterministic and proportional to size", () => {
@@ -57,4 +61,29 @@ describe("text layout", () => {
     expect(l.wordCount).toBe(3);
     expect(l.glyphCount).toBe(11);
   });
+});
+
+describe("font tables", () => {
+  // Every glyph must be valid path data: the browser silently stops drawing a path at
+  // the first error (opentype.js once glued "393" and "-0" into "3930", clipping "e" and "d").
+  const tables = { lexend400, lexend600, lexend700, symbols } as Record<
+    string,
+    { glyphs: Record<string, { d: string }> }
+  >;
+  for (const [name, table] of Object.entries(tables)) {
+    it(`${name}: every glyph outline parses strictly`, () => {
+      const bad = Object.entries(table.glyphs)
+        .filter(([, g]) => g.d !== "")
+        .filter(([, g]) => {
+          try {
+            parsePath(g.d);
+            return false;
+          } catch {
+            return true;
+          }
+        })
+        .map(([ch]) => ch);
+      expect(bad).toEqual([]);
+    });
+  }
 });

@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import opentype from "opentype.js";
+import opentype, { type PathCommand } from "opentype.js";
 import { parsePath, serializePath, transformPath } from "../src/geom/path";
 import { scaling } from "../src/math/matrix";
 import { typesetTex } from "../src/mathjax/typeset";
@@ -29,6 +29,33 @@ interface GlyphOut {
   d: string;
 }
 
+/**
+ * Glyph outline as compact SVG path data with integer coordinates. Not opentype.js's
+ * `toPathData`: when a coordinate rounds to -0 it drops the separator but prints "0",
+ * gluing two numbers together ("393" + "0" -> "3930") and corrupting the glyph.
+ */
+function glyphPathData(commands: PathCommand[]): string {
+  const nums = (...v: number[]) =>
+    v
+      .map((x) => String(Math.round(x) || 0)) // `|| 0` turns -0 into 0
+      .reduce((s, x, i) => s + (i > 0 && !x.startsWith("-") ? " " : "") + x, "");
+  let d = "";
+  let at = "";
+  for (const c of commands) {
+    if (c.type === "Z") {
+      d += "Z";
+      continue;
+    }
+    const end = nums(c.x, c.y);
+    if (c.type === "L" && end === at) continue; // zero-length line
+    if (c.type === "Q") d += `Q${nums(c.x1, c.y1, c.x, c.y)}`;
+    else if (c.type === "C") d += `C${nums(c.x1, c.y1, c.x2, c.y2, c.x, c.y)}`;
+    else d += c.type + end;
+    at = end;
+  }
+  return d;
+}
+
 for (const weight of WEIGHTS) {
   const buf = readFileSync(resolve(fontDir, `lexend-latin-${weight}-normal.woff`));
   const font = opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
@@ -42,7 +69,7 @@ for (const weight of WEIGHTS) {
       continue;
     }
     // getPath flips y so outlines are y-down with the baseline at y = 0.
-    const d = g.getPath(0, 0, upm).toPathData(0);
+    const d = glyphPathData(g.getPath(0, 0, upm).commands);
     glyphs[ch] = { a: Math.round(g.advanceWidth ?? 0), d };
   }
   const kern: Record<string, number> = {};
