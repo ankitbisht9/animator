@@ -1,0 +1,24 @@
+[project]
+name = "animator"
+version = "0.1.0"
+description = "AI-directed 2D educational animation: API, LLM pipeline, export orchestration"
+requires-python = ">=3.13"
+dependencies = [
+    "animator-contracts",
+    "fastapi==0.141.1",
+    "playwright==1.63.0",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
+    "structlog==26.1.0",
+    "uvicorn[standard]==0.53.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/animator"]
+
+[tool.uv.sources]
+animator-contracts = { workspace = true }

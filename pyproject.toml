@@ -1,0 +1,50 @@
+# uv workspace root (virtual). Members are the API app and the generated contracts package.
+[tool.uv.workspace]
+members = ["apps/api", "contracts/python"]
+
+[dependency-groups]
+dev = [
+    "datamodel-code-generator==0.83.0",
+    "httpx2==2.13.1",
+    "mypy==2.3.1",
+    "numpy==2.5.3",
+    "pillow==12.3.0",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.16.9",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+extend-exclude = ["contracts/python/src/animator_contracts/protocol.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ASYNC", "S", "RUF", "SIM", "PTH"]
+# ASYNC109: engine calls take an explicit timeout because a timed-out worker must be killed.
+ignore = ["S101", "S603", "S607", "ASYNC109"]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/api/tests/**" = ["S", "PTH"]
+"scripts/**" = ["S", "T20"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+files = ["apps/api/src", "apps/api/tests", "contracts/python/src"]
+plugins = ["pydantic.mypy"]
+exclude = ['contracts/python/src/animator_contracts/protocol[.]py']
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+  "e2e: browser-based tests (need the built web app and Chromium)",
+  "live: tests that call the real OpenAI API (never in CI)",
+  "slow: slow tests",
+]
+addopts = "-m 'not live'"
+
+[tool.ruff.lint.isort]
+known-first-party = ["animator", "animator_contracts"]

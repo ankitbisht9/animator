@@ -1,0 +1,29 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# runtime output
+var/
+test-results/
+playwright-report/
+scripts/spikes/out/
+
+# editors / os
+.DS_Store
+Thumbs.db
+.idea/

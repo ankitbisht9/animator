@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>export spike</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #f6f8fc; overflow: hidden; }
+  svg { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<!--
+  Spike (a) stand-in for the real /render page: ~150 SVG objects (gradients,
+  paths, strokes, a blurred glow) whose attributes are a pure function of t.
+  window.__renderFrame(frame) paints frame `frame` and resolves after paint.
+-->
+<svg id="s" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5cc0f2" stop-opacity="0.85" />
+      <stop offset="1" stop-color="#1f78c8" stop-opacity="0.95" />
+    </linearGradient>
+    <radialGradient id="ball" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#ffe2b8" />
+      <stop offset="1" stop-color="#e0761b" />
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" />
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="#f6f8fc" />
+  <g id="world"></g>
+</svg>
+<script>
+  const FPS = 30;
+  const NS = "http://www.w3.org/2000/svg";
+  // `master` is painted off-DOM; the displayed SVG is a fresh clone of it (see __renderFrame).
+  const master = document.getElementById("s");
+  const FRESH = !new URLSearchParams(location.search).has("incremental");
+  if (FRESH) master.remove();
+  const world = master.querySelector("#world");
+  const make = (tag, attrs) => {
+    const el = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    world.appendChild(el);
+    return el;
+  };
+  // Stateless hash-based PRNG: value depends only on (i, k).
+  const rnd = (i, k) => {
+    let h = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(k + 1, 0xc2b2ae35);
+    h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15;
+    return (h >>> 0) / 4294967296;
+  };
+  const tank = make("rect", { x: 500, y: 300, width: 600, height: 480, rx: 18, fill: "none", stroke: "#8fb3d9", "stroke-width": 8 });
+  const water = make("path", { fill: "url(#water)" });
+  const bubbles = Array.from({ length: 120 }, (_, i) => make("circle", { r: 3 + rnd(i, 1) * 7, fill: "#ffffff", "fill-opacity": 0.55 }));
+  const glow = make("circle", { r: 70, fill: "#ffd166", filter: "url(#glow)", opacity: 0.8 });
+  const ball = make("circle", { r: 60, fill: "url(#ball)", stroke: "#b85a12", "stroke-width": 4 });
+  const arrow = make("path", { stroke: "#e0561b", "stroke-width": 10, "stroke-linecap": "round", fill: "none" });
+  const label = make("text", { x: 120, y: 120, "font-family": "sans-serif", "font-size": 48, fill: "#1e2a45" });
+
+  function paint(t) {
+    const level = 560 - 40 * Math.min(1, t / 4);
+    let d = `M 504 ${level}`;
+    for (let x = 504; x <= 1096; x += 8) d += ` L ${x} ${(level + 6 * Math.sin(x / 40 + t * 3)).toFixed(2)}`;
+    water.setAttribute("d", `${d} L 1096 776 L 504 776 Z`);
+    bubbles.forEach((b, i) => {
+      const period = 3 + rnd(i, 2) * 3;
+      const u = ((t + rnd(i, 3) * period) % period) / period;
+      b.setAttribute("cx", (520 + rnd(i, 4) * 560 + 10 * Math.sin(t * 2 + i)).toFixed(2));
+      b.setAttribute("cy", (770 - u * (770 - level)).toFixed(2));
+    });
+    const by = 200 + 360 * Math.min(1, t / 3) ** 2;
+    ball.setAttribute("cx", 800); ball.setAttribute("cy", by.toFixed(2));
+    glow.setAttribute("cx", 800); glow.setAttribute("cy", by.toFixed(2));
+    arrow.setAttribute("d", `M 800 ${by.toFixed(2)} L 800 ${(by + 140).toFixed(2)}`);
+    label.textContent = `t = ${t.toFixed(2)} s`;
+  }
+
+  // Paint output must not depend on which frame was painted before (P1). Chromium
+  // repaints only damaged regions, and anti-aliasing at damage edges can differ by
+  // a few levels from a fresh paint. So each frame mounts a fresh clone of the
+  // painted master SVG: every captured frame is a full, history-free paint.
+  let shown = null;
+  window.__renderFrame = (frame) => new Promise((resolve) => {
+    paint(frame / FPS); // integer frame arithmetic: t = f / fps
+    if (FRESH) {
+      const next = master.cloneNode(true);
+      if (shown) shown.replaceWith(next); else document.body.prepend(next);
+      shown = next;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+  window.__ready = true;
+</script>
+</body>
+</html>

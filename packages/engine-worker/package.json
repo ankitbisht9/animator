@@ -1,0 +1,22 @@
+{
+  "name": "@animator/engine-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "engine": "./dist/cli.cjs"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@animator/engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.2",
+    "esbuild": "0.28.2",
+    "vitest": "5.0.1"
+  }
+}

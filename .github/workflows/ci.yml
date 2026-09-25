@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+# The whole suite runs offline: no LLM API keys, recorded fixtures only.
+env:
+  OPENAI_API_KEY: ""
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Setup
+        run: make setup
+      - name: Playwright system deps
+        run: uv run playwright install-deps chromium
+      - name: Lint
+        run: make lint
+      - name: Codegen drift
+        run: make check-codegen
+      - name: Tests
+        run: make test
