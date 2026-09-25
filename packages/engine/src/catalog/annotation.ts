@@ -35,6 +35,32 @@ export const ICON_NAMES = [
 ] as const;
 export const IconName = z.enum(ICON_NAMES).meta({ id: "IconName" });
 
+// ------------------------------------------------------------------ stroke sampling
+
+/** Points about every `step` px along a polyline (connector checks in layout validation). */
+function densify(points: Vec2[], step = 8): Vec2[] {
+  const out: Vec2[] = [];
+  for (let i = 0; i + 1 < points.length; i++) {
+    const a = points[i] as Vec2;
+    const b = points[i + 1] as Vec2;
+    const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step));
+    for (let k = 0; k < n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
+  }
+  const last = points[points.length - 1];
+  if (last) out.push(last);
+  return out;
+}
+
+function quadraticPoints(a: Vec2, c: Vec2, b: Vec2, n = 32): Vec2[] {
+  const out: Vec2[] = [];
+  for (let k = 0; k <= n; k++) {
+    const s = k / n;
+    const r = 1 - s;
+    out.push({ x: r * r * a.x + 2 * r * s * c.x + s * s * b.x, y: r * r * a.y + 2 * r * s * c.y + s * s * b.y });
+  }
+  return densify(out);
+}
+
 // ------------------------------------------------------------------ label pills
 
 export interface PillLayout {
@@ -118,6 +144,10 @@ export const arrow = defineComponentSpec({
   entrance: "draw",
   draw: true,
   worldSpace: true,
+  strokeLine: (p) => {
+    const l = arrowLayout(p);
+    return l.control ? quadraticPoints(l.start, l.control, l.end) : densify([l.start, l.end]);
+  },
   pointParams: ["from", "to"],
   defaultStyle: { stroke: "text", strokeWidth: 5 },
   semanticRoles: ["connector", "pointer", "flow"],
@@ -217,6 +247,10 @@ export const vectorArrow = defineComponentSpec({
   entrance: "draw",
   draw: true,
   worldSpace: true,
+  strokeLine: (p, theme) => {
+    const l = vectorLayout(p, theme);
+    return densify([l.tail, l.tip]);
+  },
   pointParams: ["from"],
   colorParams: ["role"],
   textParams: ["label"],
@@ -299,6 +333,10 @@ export const dimension = defineComponentSpec({
   entrance: "draw",
   draw: true,
   worldSpace: true,
+  strokeLine: (p, theme) => {
+    const l = dimensionLayout(p, theme);
+    return densify([l.a, l.b]);
+  },
   pointParams: ["from", "to"],
   colorParams: ["role"],
   textParams: ["label"],
@@ -328,6 +366,12 @@ export const bracket = defineComponentSpec({
   entrance: "draw",
   draw: true,
   worldSpace: true,
+  strokeLine: (p, theme) => {
+    const l = bracketLayout(p, theme);
+    const half = mul(l.n, l.depth / 2);
+    const m = { x: (l.a.x + l.b.x) / 2, y: (l.a.y + l.b.y) / 2 };
+    return densify([l.a, add(l.a, half), add(m, half), l.tip, add(m, half), add(l.b, half), l.b]);
+  },
   pointParams: ["from", "to"],
   colorParams: ["role"],
   textParams: ["label"],

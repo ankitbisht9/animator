@@ -28,6 +28,13 @@ describe("component geometry", () => {
     expect(neg.tip.y).toBe(-50);
   });
 
+  it("readouts honour minWidth so stacked readouts line up", () => {
+    const base = { label: "Weight lost", value: 9.8, format: "0.0", unit: "N" };
+    const natural = readoutLayout(base, theme).width;
+    expect(readoutLayout({ ...base, minWidth: natural + 100 }, theme).width).toBe(natural + 100);
+    expect(readoutLayout({ ...base, minWidth: 10 }, theme).width).toBe(natural);
+  });
+
   it("container liquid surface follows the level", () => {
     const half = containerLayout({ width: 400, height: 300, wall: 10, level: 0.5 });
     const full = containerLayout({ width: 400, height: 300, wall: 10, level: 1 });
@@ -197,6 +204,14 @@ describe("layout validation", () => {
       place: { x: 150 + i * 90, y: 400 },
     }));
     expect(codes({ objects })).toContain("warning:CLUTTER");
+  });
+
+  it("flags a connector running through a label, but not one that ends at its edge", () => {
+    const tag = { id: "tag", type: "label", params: { text: "Weight of spilled water" }, place: { x: 800, y: 400 } };
+    const through = { id: "ar", type: "arrow", params: { from: { x: 600, y: 300 }, to: { x: 1000, y: 500 } } };
+    const toEdge = { id: "ar", type: "arrow", params: { from: { x: 400, y: 400 }, to: "tag.left" } };
+    expect(codes({ objects: [tag, through] })).toContain("warning:CONNECTOR_CROSSES_LABEL");
+    expect(codes({ objects: [tag, toEdge] })).not.toContain("warning:CONNECTOR_CROSSES_LABEL");
   });
 
   it("does not check objects while they are still entering", () => {

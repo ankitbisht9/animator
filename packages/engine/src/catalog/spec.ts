@@ -71,6 +71,8 @@ export interface ComponentSpec {
   labelLike?: boolean;
   /** Excluded from the clutter limit and overlap checks. */
   decorative?: boolean;
+  /** Plays once during its entrance, then is gone: never carried into the next scene. */
+  oneShot?: boolean;
   /** Geometry is expressed in world coordinates (endpoints come from params). */
   worldSpace?: boolean;
   /** Params that hold a Point (raw or anchor reference), resolved every frame. */
@@ -96,6 +98,8 @@ export interface ComponentSpec {
   minTextSize?: (p: Params, theme: Theme) => number | null;
   /** True when text is drawn straight on the background (so contrast must be checked). */
   bareText?: (p: Params) => boolean;
+  /** Points along a connector's stroke (same frame as `geometry`), for "runs across a label" checks. */
+  strokeLine?: (p: Params, theme: Theme) => Vec2[];
 }
 
 /**

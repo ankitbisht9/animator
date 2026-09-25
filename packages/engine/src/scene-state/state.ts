@@ -24,9 +24,11 @@ export function sceneEndState(cs: CompiledScene, prev: SceneState | null, index 
     const ev = ctx.objects.get(o.id);
     if (!ev) continue;
     const presence = sampleNumber(o.ch.presence, T, ctx.env, 1);
-    const removed = o.removedAt !== undefined && o.removedAt <= T + 1e-9;
-    const lifecycle: Lifecycle = removed ? "removed" : presence < 0.5 ? "hidden" : "active";
     const spec = getSpec(o.type);
+    // A one-shot (e.g. a burst) that has finished playing is gone, not "visible".
+    const played = spec?.oneShot === true && presence >= 0.5 && sampleNumber(o.ch.reveal, T, ctx.env, 1) >= 0.999;
+    const removed = played || (o.removedAt !== undefined && o.removedAt <= T + 1e-9);
+    const lifecycle: Lifecycle = removed ? "removed" : presence < 0.5 ? "hidden" : "active";
 
     // Freeze animated and bound params; keep anchor references so followers keep following.
     const params: Record<string, unknown> = { ...ev.params };

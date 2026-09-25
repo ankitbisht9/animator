@@ -268,6 +268,11 @@ Each component declares its smallest text size and whether its text sits on the 
 (`catalog/legibility.ts`). Errors make a scene invalid (correction loop, then a flagged degraded scene);
 warnings go to the critics.
 
+**Amended in Phase 5.** `CONNECTOR_CROSSES_LABEL` (warning): a connector whose stroke passes through the
+inside of a label-like object (6 px clearance, so ending at `label.left` is fine). Connector specs provide
+`strokeLine` (points along the stroke, from the same layout function the renderer uses). Bounding-box
+overlap cannot catch this case, because a connector's bbox always overlaps what it points at.
+
 ---
 
 ## ADR-018 `flow_particles` reads the pipe it flows through
@@ -358,3 +363,16 @@ validators are what the correction loop will rely on. If hand-authored scenes ne
 either the scene or the rule is wrong, and each such case was resolved as one or the other. Examples:
 per-scene titles instead of one drifting title, and decorative objects exempt from the abrupt-disappearance
 check.
+
+---
+
+## ADR-024 One-shot components leave the world when they finish
+
+**Decision.** A component spec can be `oneShot` (bursts are). Once one has been created and has fully played
+(`reveal` = 1), its end state is `removed`. It is then never carried into the next scene and never appears
+as visible in the SceneState summary.
+
+**Why.** A burst is an event. Before this change, a finished confetti burst stayed "visible" in the
+world and was carried from scene to scene as an empty group. The LLM would have read about invisible
+objects in the state summary, or would have had to remember to remove every burst by hand. The engine
+knows the component plays once, so it handles this itself (P3).

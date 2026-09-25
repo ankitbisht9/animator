@@ -158,12 +158,13 @@
         },
         "format": "0.0",
         "unit": "N",
-        "role": "force_applied"
+        "role": "force_applied",
+        "minWidth": 320
       },
       "place": {
         "slot": "stage.right",
         "offset": {
-          "x": 0,
+          "x": -60,
           "y": -190
         }
       }
@@ -178,7 +179,8 @@
         },
         "format": "0.0",
         "unit": "N",
-        "role": "force_buoyant"
+        "role": "force_buoyant",
+        "minWidth": 320
       },
       "place": {
         "relativeTo": "r_read",
@@ -197,7 +199,8 @@
         },
         "format": "0.0",
         "unit": "N",
-        "role": "fluid"
+        "role": "fluid",
+        "minWidth": 320
       },
       "place": {
         "relativeTo": "r_lost",

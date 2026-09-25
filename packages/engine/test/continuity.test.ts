@@ -31,6 +31,20 @@ describe("scene continuity", () => {
     expect(b?.state?.registry.blk).toMatchObject({ type: "block", createdIn: "s1", lastScene: "s2" });
   });
 
+  it("drops a one-shot burst once it has played instead of carrying it", () => {
+    const [a, b] = chain([
+      {
+        id: "s1",
+        duration: 4,
+        objects: [{ id: "yay", type: "burst", place: { slot: "stage.center" } }],
+        timeline: [{ action: "create", target: "yay", start: { at: 0.5 }, duration: 1.5 }],
+      },
+      { id: "s2" },
+    ]);
+    expect(a?.state?.objects.yay).toMatchObject({ lifecycle: "removed", visible: false });
+    expect(b?.result.compiled?.objects.some((o) => o.id === "yay")).toBe(false);
+  });
+
   it("rejects a carried id reused for a different type (identity)", () => {
     const [, b] = chain([
       { id: "s1", objects: [{ id: "blk", type: "block", place: { slot: "stage.left" } }] },

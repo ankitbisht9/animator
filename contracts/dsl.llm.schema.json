@@ -8324,6 +8324,13 @@
                     "boolean",
                     "null"
                   ]
+                },
+                "minWidth": {
+                  "description": "Give stacked readouts one width so they line up (px)",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
                 }
               },
               "additionalProperties": false,
@@ -8335,7 +8342,8 @@
                 "role",
                 "size",
                 "style",
-                "countUp"
+                "countUp",
+                "minWidth"
               ]
             },
             {

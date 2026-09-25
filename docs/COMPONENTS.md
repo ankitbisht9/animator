@@ -279,6 +279,7 @@ Entrance: `pop` · Supports: label-like
 | `size` | [TextSize](#textsize) |  | `"heading"` |  |
 | `style` | `"card"` \| `"pill"` \| `"plain"` |  | `"card"` |  |
 | `countUp` | boolean |  | `true` |  |
+| `minWidth` | number |  |  | Give stacked readouts one width so they line up (px) |
 
 ```json
 {"type":"readout","params":{"label":"Buoyant force","value":{"bind":"buoy.buoyantForce"},"format":"0.0","unit":"N","role":"force_buoyant"}}

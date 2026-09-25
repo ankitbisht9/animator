@@ -10,14 +10,16 @@ import { contrastRatio } from "../color/color";
 import { LIMITS } from "../dsl/scene";
 import { cameraMatrix, evaluate, type FrameObject } from "../evaluate/evaluate";
 import { CANVAS_RECT, CAPTION_BAR } from "../layout/templates";
-import { transformRect } from "../math/matrix";
+import { apply, multiply, transformRect } from "../math/matrix";
 import { roundTo } from "../math/num";
-import { area, contains, intersection, type Rect } from "../math/rect";
+import { area, contains, expand, intersection, type Rect } from "../math/rect";
 import { getTheme } from "../theme/themes";
 import type { CompiledScene } from "../timeline/types";
 import { issue, type ValidationIssue } from "./issues";
 
 const EXPORT_SCALE = 1080 / 900;
+/** A connector may touch a label's edge (e.g. an arrow ending at `label.left`), not run through it. */
+const CONNECTOR_CLEARANCE = 6;
 
 function sampleTimes(cs: CompiledScene): number[] {
   const set = new Set<number>();
@@ -212,6 +214,31 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
             t,
             "warning",
             "Place the label beside the object instead of on top of it.",
+          );
+        }
+      }
+    }
+    // Connectors (arrows, vectors, dimensions, brackets) running through a label's text area.
+    for (const c of counted) {
+      const line = spec(c)?.strokeLine;
+      if (!line) continue;
+      const m = c.layer === "overlay" ? c.matrix : multiply(cam, c.matrix);
+      const pts = line(c.params, theme).map((p) => apply(m, p));
+      for (const b of labels) {
+        if (b === c || parentOf.get(b.id) === c.id) continue;
+        const inner = expand(screen.get(b.id) as Rect, -CONNECTOR_CLEARANCE);
+        if (inner.w <= 0 || inner.h <= 0) continue;
+        const hits = pts.filter(
+          (p) => p.x > inner.x && p.x < inner.x + inner.w && p.y > inner.y && p.y < inner.y + inner.h,
+        );
+        if (hits.length >= 2) {
+          report(
+            "CONNECTOR_CROSSES_LABEL",
+            `${c.id}|${b.id}`,
+            `'${c.id}' runs across '${b.id}' at ${roundTo(t, 2)}s.`,
+            t,
+            "warning",
+            "Route it around the label (curve, gaps or other anchors), or give the labels matching widths.",
           );
         }
       }

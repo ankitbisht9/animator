@@ -262,6 +262,7 @@ export const burst = defineComponentSpec({
   entrance: "write",
   write: true,
   decorative: true,
+  oneShot: true,
   colorParams: ["role"],
   semanticRoles: ["celebration"],
   examples: [{ type: "burst", params: { kind: "stars" }, place: { at: "equation.center" } }],

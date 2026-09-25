@@ -5435,6 +5435,12 @@
             "countUp": {
               "default": true,
               "type": "boolean"
+            },
+            "minWidth": {
+              "description": "Give stacked readouts one width so they line up (px)",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1200
             }
           },
           "additionalProperties": false

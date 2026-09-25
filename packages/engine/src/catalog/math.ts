@@ -242,7 +242,7 @@ export function readoutLayout(p: Params, theme: Theme, fraction = 1): ReadoutLay
   const finalWidth = tabularCells(readoutText(p, 1), valueSize).width;
   const pad = style === "plain" ? 0 : valueSize * 0.42;
   const lineW = Math.max(valueWidth, finalWidth) + (unit ? unit.width + unitSize * 0.3 : 0);
-  const width = Math.max(lineW, label?.width ?? 0) + 2 * pad;
+  const width = Math.max(Math.max(lineW, label?.width ?? 0) + 2 * pad, pNum(p, "minWidth", 0));
   const height = valueSize * 1.15 + (label ? label.height + 4 : 0) + 2 * pad;
   return { width, height, pad, label, valueSize, unitSize, valueCells: cells, valueWidth, unit, style };
 }
@@ -261,6 +261,7 @@ export const readout = defineComponentSpec({
     size: TextSize.default("heading"),
     style: z.enum(["card", "pill", "plain"]).default("card"),
     countUp: z.boolean().default(true),
+    minWidth: z.number().min(0).max(1200).optional().describe("Give stacked readouts one width so they line up (px)"),
   }),
   geometry: (p, ctx) => {
     const l = readoutLayout(p, ctx.theme);

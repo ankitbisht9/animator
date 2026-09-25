@@ -126,10 +126,16 @@ update here.
     the solver's first sample, so a spring scale reads the weight before the run.
   - `splash` burst, rounded pulse ring, vector labels at 72% of the shaft, `ship` icon.
   - Decorative objects are exempt from the abrupt-disappearance continuity warning.
+  - New layout rule `CONNECTOR_CROSSES_LABEL`: arrows, vectors, dimensions and brackets may end at a
+    label's edge but not run through it (connector specs expose `strokeLine`). It caught a slanted
+    bracket in the overflow scene; readouts gained `minWidth` so stacked readouts line up.
+  - One-shot components (bursts) leave the world once they have played, so they are not carried into
+    later scenes or listed as visible in the state summary (ADR-024).
 - Authoring tools (ADR-023): `check-fixtures.ts [lesson] [--warnings]`, `probe-lesson.ts <lesson> <scene>
   <t> [ids]` (object boxes and values at a time), `scripts/render_keyframes.py` (PNG stills via the real
   render page).
 - `make export-demo` now says plainly that MP4 export arrives in Phase 6.
-- Tests: 110 engine (new: every fixture lesson compiles with no issues), 12 worker, 40 components (12 new
+- Tests: 113 engine (new: every fixture lesson compiles with no issues, connector crossing, readout
+  width, one-shot bursts), 12 worker, 40 components (12 new
   Archimedes SVG golden frames), 3 web, 21 Python, 6 browser e2e (12 new Archimedes PNG goldens, pixel
   determinism across the whole lesson).
