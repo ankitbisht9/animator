@@ -4,12 +4,17 @@ import { base } from "./helpers";
 
 type Json = Record<string, unknown>;
 
+/** Visit every schema node (not property-name maps). */
 function walk(node: unknown, visit: (n: Json) => void) {
-  if (Array.isArray(node)) node.forEach((n) => walk(n, visit));
-  else if (node && typeof node === "object") {
-    visit(node as Json);
-    for (const v of Object.values(node)) walk(v, visit);
+  if (!node || typeof node !== "object" || Array.isArray(node)) return;
+  const n = node as Json;
+  visit(n);
+  for (const key of ["properties", "$defs"] as const) {
+    const map = n[key] as Record<string, unknown> | undefined;
+    if (map) for (const v of Object.values(map)) walk(v, visit);
   }
+  if (n.items) walk(n.items, visit);
+  for (const v of (n.anyOf as unknown[] | undefined) ?? []) walk(v, visit);
 }
 
 describe("canonical DSL", () => {

@@ -31,6 +31,7 @@ import { currentSegment, type SampleEnv, sampleChannel } from "../timeline/chann
 import { resolveTiming, type TimingResult, UNTIL_SCENE_END } from "../timeline/timing";
 import type { Channel, ChannelValue, CompiledObject, CompiledScene, CompiledSolver, Segment } from "../timeline/types";
 import { hasErrors, issue, type ValidationIssue } from "../validation/issues";
+import { validateLayout } from "../validation/layout";
 import { normalizeScene } from "../validation/normalize";
 import { validateSemantics, worldObjects } from "../validation/semantic";
 import { CANVAS, DSL_VERSION, ENGINE_VERSION } from "../version";
@@ -73,6 +74,7 @@ export function compileScene(input: SceneT, opts: CompileOptions = {}): CompileR
     issues.push(issue("COMPILE_FAILED", "", `Internal compile error: ${(e as Error).message}`));
     return { ok: false, issues };
   }
+  if (!hasErrors(issues)) issues.push(...validateLayout(compiled));
   return { ok: !hasErrors(issues), compiled, issues };
 }
 

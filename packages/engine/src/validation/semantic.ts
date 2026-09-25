@@ -49,8 +49,12 @@ export function worldObjects(scene: SceneT, prev: SceneState | null | undefined)
   return world;
 }
 
-export function anchorNames(spec: ComponentSpec | undefined): string[] {
-  return [...BOX_ANCHORS, ...(spec?.anchors ?? [])];
+export function anchorNames(spec: ComponentSpec | undefined, params?: Record<string, unknown>): string[] {
+  return [
+    ...BOX_ANCHORS,
+    ...(spec?.anchors ?? []),
+    ...(params && spec?.dynamicAnchors ? spec.dynamicAnchors(params) : []),
+  ];
 }
 
 function paramNames(spec: ComponentSpec | undefined): string[] {
@@ -139,7 +143,10 @@ export function validateSemantics(scene: SceneT, prev?: SceneState | null): Vali
     const [oid = "", anchor = ""] = ref.split(".");
     const e = objRef(oid, where);
     if (!e) return;
-    const names = anchorNames(getSpec(e.type));
+    const names = anchorNames(
+      getSpec(e.type),
+      e.def?.params ?? (prev?.objects[oid]?.params as Record<string, unknown> | undefined),
+    );
     if (!names.includes(anchor)) {
       issues.push(
         issue("UNKNOWN_ANCHOR", where, `A ${e.type} has no anchor '${anchor}'.`, {

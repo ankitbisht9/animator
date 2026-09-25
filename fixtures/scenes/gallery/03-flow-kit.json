@@ -1,0 +1,321 @@
+{
+  "dsl_version": "1.0",
+  "id": "kit_flow",
+  "title": "Flow and engagement kit",
+  "duration": 10,
+  "layout": "stage_with_caption",
+  "transition_in": {
+    "type": "wipe",
+    "duration": 0.6
+  },
+  "narration": {
+    "beats": [
+      {
+        "id": "b1",
+        "text": "Fluid speeds up where the pipe gets **narrow**."
+      },
+      {
+        "id": "b2",
+        "text": "Gauges show the pressure at each section."
+      },
+      {
+        "id": "b3",
+        "text": "And sometimes, we just **celebrate** a good idea!"
+      }
+    ]
+  },
+  "values": [
+    {
+      "id": "p1",
+      "value": 142
+    },
+    {
+      "id": "p2",
+      "value": 88
+    }
+  ],
+  "objects": [
+    {
+      "id": "venturi",
+      "type": "pipe",
+      "params": {
+        "sections": [
+          {
+            "id": "wide",
+            "x": 0,
+            "width": 150
+          },
+          {
+            "id": "throat",
+            "x": 380,
+            "width": 70
+          },
+          {
+            "id": "out",
+            "x": 760,
+            "width": 150
+          }
+        ]
+      },
+      "place": {
+        "slot": "stage.center",
+        "offset": {
+          "x": -120,
+          "y": 110
+        }
+      },
+      "metadata": {
+        "name": "Venturi tube",
+        "description": "The pipe narrows in the middle."
+      }
+    },
+    {
+      "id": "flow",
+      "type": "flow_particles",
+      "params": {
+        "pipe": "venturi",
+        "count": 60,
+        "speed": 110
+      }
+    },
+    {
+      "id": "g1",
+      "type": "pressure_gauge",
+      "params": {
+        "value": {
+          "bind": "p1"
+        },
+        "max": 200,
+        "label": "P1"
+      },
+      "place": {
+        "at": "venturi.section_wide_top",
+        "anchor": "stem"
+      }
+    },
+    {
+      "id": "g2",
+      "type": "pressure_gauge",
+      "params": {
+        "value": {
+          "bind": "p2"
+        },
+        "max": 200,
+        "label": "P2"
+      },
+      "place": {
+        "at": "venturi.section_throat_top",
+        "anchor": "stem"
+      }
+    },
+    {
+      "id": "u",
+      "type": "manometer",
+      "params": {
+        "difference": 70,
+        "height": 220
+      },
+      "place": {
+        "slot": "stage.right",
+        "offset": {
+          "x": 150,
+          "y": 90
+        }
+      }
+    },
+    {
+      "id": "hero",
+      "type": "title_card",
+      "params": {
+        "kicker": "Chapter 2",
+        "title": "Fast flow, **low** pressure",
+        "icon": "drop",
+        "width": 900,
+        "titleSize": 54
+      },
+      "place": {
+        "slot": "stage.top",
+        "offset": {
+          "x": -120,
+          "y": -10
+        }
+      }
+    },
+    {
+      "id": "yay",
+      "type": "burst",
+      "params": {
+        "kind": "confetti",
+        "radius": 220
+      },
+      "place": {
+        "at": "hero.center"
+      }
+    },
+    {
+      "id": "tag",
+      "type": "badge",
+      "params": {
+        "text": "FASTER",
+        "role": "velocity",
+        "icon": "arrow_up"
+      },
+      "place": {
+        "at": "venturi.section_throat_bottom",
+        "anchor": "top",
+        "offset": {
+          "x": 0,
+          "y": 58
+        }
+      }
+    },
+    {
+      "id": "q",
+      "type": "speech_bubble",
+      "params": {
+        "text": "Why is it **faster** here?",
+        "pointTo": "venturi.section_throat",
+        "maxWidth": 300
+      },
+      "place": {
+        "slot": "stage.bottom_left",
+        "offset": {
+          "x": -40,
+          "y": 40
+        }
+      }
+    },
+    {
+      "id": "clock",
+      "type": "pendulum",
+      "params": {
+        "length": 170,
+        "angle": 24,
+        "bobRadius": 22,
+        "material": "gold"
+      },
+      "place": {
+        "slot": "stage.top_right",
+        "offset": {
+          "x": 150,
+          "y": -70
+        }
+      }
+    }
+  ],
+  "timeline": [
+    {
+      "id": "c1",
+      "action": "create",
+      "target": "venturi",
+      "start": {
+        "at": 0.2
+      },
+      "duration": 1.2
+    },
+    {
+      "id": "c2",
+      "action": "create",
+      "target": "flow",
+      "start": {
+        "after": "c1"
+      }
+    },
+    {
+      "id": "c3",
+      "action": "create",
+      "target": "q",
+      "start": {
+        "after": "c2"
+      }
+    },
+    {
+      "id": "c4",
+      "action": "create",
+      "target": "tag",
+      "start": {
+        "with": "c3",
+        "delay": 0.4
+      }
+    },
+    {
+      "id": "d1",
+      "action": "create",
+      "target": "g1",
+      "start": {
+        "at": "beat:b2"
+      }
+    },
+    {
+      "id": "d2",
+      "action": "create",
+      "target": "g2",
+      "start": {
+        "after": "d1",
+        "delay": -0.3
+      }
+    },
+    {
+      "id": "d3",
+      "action": "create",
+      "target": "u",
+      "start": {
+        "with": "d2"
+      }
+    },
+    {
+      "id": "p0",
+      "action": "create",
+      "target": "clock",
+      "start": {
+        "with": "d1"
+      }
+    },
+    {
+      "id": "p1",
+      "action": "animate",
+      "target": "clock",
+      "property": "params.angle",
+      "keyframes": [
+        {
+          "time": 0,
+          "value": 24
+        },
+        {
+          "time": 1,
+          "value": -24
+        },
+        {
+          "time": 2,
+          "value": 24
+        },
+        {
+          "time": 3,
+          "value": -24
+        }
+      ],
+      "start": {
+        "with": "d1"
+      }
+    },
+    {
+      "id": "e1",
+      "action": "create",
+      "target": "hero",
+      "start": {
+        "at": "beat:b3"
+      },
+      "duration": 1.6
+    },
+    {
+      "id": "e2",
+      "action": "create",
+      "target": "yay",
+      "start": {
+        "after": "e1",
+        "delay": -0.4
+      },
+      "duration": 1.4
+    }
+  ]
+}

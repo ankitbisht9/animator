@@ -180,7 +180,7 @@ describe("action compiler and tracks", () => {
     fc.assert(
       // Durations have at most 3 decimals (the normalizer trims longer ones).
       fc.property(
-        fc.integer({ min: -500, max: 500 }),
+        fc.integer({ min: -300, max: 500 }),
         fc.integer({ min: 100, max: 3000 }).map((ms) => ms / 1000),
         (dx, dur) => {
           const cs = compiled({

@@ -1,0 +1,63 @@
+{
+  "dsl_version": "1.0",
+  "id": "kit_physics",
+  "title": "Physics kit",
+  "duration": 10,
+  "layout": "stage_with_caption",
+  "narration": {
+    "beats": [
+      { "id": "b1", "text": "Containers, bodies and forces are the building blocks." },
+      { "id": "b2", "text": "Arrows show **forces**; their length shows how big they are." },
+      { "id": "b3", "text": "A spring scale reads the pull on its hook." }
+    ]
+  },
+  "values": [
+    { "id": "weight", "value": 5.9 },
+    { "id": "lift", "value": 3.9 }
+  ],
+  "objects": [
+    { "id": "title", "type": "text", "params": { "text": "Physics **kit**", "size": "heading", "weight": "bold" }, "place": { "slot": "title_bar" } },
+    {
+      "id": "tank",
+      "type": "container",
+      "params": { "shape": "tank", "width": 380, "height": 320, "level": 0.55, "ticks": true },
+      "place": { "slot": "stage.left", "offset": { "x": 90, "y": 60 } },
+      "metadata": { "name": "Tank of water", "description": "A glass tank, a bit more than half full." }
+    },
+    {
+      "id": "cube",
+      "type": "block",
+      "params": { "width": 110, "height": 90, "material": "wood", "face": "happy" },
+      "place": { "at": "tank.water_surface", "anchor": "center", "offset": { "x": 0, "y": 10 } },
+      "metadata": { "name": "Wooden block", "description": "Wood is less dense than water, so it floats." }
+    },
+    {
+      "id": "f_up",
+      "type": "vector_arrow",
+      "params": { "from": "cube.center", "direction": "up", "magnitude": { "bind": "lift" }, "scale": 26, "role": "force_buoyant", "label": { "bind": "lift", "format": "F = 0.0 N" }, "labelSide": "right" }
+    },
+    {
+      "id": "f_down",
+      "type": "vector_arrow",
+      "params": { "from": "cube.center", "direction": "down", "magnitude": { "bind": "weight" }, "scale": 26, "role": "force_gravity", "label": { "bind": "weight", "format": "W = 0.0 N" }, "labelSide": "left" }
+    },
+    { "id": "depth", "type": "dimension", "params": { "from": "tank.floor", "to": "tank.water_surface", "offset": -230, "label": "h" } },
+    { "id": "scale", "type": "spring_scale", "params": { "reading": { "bind": "weight" }, "max": 10 }, "place": { "slot": "stage.right", "offset": { "x": -60, "y": -120 } } },
+    { "id": "stone", "type": "block", "params": { "width": 90, "height": 80, "material": "stone" }, "place": { "relativeTo": "scale", "side": "below", "gap": 70, "align": "start" } },
+    { "id": "string", "type": "rope", "params": { "from": "scale.hook", "to": "stone.attach_top" } },
+    { "id": "ball", "type": "ball", "params": { "radius": 42, "material": "plastic", "face": "surprised" }, "place": { "slot": "stage.bottom", "offset": { "x": 120, "y": 20 } } }
+  ],
+  "timeline": [
+    { "id": "t0", "action": "write", "target": "title", "start": { "at": 0.1 } },
+    { "id": "c1", "action": "create", "target": "tank", "start": { "at": 0.4 } },
+    { "id": "c2", "action": "create", "target": "cube", "start": { "after": "c1", "delay": -0.2 } },
+    { "id": "c3", "action": "create", "target": "ball", "start": { "with": "c2", "delay": 0.2 } },
+    { "id": "a1", "action": "create", "target": "f_down", "start": { "at": "beat:b2" } },
+    { "id": "a2", "action": "create", "target": "f_up", "start": { "after": "a1" } },
+    { "id": "d1", "action": "create", "target": "depth", "start": { "after": "a2" } },
+    { "id": "s1", "action": "create", "target": "scale", "start": { "at": "beat:b3" } },
+    { "id": "s2", "action": "create", "target": "string", "start": { "after": "s1", "delay": -0.2 } },
+    { "id": "s3", "action": "create", "target": "stone", "start": { "with": "s2" } },
+    { "id": "h1", "action": "highlight", "target": "scale", "style": "glow", "start": { "after": "s3" }, "duration": 1.2 }
+  ]
+}

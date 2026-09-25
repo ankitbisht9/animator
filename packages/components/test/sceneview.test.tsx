@@ -34,7 +34,7 @@ describe("renderer registry", () => {
 });
 
 describe("SceneView golden SVG frames", () => {
-  const scenes = compileLesson("engine-tour");
+  const scenes = [...compileLesson("engine-tour"), ...compileLesson("gallery")];
   const times = [0.5, 2, 3.5, 5, 7.9];
   for (const cs of scenes) {
     for (const t of times.filter((x) => x <= cs.duration)) {

@@ -438,6 +438,10 @@ Variant 2:
 | `cubic_bezier` | number[] | yes |  | CSS cubic-bezier control points [x1, y1, x2, y2] |
 
 
+### Face
+
+Type: `"none"` \| `"happy"` \| `"surprised"` \| `"worried"` \| `"calm"` \| `"wink"`
+
 ### FluidFlowSolver
 
 | Field | Type | Required | Default | Description |
@@ -450,6 +454,14 @@ Variant 2:
 | `inletPressure` | number | yes |  | Pressure at the first section in Pa |
 | `g` | number |  | `9.81` |  |
 | `unitsPerMeter` | number |  | `400` |  |
+
+### IconName
+
+Type: enum (16 values)
+
+### Material
+
+Type: `"wood"` \| `"cork"` \| `"foam"` \| `"ice"` \| `"plastic"` \| `"stone"` \| `"aluminium"` \| `"metal"` \| `"gold"` \| `"custom"`
 
 ### PendulumSolver
 
@@ -576,6 +588,13 @@ When the action starts. Use exactly one of at / after / with.
 | `shadow` | boolean |  |  |  |
 | `dashed` | boolean |  |  |  |
 
+### TextSize
+
+Named size from the theme type scale, or pixels on the 1600x900 canvas
+
+- `"title"` \| `"heading"` \| `"body"` \| `"label"` \| `"caption"` \| `"small"`
+- number
+
 ### TransitionIn
 
 | Field | Type | Required | Default | Description |
@@ -592,6 +611,10 @@ A point in scene pixels (1600x900 canvas, y down).
 |---|---|---|---|---|
 | `x` | number | yes |  |  |
 | `y` | number | yes |  |  |
+
+### Weight
+
+Type: `"regular"` \| `"semibold"` \| `"bold"`
 
 ## Vocabularies
 

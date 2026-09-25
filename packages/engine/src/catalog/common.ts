@@ -8,10 +8,10 @@ import { type Params, pNum, pStr } from "./spec";
 export const TEXT_SIZE_NAMES = ["title", "heading", "body", "label", "caption", "small"] as const;
 export const TextSize = z
   .union([z.enum(TEXT_SIZE_NAMES), z.number().min(8).max(220)])
-  .describe("Named size from the theme type scale, or pixels on the 1600x900 canvas");
+  .meta({ id: "TextSize", description: "Named size from the theme type scale, or pixels on the 1600x900 canvas" });
 
 export const WEIGHT_NAMES = ["regular", "semibold", "bold"] as const;
-export const Weight = z.enum(WEIGHT_NAMES);
+export const Weight = z.enum(WEIGHT_NAMES).meta({ id: "Weight" });
 
 export const TextValue = z.union([z.string().max(400), Binding]);
 

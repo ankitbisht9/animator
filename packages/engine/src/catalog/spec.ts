@@ -90,7 +90,28 @@ export interface ComponentSpec {
   prepareKey?: (p: Params) => string;
   /** Component-specific semantic checks (e.g. path syntax, TeX allowlist). */
   validate?: (p: Params) => { code: string; message: string; param: string; suggestion?: string }[];
+  /** Anchors that depend on params (e.g. equation terms, pipe sections). */
+  dynamicAnchors?: (p: Params) => string[];
+  /** Smallest font size (canvas px) this component draws text at, for legibility checks. */
+  minTextSize?: (p: Params, theme: Theme) => number | null;
+  /** True when text is drawn straight on the background (so contrast must be checked). */
+  bareText?: (p: Params) => boolean;
 }
+
+/**
+ * What an object param resolves to during evaluation: the referenced object's
+ * layout bounds, layout matrix and resolved params (stored at `__<param>`).
+ */
+export interface ObjectRef {
+  box: Rect;
+  matrix: readonly [number, number, number, number, number, number];
+  params: Params;
+}
+
+export const objectRefOf = (p: Params, key: string): ObjectRef | undefined => {
+  const v = p[`__${key}`] as ObjectRef | undefined;
+  return v && typeof v === "object" && "box" in v ? v : undefined;
+};
 
 // Small typed accessors for resolved params.
 export const pNum = (p: Params, k: string, d = 0): number => {

@@ -20,6 +20,7 @@ export * from "./timeline/channel";
 export * from "./timeline/timing";
 export * from "./timeline/types";
 export * from "./validation/issues";
+export * from "./validation/layout";
 export * from "./validation/normalize";
 export * from "./validation/semantic";
 export * from "./version";

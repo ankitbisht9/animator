@@ -232,3 +232,47 @@ and trimming times to 3 decimals, each reported as a `normalization` issue.
    Linux goldens will be generated inside the pinned Docker export environment (Phase 6). Until then the
    Linux comparison is skipped with an explicit reason.
 3. **Pixel determinism**: the same frames rendered in forward and reverse order must hash identically.
+
+---
+
+## ADR-016 One layout function per complex component
+
+**Decision.** Complex components (vector arrows, containers, pipes, readouts, equations, cards, gauges...)
+expose a `layout*` function in the engine. The spec's `geometry` (bounds and anchors, used for placement,
+followers and validation) and the React renderer both call it. The renderer never computes its own geometry.
+
+**Why.** P8 applied to drawing: what the validator checks is exactly what is painted. It also makes anchors
+such as `tank.water_surface`, `eq.term_rho` or `pipe.section_throat_top` exact, so arrows, gauges and labels
+attach to the right pixel as things move.
+
+---
+
+## ADR-017 Layout validation checks what the viewer sees
+
+**Decision.** After compiling, the engine evaluates the scene at beat boundaries, action ends and one-second
+samples and checks settled objects (entrances in progress are skipped) after the camera transform:
+
+| Code | Severity | Rule |
+|---|---|---|
+| `OUT_OF_BOUNDS` | error | more than 10% of an object outside the 1600x900 world frame |
+| `CAMERA_CROPS` | warning | the camera leaves an object out of view (often intentional) |
+| `NEAR_EDGE` | warning | non-decorative content touches the frame edge |
+| `LABEL_OVERLAP` | error | two label-like objects overlap by more than 12% |
+| `LABEL_OCCLUDES` | warning | a label covers a large part of an object it is not attached to |
+| `TEXT_TOO_SMALL` | error below 80% of the minimum, else warning | smallest text in an object below 22 px at 1080p (includes object scale and camera zoom) |
+| `LOW_CONTRAST` | warning | text drawn directly on the background below 3:1 |
+| `UNDER_CAPTION` | warning | content hidden behind the caption bar |
+| `CLUTTER` | warning | more than 12 non-decorative objects visible at once |
+
+Each component declares its smallest text size and whether its text sits on the background in one table
+(`catalog/legibility.ts`). Errors make a scene invalid (correction loop, then a flagged degraded scene);
+warnings go to the critics.
+
+---
+
+## ADR-018 `flow_particles` reads the pipe it flows through
+
+**Decision.** `flow_particles` is its own component that references a pipe (`pipe: <id>`). Object params
+resolve during evaluation to the referenced object's layout bounds, matrix and params, so the particles
+use the pipe's exact geometry. Particle positions are a pure function of `t`: a travel-time table built from
+continuity (speed ∝ 1/width²) is inverted per particle with a seeded phase and lane.

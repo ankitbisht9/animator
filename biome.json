@@ -55,6 +55,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["packages/components/src/renderers/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noArrayIndexKey": "off"
+          }
+        }
+      }
     }
   ],
   "javascript": {

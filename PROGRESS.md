@@ -8,7 +8,7 @@ update here.
 | 0 Foundations | done |
 | 1 DSL and timeline core | done |
 | 2 Evaluation engine + SVG slice | done |
-| 3 Tier 1 components, layout, camera | not started |
+| 3 Tier 1 components, layout, camera | done |
 | 4 Solvers, bindings, SceneState, worker protocol | not started |
 | 5 Hand-authored Archimedes, **Gate A** | not started |
 
@@ -74,3 +74,20 @@ update here.
   `scripts/render_keyframes.py` renders scene keyframes to PNG.
 - Tests: SVG golden frames (10, platform-independent), renderer coverage, markup safety, PNG golden frames
   (Windows) with tolerance, pixel determinism in forward/reverse order, lesson building.
+
+## Phase 3: Tier 1 components, layout and camera
+
+- 34 Tier 1 components on top of the 9 primitives (43 total): annotation (arrow, vector_arrow, dimension,
+  bracket, label, callout, note, marker, caption), math (equation with per-term ids, readout, graph, axes,
+  grid), physics (container: tank/beaker/cylinder/overflow can; block and ball with materials and optional
+  faces; rope, spring, pulley, pendulum, balance, spring_scale, pipe, flow_particles, pressure_gauge,
+  manometer, particles), engagement (title_card, card, icon, badge, speech_bubble, burst).
+- Shared engine layout functions per component (ADR-016); dynamic anchors (equation terms, pipe sections);
+  object references resolved during evaluation (ADR-018).
+- Layout validation (ADR-017): off-screen, camera crops, overlaps, occlusion, text size at 1080p, contrast,
+  caption overlap, clutter. `scripts/check-fixtures.ts` validates whole fixture lessons.
+- MathJax: `\mathrel`/`\mathbin` wrapping keeps spacing around per-term parts.
+- Gallery fixture lesson (3 scenes) exercising every Tier 1 component.
+- Tests: 86 engine (geometry, continuity physics of flow, tabular readouts, TeX allowlist, anchor following,
+  relative placement, camera focus, each layout rule), 28 components (25 SVG golden frames), browser pixel
+  determinism and PNG goldens for both fixture lessons.

@@ -1,5 +1,4 @@
 import { adjustLightness, type FrameObject, type Mat, mixHex, roundTo, withAlpha } from "@animator/engine";
-import type { SVGProps } from "react";
 
 export const fmt = (v: number, d = 2): number => roundTo(v, d);
 
@@ -13,7 +12,13 @@ export const darken = (hex: string, amt: number): string => adjustLightness(hex,
 export { mixHex, withAlpha };
 
 /** Stroke write-on attributes (pathLength-normalized dash) for draw progress < 1. */
-export function drawAttrs(draw: number): SVGProps<SVGPathElement> {
+export interface DrawAttrs {
+  pathLength?: number;
+  strokeDasharray?: string;
+  strokeDashoffset?: number;
+}
+
+export function drawAttrs(draw: number): DrawAttrs {
   if (draw >= 1) return {};
   return { pathLength: 1, strokeDasharray: "1 1", strokeDashoffset: fmt(1 - Math.max(0, draw), 4) };
 }

@@ -42,6 +42,7 @@ interface Adaptor {
   kind(n: LiteNode): string;
   childNodes(n: LiteNode): LiteNode[];
   getAttribute(n: LiteNode, name: string): unknown;
+  textContent(n: LiteNode): string;
 }
 
 interface Engine {
@@ -129,7 +130,12 @@ export function typesetTex(tex: string): TexLayout {
   const walk = (node: LiteNode, m: Mat, term: string | null) => {
     const kind = adaptor.kind(node);
     if (kind === "#text" || kind === "#comment") return;
-    if (kind === "text") throw new TexError("unsupported character in math (no glyph available)");
+    if (kind === "text") {
+      // MathJax adds an empty <text data-id-align> marker next to elements with an id; only
+      // text with content means a character had no glyph in the math font.
+      if (adaptor.textContent(node).trim() === "") return;
+      throw new TexError("unsupported character in math (no glyph available)");
+    }
     const own = parseTransform(adaptor.getAttribute(node, "transform") as string | undefined);
     const mm = multiply(m, own);
     const id = adaptor.getAttribute(node, "id") as string | undefined;

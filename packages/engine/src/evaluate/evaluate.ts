@@ -60,6 +60,8 @@ export interface FrameObject {
   reveal: number;
   /** Fill opacity factor 0..1 (fills fade in after a draw entrance). */
   fillReveal: number;
+  /** Entrance/exit progress 0..1 (e.g. readouts count up while appearing). */
+  presence: number;
   /** Per-term reveal for equations written term by term. */
   terms?: Record<string, number>;
   emph?: Emphasis;
@@ -247,6 +249,13 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
         params[key] = anchorOf(v.slice(0, dot), v.slice(dot + 1)) ?? { x: 0, y: 0 };
       }
     }
+    for (const key of spec?.objectParams ?? []) {
+      const ref = params[key];
+      const e = typeof ref === "string" ? objects.get(ref) : undefined;
+      if (typeof ref === "string" && e) {
+        params[`__${key}`] = { box: bboxOf(ref) ?? e.layoutBBox, matrix: e.rawMatrix, params: e.params };
+      }
+    }
     const morph = (obj.prep as { morph?: MorphPrep } | undefined)?.morph;
     if (morph) {
       const u = sampleNumber(ch.morph, t, env, 0);
@@ -339,6 +348,7 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
       draw: clamp01(sampleNumber(ch.draw, t, env, 1)) * eff.draw,
       reveal: clamp01(sampleNumber(ch.reveal, t, env, 1)) * eff.reveal,
       fillReveal: eff.fill,
+      presence: clamp01(presence),
       shadow: sampleChannel(ch.shadow, t, env) === true,
       dashed: sampleChannel(ch.dashed, t, env) === true,
       bbox,

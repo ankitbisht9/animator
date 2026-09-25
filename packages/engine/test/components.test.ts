@@ -1,0 +1,211 @@
+import { describe, expect, it } from "vitest";
+import {
+  compileScene,
+  containerLayout,
+  EDUCATIONAL_CLEAN,
+  evaluateObjects,
+  flowTable,
+  getSpec,
+  pipeLayout,
+  readoutLayout,
+  typesetEquation,
+  vectorLayout,
+} from "../src";
+import { compiled, errorCodes, lifted } from "./helpers";
+
+const theme = EDUCATIONAL_CLEAN;
+
+describe("component geometry", () => {
+  it("vector arrows are proportional to magnitude (within limits)", () => {
+    const base = { from: { x: 0, y: 0 }, direction: "down", scale: 10, minLength: 20, maxLength: 400 };
+    const a = vectorLayout({ ...base, magnitude: 5 }, theme);
+    const b = vectorLayout({ ...base, magnitude: 10 }, theme);
+    expect(a.length).toBe(50);
+    expect(b.length).toBe(100);
+    expect(b.tip).toEqual({ x: 0, y: 100 });
+    expect(vectorLayout({ ...base, magnitude: 1000 }, theme).length).toBe(400);
+    const neg = vectorLayout({ ...base, magnitude: -5 }, theme);
+    expect(neg.tip.y).toBe(-50);
+  });
+
+  it("container liquid surface follows the level", () => {
+    const half = containerLayout({ width: 400, height: 300, wall: 10, level: 0.5 });
+    const full = containerLayout({ width: 400, height: 300, wall: 10, level: 1 });
+    const innerH = half.inner.floor - half.inner.top;
+    expect(half.surfaceY).toBeCloseTo(half.inner.floor - innerH / 2);
+    expect(full.surfaceY).toBeCloseTo(half.inner.top);
+    expect(containerLayout({ shape: "overflow_can", width: 300, height: 300 }).spout).not.toBeNull();
+  });
+
+  it("equation parts become term anchors", () => {
+    const parts = [
+      { id: "fb", tex: "F_b" },
+      { id: "eq", tex: "=" },
+      { id: "rho", tex: "\\rho" },
+    ];
+    const tex = typesetEquation(parts);
+    expect(tex.parts.map((p) => p.id).filter(Boolean)).toEqual(["fb", "eq", "rho"]);
+    const spec = getSpec("equation");
+    const geo = spec?.geometry({ parts, size: 50 }, { theme, prep: tex });
+    expect(Object.keys(geo?.anchors ?? {})).toEqual(["term_fb", "term_eq", "term_rho"]);
+    const fb = geo?.anchors?.term_fb as { x: number };
+    const rho = geo?.anchors?.term_rho as { x: number };
+    expect(fb.x).toBeLessThan(rho.x);
+  });
+
+  it("rejects TeX commands outside the allowlist", () => {
+    expect(
+      errorCodes({
+        objects: [
+          {
+            id: "e",
+            type: "equation",
+            params: { parts: [{ id: "a", tex: "\\href{x}{y}" }] },
+            place: { slot: "stage.center" },
+          },
+        ],
+      }),
+    ).toContain("TEX_UNSUPPORTED");
+    expect(
+      errorCodes({
+        objects: [
+          {
+            id: "e",
+            type: "equation",
+            params: { parts: [{ id: "a", tex: "\\def\\x{1}" }] },
+            place: { slot: "stage.center" },
+          },
+        ],
+      }),
+    ).toContain("TEX_UNSUPPORTED");
+  });
+
+  it("readout digits are tabular: width does not change with the digits", () => {
+    const a = readoutLayout({ value: 11.1, format: "0.0", unit: "N" }, theme);
+    const b = readoutLayout({ value: 88.8, format: "0.0", unit: "N" }, theme);
+    expect(a.valueWidth).toBeCloseTo(b.valueWidth, 6);
+  });
+
+  it("flow particles obey continuity: speed x width^2 is constant", () => {
+    const l = pipeLayout({
+      sections: [
+        { id: "a", x: 0, width: 120 },
+        { id: "b", x: 300, width: 60 },
+        { id: "c", x: 600, width: 120 },
+      ],
+    });
+    const table = flowTable(l, 100);
+    for (const x of [-300, -120, 0, 150]) expect(table.speedAt(x) * l.widthAt(x) ** 2).toBeCloseTo(100 * 120 ** 2, 3);
+    expect(table.speedAt(0)).toBeCloseTo(400, 3);
+  });
+});
+
+describe("layout and camera", () => {
+  it("anchors follow their objects: an arrow tail stays on a moving block", () => {
+    const cs = compiled({
+      objects: [
+        { id: "blk", type: "block", place: { x: 400, y: 400 } },
+        { id: "f", type: "vector_arrow", params: { from: "blk.center", direction: "down", magnitude: 5, scale: 10 } },
+      ],
+      timeline: [{ id: "m", action: "move", target: "blk", by: { x: 300, y: 0 }, start: { at: 1 }, duration: 2 }],
+    });
+    for (const t of [0, 2, 4]) {
+      const ctx = evaluateObjects(cs, t);
+      const blk = ctx.anchorOf("blk", "center");
+      const tail = ctx.anchorOf("f", "tail");
+      expect(tail).toEqual(blk);
+    }
+  });
+
+  it("relative placement puts objects on the requested side", () => {
+    const cs = compiled({
+      objects: [
+        { id: "tank", type: "container", place: { slot: "stage.center" } },
+        { id: "blk", type: "block", place: { relativeTo: "tank", side: "above", gap: 50 } },
+      ],
+    });
+    const ctx = evaluateObjects(cs, 0);
+    const tank = ctx.bboxOf("tank");
+    const blk = ctx.bboxOf("blk");
+    expect(blk && tank && blk.y + blk.h).toBeCloseTo((tank?.y ?? 0) - 50, 4);
+  });
+
+  it("camera focus frames the chosen objects", () => {
+    const cs = compiled({
+      objects: [{ id: "blk", type: "block", place: { slot: "stage.left" } }],
+      timeline: [{ id: "c", action: "camera_move", focus: ["blk"], padding: 100, start: { at: 1 }, duration: 1 }],
+    });
+    const ctx = evaluateObjects(cs, 3);
+    const b = ctx.bboxOf("blk");
+    const cam = cs.camera.ch;
+    const cx = cam.cx.segs[0]?.k === "tween" ? cam.cx.segs[0].to : 0;
+    expect(cx).toBeCloseTo((b?.x ?? 0) + (b?.w ?? 0) / 2, 3);
+    expect(cam.zoom.segs[0]?.k === "tween" && cam.zoom.segs[0].to).toBeGreaterThan(1);
+  });
+});
+
+describe("layout validation", () => {
+  const codes = (extra: Record<string, unknown>) =>
+    compileScene(lifted(extra)).issues.map((i) => `${i.severity}:${i.code}`);
+
+  it("flags content outside the frame", () => {
+    expect(codes({ objects: [{ id: "b", type: "block", place: { x: 1580, y: 450 } }] })).toContain(
+      "error:OUT_OF_BOUNDS",
+    );
+  });
+
+  it("flags overlapping labels", () => {
+    expect(
+      codes({
+        objects: [
+          { id: "a", type: "text", params: { text: "Buoyant force" }, place: { x: 800, y: 400 } },
+          { id: "b", type: "text", params: { text: "Weight of water" }, place: { x: 820, y: 410 } },
+        ],
+      }),
+    ).toContain("error:LABEL_OVERLAP");
+  });
+
+  it("flags text that is too small at 1080p", () => {
+    expect(
+      codes({
+        objects: [{ id: "a", type: "text", params: { text: "tiny", size: 10 }, place: { slot: "stage.center" } }],
+      }),
+    ).toContain("error:TEXT_TOO_SMALL");
+  });
+
+  it("flags low-contrast bare text", () => {
+    expect(
+      codes({
+        objects: [
+          {
+            id: "a",
+            type: "text",
+            params: { text: "faint" },
+            place: { slot: "stage.center" },
+            style: { text: "grid" },
+          },
+        ],
+      }),
+    ).toContain("warning:LOW_CONTRAST");
+  });
+
+  it("flags clutter", () => {
+    const objects = Array.from({ length: 14 }, (_, i) => ({
+      id: `c${i}`,
+      type: "circle",
+      params: { radius: 20 },
+      place: { x: 150 + i * 90, y: 400 },
+    }));
+    expect(codes({ objects })).toContain("warning:CLUTTER");
+  });
+
+  it("does not check objects while they are still entering", () => {
+    expect(
+      codes({
+        duration: 3,
+        objects: [{ id: "a", type: "text", params: { text: "hello" }, place: { slot: "stage.center" } }],
+        timeline: [{ action: "create", target: "a", style: "zoom", start: { at: 0 }, duration: 1 }],
+      }).filter((c) => c.startsWith("error")),
+    ).toEqual([]);
+  });
+});

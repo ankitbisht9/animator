@@ -4,6 +4,691 @@
 
 Every object's `type` is one of these. Params are validated per type; unknown params are errors.
 
+## annotation
+
+### `arrow`
+
+A straight or curved arrow between two points (anchor references follow their objects). Use `curve` to bend it and gaps to keep clear of the objects it joins.
+
+Entrance: `draw` · Supports: draw, positioned by endpoints
+
+Anchors (plus box anchors): `start`, `end`, `mid`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `from` | [Point](#point) | yes |  |  |
+| `to` | [Point](#point) | yes |  |  |
+| `curve` | number |  | `0` | Sideways bend in px (0 = straight) |
+| `head` | `"end"` \| `"start"` \| `"both"` \| `"none"` |  | `"end"` |  |
+| `headSize` | number |  | `22` |  |
+| `startGap` | number |  | `0` |  |
+| `endGap` | number |  | `0` |  |
+| `dashed` | boolean |  | `false` |  |
+
+```json
+{"type":"arrow","params":{"from":"block.right","to":"label.left","curve":40,"endGap":10}}
+```
+
+### `bracket`
+
+A curly brace spanning two points, bulging to one side, with an optional label.
+
+Entrance: `draw` · Supports: draw, positioned by endpoints
+
+Anchors (plus box anchors): `tip`, `label`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `from` | [Point](#point) | yes |  |  |
+| `to` | [Point](#point) | yes |  |  |
+| `side` | `"left"` \| `"right"` |  | `"right"` |  |
+| `depth` | number |  | `20` |  |
+| `label` | string \| [Binding](#binding) |  |  |  |
+| `role` | [ColorRef](#colorref) |  | `"muted"` |  |
+
+```json
+{"type":"bracket","params":{"from":"block.top_right","to":"block.bottom_right","label":"submerged"}}
+```
+
+### `callout`
+
+A small explanatory box with a pointer to a point of interest (`target`). Place the box with `place`; the pointer follows the target.
+
+Entrance: `pop` · Supports: label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `text` | string \| [Binding](#binding) | yes |  |  |
+| `target` | [Point](#point) |  |  |  |
+| `size` | [TextSize](#textsize) |  | `"label"` |  |
+| `maxWidth` | number |  | `360` |  |
+| `role` | [ColorRef](#colorref) |  | `"accent"` |  |
+
+```json
+{"type":"callout","params":{"text":"The block pushes water **aside**.","target":"tank.water_surface"},"place":{"slot":"stage.top_right"}}
+```
+
+### `caption`
+
+A lower-third style text block on a soft background (for on-stage captions separate from the narration bar).
+
+Entrance: `slide_up` · Supports: label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `text` | string \| [Binding](#binding) | yes |  |  |
+| `size` | [TextSize](#textsize) |  | `"body"` |  |
+| `maxWidth` | number |  | `900` |  |
+
+```json
+{"type":"caption","params":{"text":"Density decides: float or sink."},"place":{"slot":"stage.bottom"}}
+```
+
+### `dimension`
+
+A measurement line with end ticks and a label (e.g. a height or a rise in water level). `offset` shifts it sideways from the measured points.
+
+Entrance: `draw` · Supports: draw, positioned by endpoints
+
+Anchors (plus box anchors): `start`, `end`, `label`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `from` | [Point](#point) | yes |  |  |
+| `to` | [Point](#point) | yes |  |  |
+| `offset` | number |  | `0` |  |
+| `label` | string \| [Binding](#binding) |  |  |  |
+| `labelSize` | [TextSize](#textsize) |  | `"small"` |  |
+| `role` | [ColorRef](#colorref) |  | `"muted"` |  |
+
+```json
+{"type":"dimension","params":{"from":"tank.floor","to":"tank.water_surface","offset":260,"label":"h"}}
+```
+
+### `label`
+
+A short text label, usually attached to an object by the `label` action. Styles: plain text, a pill, or a colored tag. `pointTo` draws a leader line to a point.
+
+Entrance: `pop` · Supports: label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `text` | string \| [Binding](#binding) | yes |  |  |
+| `style` | `"plain"` \| `"pill"` \| `"tag"` |  | `"pill"` |  |
+| `color` | [ColorRef](#colorref) |  | `"text"` |  |
+| `size` | [TextSize](#textsize) |  | `"label"` |  |
+| `weight` | [Weight](#weight) |  | `"semibold"` |  |
+| `maxWidth` | number |  |  |  |
+| `pointTo` | [Point](#point) |  |  |  |
+
+```json
+{"type":"label","params":{"text":"water","style":"tag","color":"fluid"},"place":{"relativeTo":"tank","side":"left"}}
+```
+
+### `marker`
+
+A persistent highlight around another object (box, circle, underline or glow) that follows it. For a temporary emphasis use the `highlight` action instead.
+
+Entrance: `draw` · Supports: draw, positioned by endpoints
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `target` | string | yes |  |  |
+| `shape` | `"box"` \| `"circle"` \| `"underline"` \| `"glow"` |  | `"box"` |  |
+| `padding` | number |  | `14` |  |
+| `role` | [ColorRef](#colorref) |  | `"highlight"` |  |
+
+```json
+{"type":"marker","params":{"target":"equation","shape":"box"}}
+```
+
+### `note`
+
+An annotation card: optional icon and title, and a short explanation. Good for 'Key idea' or 'Remember' moments.
+
+Entrance: `slide_up` · Supports: label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `text` | string \| [Binding](#binding) | yes |  |  |
+| `title` | string |  |  |  |
+| `icon` | [IconName](#iconname) |  |  |  |
+| `role` | [ColorRef](#colorref) |  | `"accent"` |  |
+| `width` | number |  | `380` |  |
+
+```json
+{"type":"note","params":{"title":"Key idea","icon":"lightbulb","text":"Floating objects displace their own **weight** of water."}}
+```
+
+### `vector_arrow`
+
+A bold physics vector (force, velocity, acceleration). Length = |magnitude| x scale px (clamped), so bind `magnitude` to a solver output to keep arrows proportional. `role` picks the concept color (force_gravity, force_buoyant, force_normal, force_applied, velocity).
+
+Entrance: `draw` · Supports: draw, positioned by endpoints
+
+Anchors (plus box anchors): `tail`, `tip`, `mid`, `label`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `from` | [Point](#point) | yes |  | Tail point (or tip, with origin: 'head') |
+| `direction` | `"up"` \| `"down"` \| `"left"` \| `"right"` \| number |  | `"down"` |  |
+| `magnitude` | number \| [Binding](#binding) |  | `1` |  |
+| `scale` | number |  | `12` | Pixels per unit of magnitude |
+| `minLength` | number |  | `36` |  |
+| `maxLength` | number |  | `360` |  |
+| `origin` | `"tail"` \| `"head"` \| `"center"` |  | `"tail"` |  |
+| `role` | [ColorRef](#colorref) |  | `"force_applied"` |  |
+| `thickness` | number |  | `10` |  |
+| `label` | string \| [Binding](#binding) |  |  |  |
+| `labelSide` | `"auto"` \| `"left"` \| `"right"` \| `"above"` \| `"below"` \| `"start"` \| `"end"` |  | `"auto"` |  |
+| `labelSize` | [TextSize](#textsize) |  | `"small"` |  |
+
+```json
+{"type":"vector_arrow","params":{"from":"block.center","direction":"down","magnitude":{"bind":"buoy.weight"},"scale":6,"role":"force_gravity","label":{"bind":"buoy.weight","format":"W = 0.0 N"}}}
+```
+
+## math
+
+### `axes`
+
+Coordinate axes with ticks and labels (a graph without series).
+
+Entrance: `draw` · Supports: draw
+
+Anchors (plus box anchors): `origin`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `width` | number |  | `560` |  |
+| `height` | number |  | `340` |  |
+| `x` | object |  | `{"min":0,"max":10}` |  |
+| `y` | object |  | `{"min":0,"max":10}` |  |
+| `grid` | boolean |  | `false` |  |
+
+```json
+{"type":"axes","params":{"x":{"min":0,"max":5,"label":"time (s)"},"y":{"min":0,"max":20,"label":"speed (m/s)"}}}
+```
+
+### `equation`
+
+A typeset equation (TeX subset) split into parts with ids, so parts can be written one by one (`write` with `terms`) and highlighted individually (`highlight` with `terms`). Each part is an anchor 'term_<id>'. Numbers computed by the engine belong in readouts or bound labels, not in TeX.
+
+Entrance: `write` · Supports: write, label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `parts` | object[] | yes |  | e.g. [{id:'fb',tex:'F_b'},{id:'eq',tex:'='},{id:'rho',tex:'\\rho_f'},{id:'v',tex:'V'},{id:'g',tex:'g'}] |
+| `size` | number |  | `52` | Pixels per em |
+| `color` | [ColorRef](#colorref) |  | `"text"` |  |
+| `box` | boolean |  | `false` | Draw a soft card behind the equation |
+
+```json
+{"type":"equation","params":{"parts":[{"id":"fb","tex":"F_b"},{"id":"eq","tex":"="},{"id":"rho","tex":"\\rho_{fluid}"},{"id":"v","tex":"V_{sub}"},{"id":"g","tex":"g"}],"box":true},"place":{"slot":"equation_panel"}}
+```
+
+### `graph`
+
+A plot with axes (y up). Series come from data points or a safe expression in x (and t for motion). `draw` reveals the curves left to right.
+
+Entrance: `draw` · Supports: draw
+
+Anchors (plus box anchors): `origin`, `plot_center`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `width` | number |  | `560` |  |
+| `height` | number |  | `340` |  |
+| `x` | object |  | `{"min":0,"max":10}` |  |
+| `y` | object |  | `{"min":0,"max":10}` |  |
+| `series` | object[] |  | `[]` |  |
+| `grid` | boolean |  | `true` |  |
+
+```json
+{"type":"graph","params":{"x":{"min":0,"max":6.3,"label":"x"},"y":{"min":-1.2,"max":1.2,"label":"sin x"},"series":[{"id":"s","expr":"sin(x)","role":"accent"}]}}
+```
+
+### `grid`
+
+A decorative square grid (graph paper) behind other content.
+
+Entrance: `fade`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `width` | number |  | `600` |  |
+| `height` | number |  | `400` |  |
+| `spacing` | number |  | `40` |  |
+
+```json
+{"type":"grid","params":{"width":800,"height":500},"layer":"background"}
+```
+
+### `readout`
+
+A live number display (value + unit + small label). Bind `value` to a solver output or expression; digits are tabular so changing values do not jitter. Counts up from zero when it appears.
+
+Entrance: `pop` · Supports: label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `label` | string |  |  |  |
+| `value` | number \| [Binding](#binding) |  | `0` |  |
+| `format` | string |  | `"0.0"` |  |
+| `unit` | string |  |  |  |
+| `role` | [ColorRef](#colorref) |  | `"accent"` |  |
+| `size` | [TextSize](#textsize) |  | `"heading"` |  |
+| `style` | `"card"` \| `"pill"` \| `"plain"` |  | `"card"` |  |
+| `countUp` | boolean |  | `true` |  |
+
+```json
+{"type":"readout","params":{"label":"Buoyant force","value":{"bind":"buoy.buoyantForce"},"format":"0.0","unit":"N","role":"force_buoyant"}}
+```
+
+## ui
+
+### `badge`
+
+A small colored chip with text (and optional icon), e.g. 'FLOATS', 'Step 2', 'Key idea'.
+
+Entrance: `pop` · Supports: label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `text` | string | yes |  |  |
+| `role` | [ColorRef](#colorref) |  | `"accent"` |  |
+| `icon` | [IconName](#iconname) |  |  |  |
+| `size` | [TextSize](#textsize) |  | `"small"` |  |
+
+```json
+{"type":"badge","params":{"text":"FLOATS","role":"positive","icon":"check"}}
+```
+
+### `burst`
+
+A one-shot celebration burst (confetti, stars or rays) for 'aha!' moments. Create it; it plays during its entrance and then fades away.
+
+Entrance: `write` · Supports: write
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `kind` | `"confetti"` \| `"stars"` \| `"rays"` |  | `"confetti"` |  |
+| `count` | integer |  | `26` |  |
+| `radius` | number |  | `170` |  |
+| `role` | [ColorRef](#colorref) |  | `"highlight"` |  |
+
+```json
+{"type":"burst","params":{"kind":"stars"},"place":{"at":"equation.center"}}
+```
+
+### `card`
+
+A rounded card with an optional title and a list of short points that appear one by one (write). Great for summaries and step lists.
+
+Entrance: `write` · Supports: write, label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `title` | string |  |  |  |
+| `items` | string[] | yes |  |  |
+| `marker` | `"check"` \| `"dot"` \| `"number"` \| `"star"` \| `"arrow"` |  | `"check"` |  |
+| `role` | [ColorRef](#colorref) |  | `"accent"` |  |
+| `width` | number |  | `640` |  |
+| `size` | [TextSize](#textsize) |  | `"body"` |  |
+
+```json
+{"type":"card","params":{"title":"Remember","items":["Water pushes up on things in it.","The push equals the weight of water moved aside."]}}
+```
+
+### `icon`
+
+A friendly line icon (lightbulb, check, cross, question, star, info, warning, magnifier, drop, balance, clock, arrow_up, arrow_down, sparkle, target, book), optionally on a soft round badge.
+
+Entrance: `pop`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `name` | [IconName](#iconname) | yes |  |  |
+| `size` | number |  | `72` |  |
+| `role` | [ColorRef](#colorref) |  | `"accent"` |  |
+| `badge` | boolean |  | `true` |  |
+
+```json
+{"type":"icon","params":{"name":"lightbulb","role":"highlight"}}
+```
+
+### `speech_bubble`
+
+A speech or thought bubble with a tail pointing at `pointTo` (e.g. a character's face). Great for questions like 'Why does it float?'.
+
+Entrance: `pop` · Supports: label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `text` | string | yes |  |  |
+| `pointTo` | [Point](#point) |  |  |  |
+| `kind` | `"speech"` \| `"thought"` |  | `"speech"` |  |
+| `maxWidth` | number |  | `380` |  |
+| `size` | [TextSize](#textsize) |  | `"label"` |  |
+| `role` | [ColorRef](#colorref) |  | `"surface"` |  |
+
+```json
+{"type":"speech_bubble","params":{"text":"Why does the heavy ship **float**?","pointTo":"block.top"}}
+```
+
+### `title_card`
+
+A big, friendly title with an optional kicker, subtitle and icon, and an underline that draws itself. Use for lesson and chapter openings.
+
+Entrance: `write` · Supports: write, label-like
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `title` | string | yes |  |  |
+| `subtitle` | string |  |  |  |
+| `kicker` | string |  |  |  |
+| `icon` | [IconName](#iconname) |  |  |  |
+| `role` | [ColorRef](#colorref) |  | `"accent"` |  |
+| `width` | number |  | `1100` |  |
+| `titleSize` | number |  | `76` |  |
+
+```json
+{"type":"title_card","params":{"kicker":"Physics","title":"Why do things **float**?","subtitle":"Archimedes' principle","icon":"drop"},"place":{"slot":"hero"}}
+```
+
+## physics
+
+### `balance`
+
+A two-pan beam balance. Origin is the pivot; `tilt` (degrees, positive = right side down) shows which side is heavier.
+
+Entrance: `pop`
+
+Anchors (plus box anchors): `pivot`, `left_pan`, `right_pan`, `base`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `armLength` | number |  | `300` |  |
+| `tilt` | number |  | `0` |  |
+| `hang` | number |  | `120` |  |
+| `height` | number |  | `220` |  |
+| `panWidth` | number |  | `110` |  |
+
+```json
+{"type":"balance","params":{"tilt":-8},"place":{"slot":"stage.center"}}
+```
+
+### `ball`
+
+A glossy ball with a material look. Optional friendly face.
+
+Entrance: `pop`
+
+Anchors (plus box anchors): `attach_top`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `radius` | number |  | `48` |  |
+| `material` | [Material](#material) |  | `"plastic"` |  |
+| `face` | [Face](#face) |  | `"none"` |  |
+
+```json
+{"type":"ball","params":{"radius":40,"material":"plastic"}}
+```
+
+### `block`
+
+A solid block with a recognizable material look (wood, cork, ice, plastic, stone, metal, gold...). The material also sets the default density for the buoyancy solver. Optional friendly face for younger audiences.
+
+Entrance: `pop`
+
+Anchors (plus box anchors): `attach_top`, `attach_bottom`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `width` | number |  | `120` |  |
+| `height` | number |  | `100` |  |
+| `material` | [Material](#material) |  | `"wood"` |  |
+| `face` | [Face](#face) |  | `"none"` |  |
+| `label` | string |  |  | Short text on the block, e.g. 'A' or '2 kg' |
+| `cornerRadius` | number |  | `10` |  |
+
+```json
+{"type":"block","params":{"width":120,"height":100,"material":"wood"},"place":{"relativeTo":"tank","side":"above","gap":80}}
+```
+
+### `container`
+
+A glass container with liquid: tank, beaker, measuring cylinder or overflow (Eureka) can. `level` is the fill fraction (0..1) and is driven by the buoyancy solver when a body enters. Anchors: water_surface, water_center, floor, rim, rim_left, rim_right, inner_left, inner_right, spout.
+
+Entrance: `pop`
+
+Anchors (plus box anchors): `water_surface`, `water_center`, `floor`, `rim`, `rim_left`, `rim_right`, `inner_left`, `inner_right`, `spout`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `shape` | `"tank"` \| `"beaker"` \| `"cylinder"` \| `"overflow_can"` |  | `"tank"` |  |
+| `width` | number |  | `420` |  |
+| `height` | number |  | `360` |  |
+| `level` | number |  | `0.55` |  |
+| `wall` | number |  | `8` |  |
+| `fluid` | [ColorRef](#colorref) |  | `"fluid"` |  |
+| `glass` | [ColorRef](#colorref) |  | `"glass"` |  |
+| `ticks` | boolean |  | `false` | Graduation marks on the side |
+| `spoutLevel` | number |  | `0.75` | overflow_can only: spout height as a fill fraction |
+| `ripple` | number |  | `0` | Surface ripple amplitude in px (animated by solvers) |
+| `rippleX` | number |  | `0` |  |
+| `outflow` | number |  | `0` | overflow_can only: strength of the stream pouring from the spout (driven by the buoyancy solver) |
+| `bubbles` | boolean |  | `true` | Gentle ambient bubbles |
+| `unitsPerMeter` | number |  | `400` |  |
+
+```json
+{"type":"container","params":{"shape":"tank","width":420,"height":340,"level":0.55,"ticks":true},"place":{"slot":"stage.center"}}
+```
+
+### `flow_particles`
+
+Seeded particles streaming through a pipe. They speed up where the pipe narrows (continuity: v ∝ 1/A). `speed` is the inlet speed in px/s; the fluid_flow solver can drive it.
+
+Entrance: `fade` · Supports: positioned by endpoints
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `pipe` | string | yes |  |  |
+| `count` | integer |  | `44` |  |
+| `speed` | number |  | `90` |  |
+| `size` | number |  | `6` |  |
+| `role` | [ColorRef](#colorref) |  | `"surface"` |  |
+| `streaks` | boolean |  | `true` | Stretch particles along the flow in proportion to their speed |
+
+```json
+{"type":"flow_particles","params":{"pipe":"venturi","count":50,"speed":80}}
+```
+
+### `manometer`
+
+A U-tube manometer. `difference` is the level difference in px (left lower when positive, i.e. higher pressure on the left).
+
+Entrance: `pop`
+
+Anchors (plus box anchors): `left_top`, `right_top`, `left_level`, `right_level`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `difference` | number \| [Binding](#binding) |  | `0` |  |
+| `width` | number |  | `130` |  |
+| `height` | number |  | `260` |  |
+| `tube` | number |  | `24` |  |
+| `level` | number |  | `0.55` |  |
+| `fluid` | [ColorRef](#colorref) |  | `"pressure"` |  |
+
+```json
+{"type":"manometer","params":{"difference":{"bind":"flow.dp_px"}}}
+```
+
+### `particles`
+
+Seeded ambient particles in a region: rising bubbles, sparkles, drifting dots, snow or steam.
+
+Entrance: `fade`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `kind` | `"bubbles"` \| `"sparkles"` \| `"dots"` \| `"snow"` \| `"steam"` |  | `"bubbles"` |  |
+| `count` | integer |  | `24` |  |
+| `width` | number |  | `400` |  |
+| `height` | number |  | `300` |  |
+| `speed` | number |  | `1` |  |
+| `size` | number |  | `8` |  |
+| `role` | [ColorRef](#colorref) |  | `"surface"` |  |
+
+```json
+{"type":"particles","params":{"kind":"bubbles","width":300,"height":200}}
+```
+
+### `pendulum`
+
+A pendulum hanging from a pivot (the object origin). `angle` is degrees from vertical; the pendulum solver animates it.
+
+Entrance: `pop`
+
+Anchors (plus box anchors): `pivot`, `bob`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `length` | number |  | `280` |  |
+| `angle` | number |  | `20` |  |
+| `bobRadius` | number |  | `32` |  |
+| `material` | [Material](#material) |  | `"metal"` |  |
+| `showArc` | boolean |  | `true` |  |
+
+```json
+{"type":"pendulum","params":{"length":300,"angle":25},"place":{"slot":"stage.top"}}
+```
+
+### `pipe`
+
+A horizontal pipe whose inner diameter (and height) varies smoothly between named sections, e.g. a Venturi tube. Anchors: inlet, outlet, and per section 'section_<id>', 'section_<id>_top', 'section_<id>_bottom'. Add flow_particles to show the flow.
+
+Entrance: `draw` · Supports: draw
+
+Anchors (plus box anchors): `inlet`, `outlet`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sections` | object[] | yes |  |  |
+| `wall` | number |  | `10` |  |
+| `fluid` | [ColorRef](#colorref) |  | `"fluid"` |  |
+| `showSections` | boolean |  | `true` | Mark and name each section |
+
+```json
+{"type":"pipe","params":{"sections":[{"id":"wide","x":0,"width":160},{"id":"narrow","x":420,"width":70},{"id":"out","x":840,"width":160}]},"place":{"slot":"stage.center"}}
+```
+
+### `pressure_gauge`
+
+A dial pressure gauge on a short stem (anchor 'stem' at its bottom). Bind `value` to a pressure; the needle and readout follow.
+
+Entrance: `pop`
+
+Anchors (plus box anchors): `stem`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `value` | number \| [Binding](#binding) |  | `0` |  |
+| `max` | number |  | `200` |  |
+| `unit` | string |  | `"kPa"` |  |
+| `format` | string |  | `"0"` |  |
+| `radius` | number |  | `64` |  |
+| `stem` | number |  | `34` |  |
+| `label` | string |  |  |  |
+| `role` | [ColorRef](#colorref) |  | `"pressure"` |  |
+
+```json
+{"type":"pressure_gauge","params":{"value":{"bind":"flow.p_wide"},"max":200,"label":"P₁"},"place":{"at":"venturi.section_wide_top","anchor":"stem"}}
+```
+
+### `pulley`
+
+A pulley wheel on a ceiling mount. Ropes leave from its 'left' and 'right' anchors.
+
+Entrance: `pop`
+
+Anchors (plus box anchors): `left`, `right`, `axle`, `mount`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `radius` | number |  | `42` |  |
+| `mount` | number |  | `60` | Length of the mounting bar above the wheel |
+| `angle` | number |  | `0` | Wheel rotation in degrees (animate to show turning) |
+
+```json
+{"type":"pulley","params":{"radius":40},"place":{"slot":"stage.top"}}
+```
+
+### `rope`
+
+A rope or string between two points (anchor references follow their objects). `sag` makes it droop.
+
+Entrance: `draw` · Supports: draw, positioned by endpoints
+
+Anchors (plus box anchors): `start`, `end`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `from` | [Point](#point) | yes |  |  |
+| `to` | [Point](#point) | yes |  |  |
+| `sag` | number |  | `0` |  |
+| `thickness` | number |  | `4` |  |
+| `role` | [ColorRef](#colorref) |  | `"muted"` |  |
+
+```json
+{"type":"rope","params":{"from":"scale.hook","to":"block.attach_top"}}
+```
+
+### `spring`
+
+A coil spring between two points; it stretches and compresses as its endpoints move.
+
+Entrance: `draw` · Supports: draw, positioned by endpoints
+
+Anchors (plus box anchors): `start`, `end`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `from` | [Point](#point) | yes |  |  |
+| `to` | [Point](#point) | yes |  |  |
+| `coils` | integer |  | `10` |  |
+| `width` | number |  | `34` |  |
+| `thickness` | number |  | `4` |  |
+| `role` | [ColorRef](#colorref) |  | `"muted"` |  |
+
+```json
+{"type":"spring","params":{"from":{"x":800,"y":150},"to":"mass.attach_top","coils":12}}
+```
+
+### `spring_scale`
+
+A Newton meter (spring balance). Bind `reading` to a force (e.g. the buoyancy solver's apparentWeight) and the pointer moves along the scale. Hang objects from the 'hook' anchor with a rope.
+
+Entrance: `pop`
+
+Anchors (plus box anchors): `top`, `hook`, `pointer`
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `reading` | number \| [Binding](#binding) |  | `0` |  |
+| `max` | number |  | `20` |  |
+| `unit` | string |  | `"N"` |  |
+| `format` | string |  | `"0.0"` |  |
+| `width` | number |  | `66` |  |
+| `height` | number |  | `230` |  |
+| `hook` | number |  | `38` |  |
+| `showValue` | boolean |  | `true` |  |
+
+```json
+{"type":"spring_scale","params":{"reading":{"bind":"buoy.apparentWeight"},"max":20},"place":{"x":800,"y":260}}
+```
+
 ## primitive
 
 ### `circle`
@@ -139,8 +824,8 @@ Entrance: `write` · Supports: write, label-like
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `text` | string \| [Binding](#binding) | yes |  |  |
-| `size` | `"title"` \| `"heading"` \| `"body"` \| `"label"` \| `"caption"` \| `"small"` \| number |  | `"body"` | Named size from the theme type scale, or pixels on the 1600x900 canvas |
-| `weight` | `"regular"` \| `"semibold"` \| `"bold"` |  | `"regular"` |  |
+| `size` | [TextSize](#textsize) |  | `"body"` |  |
+| `weight` | [Weight](#weight) |  | `"regular"` |  |
 | `align` | `"left"` \| `"center"` \| `"right"` |  | `"center"` |  |
 | `maxWidth` | number |  |  |  |
 | `lineHeight` | number |  |  |  |

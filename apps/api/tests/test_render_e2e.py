@@ -28,7 +28,10 @@ pytestmark = [pytest.mark.e2e, pytest.mark.asyncio(loop_scope="module")]
 
 GOLDEN_DIR = Path(__file__).parent / "golden" / sys.platform
 FPS = 30
-FRAMES = [0, 15, 45, 75, 105, 150, 239, 270, 330, 420]
+FRAMES = {
+    "engine-tour": [0, 15, 45, 75, 105, 150, 239, 270, 330, 420],
+    "gallery": [20, 90, 200, 290, 330, 420, 560, 640, 700, 880],
+}
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
@@ -38,15 +41,24 @@ async def session() -> AsyncIterator[RenderSession]:
     with StaticSite() as site:
         async with async_playwright() as pw:
             s = await RenderSession(site.url, Viewport(960, 540)).start(pw)
-            summary = await s.load(load_fixture_lesson("engine-tour"))
-            assert all(sc["ok"] for sc in summary["scenes"]), summary
             yield s
             await s.close()
 
 
-async def test_frames_are_pixel_deterministic_regardless_of_order(session: RenderSession) -> None:
-    forward = {f: hashlib.sha256(await session.frame_png(f, FPS)).hexdigest() for f in FRAMES}
-    backward = {f: hashlib.sha256(await session.frame_png(f, FPS)).hexdigest() for f in reversed(FRAMES)}
+async def _load(session: RenderSession, lesson: str) -> None:
+    summary = await session.load(load_fixture_lesson(lesson))
+    bad = [(sc["id"], sc["errors"]) for sc in summary["scenes"] if not sc["ok"]]
+    assert not bad, bad
+
+
+@pytest.mark.parametrize("lesson", sorted(FRAMES))
+async def test_frames_are_pixel_deterministic_regardless_of_order(
+    session: RenderSession, lesson: str
+) -> None:
+    await _load(session, lesson)
+    frames = FRAMES[lesson]
+    forward = {f: hashlib.sha256(await session.frame_png(f, FPS)).hexdigest() for f in frames}
+    backward = {f: hashlib.sha256(await session.frame_png(f, FPS)).hexdigest() for f in reversed(frames)}
     assert forward == backward
 
 
@@ -58,19 +70,26 @@ def _diff_ratio(a: bytes, b: bytes) -> float:
     return float((np.abs(x - y).max(axis=2) > 8).mean())
 
 
-@pytest.mark.parametrize("frame", FRAMES)
-async def test_golden_frames(session: RenderSession, frame: int) -> None:
-    png = await session.frame_png(frame, FPS)
-    golden = GOLDEN_DIR / f"engine-tour-{frame:04d}.png"
-    if os.environ.get("UPDATE_GOLDENS") == "1":
-        golden.parent.mkdir(parents=True, exist_ok=True)
-        golden.write_bytes(png)
-        return
-    if not GOLDEN_DIR.exists():
+@pytest.mark.parametrize("lesson", sorted(FRAMES))
+async def test_golden_frames(session: RenderSession, lesson: str) -> None:
+    await _load(session, lesson)
+    update = os.environ.get("UPDATE_GOLDENS") == "1"
+    if not update and not GOLDEN_DIR.exists():
         pytest.skip(
-            f"no golden frames for platform '{sys.platform}' yet "
-            "(generated in the pinned Docker env, Phase 6)"
+            f"no golden frames for platform '{sys.platform}' yet (generated in the pinned Docker env, Phase 6)"
         )
-    assert golden.exists(), f"missing golden {golden.name}: run with UPDATE_GOLDENS=1"
-    ratio = _diff_ratio(png, golden.read_bytes())
-    assert ratio < 0.002, f"{golden.name}: {ratio:.4%} of pixels differ"
+    failures = []
+    for frame in FRAMES[lesson]:
+        png = await session.frame_png(frame, FPS)
+        golden = GOLDEN_DIR / f"{lesson}-{frame:04d}.png"
+        if update:
+            golden.parent.mkdir(parents=True, exist_ok=True)
+            golden.write_bytes(png)
+            continue
+        if not golden.exists():
+            failures.append(f"missing golden {golden.name}: run with UPDATE_GOLDENS=1")
+            continue
+        ratio = _diff_ratio(png, golden.read_bytes())
+        if ratio >= 0.002:
+            failures.append(f"{golden.name}: {ratio:.4%} of pixels differ")
+    assert not failures, failures
