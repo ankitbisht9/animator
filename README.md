@@ -25,8 +25,20 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DECISIONS.md](docs/DECIS
 | `make lint` | Biome + tsc, Ruff + mypy |
 | `make codegen` | Regenerate `contracts/` and generated docs |
 | `make check-codegen` | Fail if regenerated output differs from what is committed |
-| `make export-demo` | Render the hand-authored Archimedes lesson to MP4 |
+| `make export-demo` | Render the hand-authored Archimedes lesson to MP4 (Phase 6; not implemented yet) |
 | `make spikes` | Re-run the Phase 0 spikes |
+
+## See the demo lesson
+
+Run `make dev` and open http://localhost:5173/lesson/archimedes (12 scenes, about 4.5 minutes). The DSL
+Playground is at http://localhost:5173/playground. To render still frames to PNG without the dev server:
+
+```
+make build-web
+uv run python scripts/render_keyframes.py archimedes --scene 8 --times 16 24
+```
+
+`--scene` is 0-based; images go to `var/keyframes/archimedes/`.
 
 ## Configuration
 

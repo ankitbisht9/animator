@@ -31,6 +31,8 @@ FPS = 30
 FRAMES = {
     "engine-tour": [0, 15, 45, 75, 105, 150, 239, 270, 330, 420],
     "gallery": [20, 90, 200, 290, 330, 420, 560, 640, 700, 880],
+    # Gate A: one reviewed key moment per scene (global time = scene start + local time).
+    "archimedes": [360, 990, 1440, 2190, 2880, 3600, 4245, 4830, 5850, 6480, 7335, 8184],
 }
 
 

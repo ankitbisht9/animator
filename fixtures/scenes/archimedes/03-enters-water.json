@@ -1,0 +1,289 @@
+{
+  "dsl_version": "1.0",
+  "id": "s03_enters_water",
+  "title": "It enters the water",
+  "educational_purpose": "Show the block falling in, bobbing and settling: it floats, partly under and partly above the surface.",
+  "duration": 18,
+  "layout": "stage_with_caption",
+  "narration": {
+    "beats": [
+      {
+        "id": "b1",
+        "text": "Let it go! The block drops into the water...",
+        "at": 0
+      },
+      {
+        "id": "b2",
+        "text": "...bobs up and down, and settles. It **floats**!",
+        "at": 5.2
+      },
+      {
+        "id": "b3",
+        "text": "Look closely: part of the block is **under** the water, and part stays **above** it.",
+        "at": 10.5
+      }
+    ]
+  },
+  "objects": [
+    {
+      "id": "title_s03",
+      "type": "text",
+      "params": {
+        "text": "It enters the water",
+        "size": "heading",
+        "weight": "bold"
+      },
+      "place": {
+        "slot": "title_bar"
+      },
+      "layer": "overlay"
+    },
+    {
+      "id": "splash",
+      "type": "burst",
+      "params": {
+        "kind": "splash",
+        "radius": 120,
+        "count": 18,
+        "role": "fluid"
+      },
+      "place": {
+        "at": "tank.water_surface",
+        "offset": {
+          "x": 0,
+          "y": -4
+        }
+      },
+      "persist": false
+    },
+    {
+      "id": "float_badge",
+      "type": "badge",
+      "params": {
+        "text": "IT FLOATS",
+        "role": "positive",
+        "icon": "check",
+        "size": "label"
+      },
+      "place": {
+        "slot": "stage.right",
+        "offset": {
+          "x": 20,
+          "y": -120
+        }
+      }
+    },
+    {
+      "id": "sub",
+      "type": "rectangle",
+      "params": {
+        "width": 120,
+        "height": 1,
+        "cornerRadius": 6
+      },
+      "place": {
+        "at": "blk.bottom",
+        "anchor": "bottom",
+        "follow": true
+      },
+      "opacity": 0.55,
+      "style": {
+        "fill": "fluid.dark",
+        "stroke": "surface",
+        "strokeWidth": 3,
+        "dashed": true
+      },
+      "decorative": true,
+      "metadata": {
+        "name": "Part under water",
+        "description": "The part of the block below the water surface."
+      }
+    },
+    {
+      "id": "lab_above",
+      "type": "label",
+      "params": {
+        "text": "above the water",
+        "style": "pill",
+        "color": "object_a.dark",
+        "pointTo": "blk.top_right"
+      },
+      "place": {
+        "relativeTo": "tank",
+        "side": "right",
+        "gap": 130,
+        "align": "start"
+      }
+    },
+    {
+      "id": "lab_under",
+      "type": "label",
+      "params": {
+        "text": "under the water",
+        "style": "pill",
+        "color": "fluid.dark",
+        "pointTo": "sub.right"
+      },
+      "place": {
+        "relativeTo": "lab_above",
+        "side": "below",
+        "gap": 90,
+        "align": "start"
+      }
+    }
+  ],
+  "solvers": [
+    {
+      "id": "drop",
+      "type": "buoyancy",
+      "container": "tank",
+      "body": "blk",
+      "mode": "drop",
+      "unitsPerMeter": 1200
+    }
+  ],
+  "timeline": [
+    {
+      "id": "bsub",
+      "action": "bind",
+      "target": "sub",
+      "property": "params.height",
+      "bind": "drop.submergedPx",
+      "start": {
+        "at": 0
+      }
+    },
+    {
+      "id": "t0",
+      "action": "write",
+      "target": "title_s03",
+      "start": {
+        "at": 0.1
+      }
+    },
+    {
+      "id": "d1",
+      "action": "run_solver",
+      "target": "drop",
+      "start": {
+        "at": 0.8
+      },
+      "duration": 5
+    },
+    {
+      "id": "d2",
+      "action": "create",
+      "target": "splash",
+      "start": {
+        "at": 2.1
+      },
+      "duration": 1
+    },
+    {
+      "id": "f1",
+      "action": "transform",
+      "target": "blk",
+      "changes": [
+        {
+          "param": "face",
+          "to": "happy"
+        }
+      ],
+      "start": {
+        "at": "beat:b2"
+      },
+      "duration": 0.4
+    },
+    {
+      "id": "f2",
+      "action": "create",
+      "target": "float_badge",
+      "start": {
+        "after": "f1",
+        "delay": 0.4
+      }
+    },
+    {
+      "id": "u1",
+      "action": "remove",
+      "target": "float_badge",
+      "start": {
+        "at": "beat:b3"
+      }
+    },
+    {
+      "id": "u2",
+      "action": "create",
+      "target": "sub",
+      "start": {
+        "at": "beat:b3",
+        "delay": 0.4
+      },
+      "style": "fade",
+      "duration": 0.8
+    },
+    {
+      "id": "u3",
+      "action": "create",
+      "target": "lab_above",
+      "start": {
+        "after": "u2"
+      }
+    },
+    {
+      "id": "u4",
+      "action": "create",
+      "target": "lab_under",
+      "start": {
+        "after": "u3",
+        "delay": 0.2
+      }
+    },
+    {
+      "id": "u5",
+      "action": "highlight",
+      "target": "sub",
+      "style": "glow",
+      "start": {
+        "after": "u4"
+      },
+      "duration": 1.6
+    },
+    {
+      "id": "x1",
+      "action": "remove",
+      "target": "lab_above",
+      "start": {
+        "at": 17.2
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x2",
+      "action": "remove",
+      "target": "lab_under",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x3",
+      "action": "remove",
+      "target": "sub",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "tx",
+      "action": "remove",
+      "target": "title_s03",
+      "start": {
+        "at": 17.3
+      },
+      "duration": 0.5
+    }
+  ]
+}

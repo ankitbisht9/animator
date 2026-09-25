@@ -116,6 +116,7 @@
             "rippleX": 0,
             "outflow": 0,
             "bubbles": true,
+            "showMark": false,
             "unitsPerMeter": 400
           },
           "place": {

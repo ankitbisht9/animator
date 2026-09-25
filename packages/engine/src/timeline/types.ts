@@ -63,6 +63,8 @@ export interface ExprSeg extends SegBase {
   k: "expr";
   src: string;
   expr: Expr;
+  /** When set, the value is a formatted string (for text params). */
+  format?: string;
   /** Value at t1, computed at compile time for holding afterwards. */
   end?: number;
 }

@@ -67,8 +67,10 @@ codegen:
 check-codegen: codegen
 	git diff --exit-code -- contracts docs/DSL.md docs/COMPONENTS.md
 
-export-demo: build
-	$(UV) run python -m animator.export.demo
+export-demo:
+	@echo TODO(Phase 6): MP4 export is not implemented yet. For stills now: make build-web, then
+	@echo   uv run python scripts/render_keyframes.py archimedes --scene 0 --times 3 12
+	@exit 1
 
 eval:
 	@echo TODO(Phase 9): the live LLM eval suite is not implemented yet.

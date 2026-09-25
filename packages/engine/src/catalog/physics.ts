@@ -85,7 +85,16 @@ export const container = defineComponentSpec({
       .min(0)
       .max(1)
       .optional()
-      .describe("Dashed line at this fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right"),
+      .describe("A reference fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right"),
+    showMark: z.boolean().default(false).describe("Draw the dashed reference line at 'mark'"),
+    depth: z
+      .number()
+      .min(10)
+      .max(1400)
+      .optional()
+      .describe(
+        "Depth into the screen in px (plan view); defaults to the inner width. Slimmer tanks show bigger level changes.",
+      ),
     unitsPerMeter: z.number().min(10).max(5000).default(400),
   }),
   geometry: (p) => {

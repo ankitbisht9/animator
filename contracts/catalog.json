@@ -383,7 +383,8 @@
               "arrow_down",
               "sparkle",
               "target",
-              "book"
+              "book",
+              "ship"
             ]
           },
           "TextSize": {
@@ -901,7 +902,7 @@
     {
       "type": "burst",
       "category": "ui",
-      "description": "A one-shot celebration burst (confetti, stars or rays) for 'aha!' moments. Create it; it plays during its entrance and then fades away.",
+      "description": "A one-shot burst: confetti, stars or rays for 'aha!' moments, or a water splash (droplets arcing up and falling back). Create it; it plays during its entrance and then fades away.",
       "params": {
         "type": "object",
         "properties": {
@@ -911,7 +912,8 @@
             "enum": [
               "confetti",
               "stars",
-              "rays"
+              "rays",
+              "splash"
             ]
           },
           "count": {
@@ -1716,10 +1718,21 @@
             "type": "boolean"
           },
           "mark": {
-            "description": "Dashed line at this fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right",
+            "description": "A reference fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right",
             "type": "number",
             "minimum": 0,
             "maximum": 1
+          },
+          "showMark": {
+            "default": false,
+            "description": "Draw the dashed reference line at 'mark'",
+            "type": "boolean"
+          },
+          "depth": {
+            "description": "Depth into the screen in px (plan view); defaults to the inner width. Slimmer tanks show bigger level changes.",
+            "type": "number",
+            "minimum": 10,
+            "maximum": 1400
           },
           "unitsPerMeter": {
             "default": 400,
@@ -2941,7 +2954,8 @@
               "arrow_down",
               "sparkle",
               "target",
-              "book"
+              "book",
+              "ship"
             ]
           },
           "ColorRef": {
@@ -3893,7 +3907,8 @@
               "arrow_down",
               "sparkle",
               "target",
-              "book"
+              "book",
+              "ship"
             ]
           },
           "ColorRef": {
@@ -6052,7 +6067,8 @@
               "arrow_down",
               "sparkle",
               "target",
-              "book"
+              "book",
+              "ship"
             ]
           },
           "ColorRef": {
@@ -6722,6 +6738,11 @@
           "description": "Volume of fluid pushed aside (= submerged volume)"
         },
         {
+          "name": "displacedVolumeCm3",
+          "unit": "cm³",
+          "description": "Displaced volume in cubic centimetres"
+        },
+        {
           "name": "displacedMass",
           "unit": "kg",
           "description": "Mass of the displaced fluid"
@@ -6760,6 +6781,26 @@
           "name": "levelRiseCm",
           "unit": "cm",
           "description": "Rise of the water level in centimetres"
+        },
+        {
+          "name": "levelHeightCm",
+          "unit": "cm",
+          "description": "Height of the water surface above the floor"
+        },
+        {
+          "name": "innerHeight",
+          "unit": "m",
+          "description": "Inner height of the container"
+        },
+        {
+          "name": "innerHeightCm",
+          "unit": "cm",
+          "description": "Inner height of the container in centimetres"
+        },
+        {
+          "name": "containerArea",
+          "unit": "m²",
+          "description": "Plan area of the container (width x depth)"
         },
         {
           "name": "spilledVolume",

@@ -10,7 +10,7 @@ update here.
 | 2 Evaluation engine + SVG slice | done |
 | 3 Tier 1 components, layout, camera | done |
 | 4 Solvers, bindings, SceneState, worker protocol | done |
-| 5 Hand-authored Archimedes, **Gate A** | not started |
+| 5 Hand-authored Archimedes, **Gate A** | done, awaiting Gate A review |
 
 ## Phase 0: Foundations
 
@@ -106,3 +106,30 @@ update here.
 - Generated contracts: `protocol.schema.json`, `catalog.json`, Pydantic models; typed `EngineClient`.
 - Tests: 105 engine (solver physics vs closed forms, continuity), 12 worker, 10 Python contract tests (live vs
   committed contracts, 4 golden RPC fixtures, invalid params, continuity over RPC).
+
+## Phase 5: Hand-authored Archimedes lesson (Gate A)
+
+- `fixtures/scenes/archimedes`: 12 scenes, 274.5 s, written in the DSL with no engine special cases:
+  why things float, the block above the water, the drop and splash, displacement, the level rise (camera
+  zoom with a live Δh dimension), the displaced volume, weight, buoyant force (balance, then a push
+  deeper), the overflow experiment with a spring scale (15.7 N reading, 9.8 N lost = 9.8 N spilled),
+  the equation with each symbol explained, a worked example (1000 × 0.001 × 9.81 = 9.8 N computed by the
+  engine), and a summary. Four checkpoint questions.
+- Every number on screen comes from a solver or a scene value (P3); the narration check agrees with the
+  physics. All 12 scenes validate with zero errors and zero warnings, with continuity across scenes.
+- Engine and renderer work the lesson needed:
+  - Containers draw in two passes, so water and glass sit in front of submerged bodies (ADR-021).
+  - Glyph text supports `_{sub}` and `^{sup}`; `bind` actions take a `format` so text channels can show
+    live, formatted values such as `Δh = 2.9 cm` (ADR-022).
+  - Container `depth` (plan depth for volumes) and `showMark` (start-level mark); buoyancy outputs
+    `innerHeightCm`, `containerArea`, `displacedVolumeCm3`, `levelHeightCm`; attached channels start from
+    the solver's first sample, so a spring scale reads the weight before the run.
+  - `splash` burst, rounded pulse ring, vector labels at 72% of the shaft, `ship` icon.
+  - Decorative objects are exempt from the abrupt-disappearance continuity warning.
+- Authoring tools (ADR-023): `check-fixtures.ts [lesson] [--warnings]`, `probe-lesson.ts <lesson> <scene>
+  <t> [ids]` (object boxes and values at a time), `scripts/render_keyframes.py` (PNG stills via the real
+  render page).
+- `make export-demo` now says plainly that MP4 export arrives in Phase 6.
+- Tests: 110 engine (new: every fixture lesson compiles with no issues), 12 worker, 40 components (12 new
+  Archimedes SVG golden frames), 3 web, 21 Python, 6 browser e2e (12 new Archimedes PNG goldens, pixel
+  determinism across the whole lesson).

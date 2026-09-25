@@ -46,8 +46,19 @@ describe("SceneView golden SVG frames", () => {
     }
   }
 
+  // Archimedes (Gate A): one reviewed key moment per scene.
+  const archimedes = compileLesson("archimedes");
+  const keyTimes = [12, 12, 10, 17, 17, 17, 15.5, 16, 24, 18, 22, 23.3];
+  archimedes.forEach((cs, i) => {
+    const t = keyTimes[i] ?? cs.duration / 2;
+    it(`${cs.id} @ ${t}s`, async () => {
+      const svg = renderToStaticMarkup(<SceneView compiled={cs} frame={evaluate(cs, t)} />);
+      await expect(svg).toMatchFileSnapshot(`./__snapshots__/${cs.id}-${t}.svg`);
+    });
+  });
+
   it("never emits script, foreignObject or external references", () => {
-    for (const cs of scenes) {
+    for (const cs of [...scenes, ...archimedes]) {
       for (const t of times) {
         const svg = renderToStaticMarkup(<SceneView compiled={cs} frame={evaluate(cs, t)} />);
         expect(svg).not.toMatch(/<script|foreignObject|href="http|javascript:/i);

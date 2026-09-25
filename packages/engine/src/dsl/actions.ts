@@ -166,6 +166,7 @@ export const BindAction = z.strictObject({
   target,
   property: z.string().regex(/^(x|y|rotation|scale|opacity|params\.[a-zA-Z][a-zA-Z0-9_]*)$/),
   bind: z.string().max(240).describe("Expression; may use t (seconds since action start)"),
+  format: z.string().max(32).optional().describe("For text params: number format, e.g. 'F = 0.0 N'"),
 });
 export const CameraMoveAction = z.strictObject({
   ...Common,

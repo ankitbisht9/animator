@@ -1,0 +1,348 @@
+{
+  "dsl_version": "1.0",
+  "id": "s06_displaced_volume",
+  "title": "The displaced volume",
+  "educational_purpose": "Connect the submerged volume to the volume of water pushed aside (the displaced volume), with a live readout.",
+  "duration": 23,
+  "layout": "stage_with_caption",
+  "narration": {
+    "beats": [
+      {
+        "id": "b1",
+        "text": "Let go, and the block **pops back up** and floats again.",
+        "at": 0
+      },
+      {
+        "id": "b2",
+        "text": "The part of the block under the water takes up some space: its **volume**.",
+        "at": 6
+      },
+      {
+        "id": "b3",
+        "text": "The block pushed aside exactly that much water: the **displaced volume**.",
+        "at": 12
+      },
+      {
+        "id": "b4",
+        "text": "Remember this idea. It is the key to Archimedes' principle.",
+        "at": 18
+      }
+    ]
+  },
+  "objects": [
+    {
+      "id": "title_s06",
+      "type": "text",
+      "params": {
+        "text": "The displaced volume",
+        "size": "heading",
+        "weight": "bold"
+      },
+      "place": {
+        "slot": "title_bar"
+      },
+      "layer": "overlay"
+    },
+    {
+      "id": "sub6",
+      "type": "rectangle",
+      "params": {
+        "width": 120,
+        "height": 1,
+        "cornerRadius": 6
+      },
+      "place": {
+        "at": "blk.bottom",
+        "anchor": "bottom",
+        "follow": true
+      },
+      "opacity": 0.55,
+      "style": {
+        "fill": "fluid.dark",
+        "stroke": "surface",
+        "strokeWidth": 3,
+        "dashed": true
+      },
+      "decorative": true,
+      "metadata": {
+        "name": "Part under water",
+        "description": "Its volume equals the volume of water pushed aside."
+      }
+    },
+    {
+      "id": "vol",
+      "type": "readout",
+      "params": {
+        "label": "Volume under water",
+        "value": {
+          "bind": "release.submergedVolumeCm3"
+        },
+        "format": "0",
+        "unit": "cm³",
+        "role": "fluid"
+      },
+      "place": {
+        "slot": "stage.right",
+        "offset": {
+          "x": -60,
+          "y": -196
+        }
+      }
+    },
+    {
+      "id": "ghost",
+      "type": "rectangle",
+      "params": {
+        "width": 120,
+        "height": 1,
+        "cornerRadius": 10
+      },
+      "place": {
+        "relativeTo": "vol",
+        "side": "below",
+        "gap": 90
+      },
+      "opacity": 0.9,
+      "style": {
+        "fill": "fluid",
+        "stroke": "fluid.dark",
+        "strokeWidth": 3
+      },
+      "metadata": {
+        "name": "The displaced water",
+        "description": "The water the block pushed aside, scooped out: same volume as the part under water."
+      }
+    },
+    {
+      "id": "ghost_tag",
+      "type": "label",
+      "params": {
+        "text": {
+          "bind": "release.displacedVolumeCm3",
+          "format": "0 cm³ of water"
+        },
+        "style": "tag",
+        "color": "fluid.dark"
+      },
+      "place": {
+        "relativeTo": "ghost",
+        "side": "below",
+        "gap": 22,
+        "follow": true
+      }
+    },
+    {
+      "id": "link",
+      "type": "arrow",
+      "params": {
+        "from": "sub6.right",
+        "to": "ghost.left",
+        "curve": -60,
+        "startGap": 14,
+        "endGap": 14,
+        "dashed": true
+      },
+      "style": {
+        "stroke": "fluid.dark",
+        "strokeWidth": 4
+      }
+    },
+    {
+      "id": "idea",
+      "type": "note",
+      "params": {
+        "title": "Key idea",
+        "icon": "lightbulb",
+        "text": "An object in water pushes aside a volume of water equal to the volume of its part **under the water**.",
+        "width": 520,
+        "role": "highlight"
+      },
+      "place": {
+        "slot": "stage.right",
+        "offset": {
+          "x": -60,
+          "y": 222
+        }
+      }
+    }
+  ],
+  "solvers": [
+    {
+      "id": "release",
+      "type": "buoyancy",
+      "container": "tank",
+      "body": "blk",
+      "mode": "drop",
+      "unitsPerMeter": 1200
+    }
+  ],
+  "timeline": [
+    {
+      "id": "b_sub",
+      "action": "bind",
+      "target": "sub6",
+      "property": "params.height",
+      "bind": "release.submergedPx",
+      "start": {
+        "at": 0
+      }
+    },
+    {
+      "id": "b_gh",
+      "action": "bind",
+      "target": "ghost",
+      "property": "params.height",
+      "bind": "release.submergedPx",
+      "start": {
+        "at": 0
+      }
+    },
+    {
+      "id": "t0",
+      "action": "write",
+      "target": "title_s06",
+      "start": {
+        "at": 0.1
+      }
+    },
+    {
+      "id": "r1",
+      "action": "run_solver",
+      "target": "release",
+      "start": {
+        "at": 0.5
+      },
+      "duration": 4.6
+    },
+    {
+      "id": "v1",
+      "action": "create",
+      "target": "sub6",
+      "start": {
+        "at": "beat:b2",
+        "delay": 0.2
+      },
+      "style": "fade",
+      "duration": 0.8
+    },
+    {
+      "id": "v2",
+      "action": "create",
+      "target": "vol",
+      "start": {
+        "after": "v1"
+      },
+      "duration": 1.2
+    },
+    {
+      "id": "v3",
+      "action": "highlight",
+      "target": "sub6",
+      "style": "glow",
+      "start": {
+        "after": "v2"
+      },
+      "duration": 1.4
+    },
+    {
+      "id": "g1",
+      "action": "create",
+      "target": "ghost",
+      "start": {
+        "at": "beat:b3",
+        "delay": 0.2
+      },
+      "style": "grow",
+      "duration": 0.9
+    },
+    {
+      "id": "g2",
+      "action": "create",
+      "target": "link",
+      "start": {
+        "with": "g1"
+      },
+      "duration": 1.2
+    },
+    {
+      "id": "g3",
+      "action": "create",
+      "target": "ghost_tag",
+      "start": {
+        "after": "g1"
+      }
+    },
+    {
+      "id": "k1",
+      "action": "create",
+      "target": "idea",
+      "start": {
+        "at": "beat:b4",
+        "delay": 0.2
+      }
+    },
+    {
+      "id": "x1",
+      "action": "remove",
+      "target": "vol",
+      "start": {
+        "at": 22
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x2",
+      "action": "remove",
+      "target": "ghost",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x3",
+      "action": "remove",
+      "target": "ghost_tag",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x4",
+      "action": "remove",
+      "target": "link",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x5",
+      "action": "remove",
+      "target": "idea",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x6",
+      "action": "remove",
+      "target": "sub6",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x7",
+      "action": "remove",
+      "target": "title_s06",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    }
+  ]
+}

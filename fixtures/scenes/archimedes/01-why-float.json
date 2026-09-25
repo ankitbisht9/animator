@@ -1,0 +1,56 @@
+{
+  "dsl_version": "1.0",
+  "id": "s01_why_float",
+  "title": "Why do things float?",
+  "educational_purpose": "Hook: pose the float-or-sink puzzle, introduce Archimedes, and set up the tank of water we will use throughout.",
+  "duration": 21,
+  "layout": "title_card",
+  "narration": {
+    "beats": [
+      { "id": "b1", "text": "Why does a giant steel ship **float**, while a tiny pebble **sinks**?", "at": 0 },
+      { "id": "b2", "text": "More than 2,000 years ago, a Greek thinker called **Archimedes** found the answer.", "at": 7 },
+      { "id": "b3", "text": "Let's discover his idea together, starting with a simple tank of water.", "at": 14 }
+    ]
+  },
+  "objects": [
+    {
+      "id": "hero",
+      "type": "title_card",
+      "params": { "kicker": "Physics · Buoyancy", "title": "Why do things **float**?", "subtitle": "Archimedes' principle, step by step", "icon": "drop", "width": 1100 },
+      "place": { "slot": "hero", "offset": { "x": 0, "y": -30 } }
+    },
+    { "id": "tag_float", "type": "badge", "params": { "text": "SHIP FLOATS", "role": "positive", "icon": "arrow_up", "size": "label" }, "place": { "relativeTo": "hero", "side": "below", "gap": 40, "align": "start" }, "persist": false },
+    { "id": "tag_sink", "type": "badge", "params": { "text": "PEBBLE SINKS", "role": "negative", "icon": "arrow_down", "size": "label" }, "place": { "relativeTo": "hero", "side": "below", "gap": 40, "align": "end" }, "persist": false },
+    {
+      "id": "who",
+      "type": "note",
+      "params": { "title": "Archimedes of Syracuse", "icon": "book", "text": "Greek mathematician and inventor, about 250 BC. Legend says he shouted **Eureka!** (\"I found it!\") in his bath.", "width": 560, "role": "accent" },
+      "place": { "relativeTo": "hero", "side": "below", "gap": 40 },
+      "persist": false
+    },
+    {
+      "id": "tank",
+      "type": "container",
+      "params": { "shape": "tank", "width": 380, "height": 300, "wall": 10, "level": 0.45, "depth": 132, "ticks": true, "mark": 0.45, "unitsPerMeter": 1200 },
+      "place": { "x": 550, "y": 526 },
+      "metadata": { "name": "Tank of water", "description": "A glass tank, a little less than half full. It is 11 cm deep (front to back)." }
+    },
+    { "id": "tank_tag", "type": "label", "params": { "text": "water", "style": "tag", "color": "fluid" }, "place": { "relativeTo": "tank", "side": "right", "gap": 30 }, "persist": false }
+  ],
+  "timeline": [
+    { "id": "t1", "action": "create", "target": "hero", "start": { "at": 0.3 }, "duration": 3 },
+    { "id": "t2", "action": "create", "target": "tag_float", "start": { "at": 3.4 } },
+    { "id": "t3", "action": "create", "target": "tag_sink", "start": { "after": "t2", "delay": -0.2 } },
+    { "id": "t4", "action": "highlight", "target": "tag_sink", "style": "pulse", "start": { "after": "t3", "delay": 0.4 } },
+    { "id": "t5", "action": "remove", "target": "tag_float", "start": { "at": "beat:b2" }, "style": "fade" },
+    { "id": "t6", "action": "remove", "target": "tag_sink", "start": { "with": "t5" }, "style": "fade" },
+    { "id": "t7", "action": "create", "target": "who", "start": { "after": "t5", "delay": 0.1 } },
+    { "id": "t8", "action": "highlight", "target": "who", "style": "glow", "start": { "after": "t7", "delay": 1.5 }, "duration": 1.6 },
+    { "id": "t9", "action": "remove", "target": "who", "start": { "at": "beat:b3" }, "style": "slide_down" },
+    { "id": "t10", "action": "remove", "target": "hero", "start": { "with": "t9" }, "style": "fade" },
+    { "id": "t11", "action": "create", "target": "tank", "start": { "after": "t10", "delay": -0.1 }, "duration": 0.9 },
+    { "id": "t12", "action": "create", "target": "tank_tag", "start": { "after": "t11", "delay": 0.2 } },
+    { "id": "t13", "action": "remove", "target": "tank_tag", "start": { "at": 20.2 }, "duration": 0.6 }
+  ],
+  "interactions": []
+}

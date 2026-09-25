@@ -23,13 +23,28 @@ describe("text layout", () => {
 
   it("parses **emphasis** into bold runs", () => {
     expect(parseRuns("a **b** c")).toEqual([
-      { text: "a ", emph: false },
-      { text: "b", emph: true },
-      { text: " c", emph: false },
+      { text: "a ", emph: false, script: "base" },
+      { text: "b", emph: true, script: "base" },
+      { text: " c", emph: false, script: "base" },
     ]);
     expect(stripMarkup("a **b** c")).toBe("a b c");
     const l = layoutText("a **b**", { size: 30 });
     expect(l.lines[0]?.glyphs.find((g) => g.ch === "b")?.weight).toBe(700);
+  });
+
+  it("lays out subscripts and superscripts smaller and shifted", () => {
+    expect(parseRuns("F_{b} = x^{2}").map((r) => [r.text, r.script])).toEqual([
+      ["F", "base"],
+      ["b", "sub"],
+      [" = x", "base"],
+      ["2", "sup"],
+    ]);
+    const l = layoutText("F_{b}", { size: 40 });
+    const [f, b] = l.lines[0]?.glyphs ?? [];
+    expect(b?.size).toBeCloseTo(28);
+    expect(b?.dy).toBeGreaterThan(0);
+    expect(f?.dy).toBe(0);
+    expect(stripMarkup("V_{sub} in cm^{3}")).toBe("Vsub in cm3");
   });
 
   it("supports Greek letters and arrows through the symbol fallback", () => {

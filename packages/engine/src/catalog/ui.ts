@@ -248,9 +248,9 @@ export const burst = defineComponentSpec({
   type: "burst",
   category: "ui",
   description:
-    "A one-shot celebration burst (confetti, stars or rays) for 'aha!' moments. Create it; it plays during its entrance and then fades away.",
+    "A one-shot burst: confetti, stars or rays for 'aha!' moments, or a water splash (droplets arcing up and falling back). Create it; it plays during its entrance and then fades away.",
   params: z.strictObject({
-    kind: z.enum(["confetti", "stars", "rays"]).default("confetti"),
+    kind: z.enum(["confetti", "stars", "rays", "splash"]).default("confetti"),
     count: z.number().int().min(4).max(80).default(26),
     radius: z.number().min(20).max(800).default(170),
     role: ColorRef.default("highlight"),

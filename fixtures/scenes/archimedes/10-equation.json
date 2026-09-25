@@ -1,0 +1,56 @@
+{
+  "dsl_version": "1.0",
+  "id": "s10_equation",
+  "title": "The equation",
+  "educational_purpose": "State Archimedes' principle and its equation, and explain each symbol while pointing back at the experiment.",
+  "duration": 24.5,
+  "layout": "stage_with_equation",
+  "narration": {
+    "beats": [
+      { "id": "b1", "text": "This is **Archimedes' principle**: the buoyant force equals the weight of the fluid pushed aside.", "at": 0 },
+      { "id": "b2", "text": "We can write it as an equation.", "at": 7.5 },
+      { "id": "b3", "text": "ρ (rho) is the **density** of the fluid: how heavy each cubic metre of it is.", "at": 11.8 },
+      { "id": "b4", "text": "V is the **volume** of fluid pushed aside: the part of the object under the surface.", "at": 16.3 },
+      { "id": "b5", "text": "And g is the pull of gravity: **9.81 newtons** on every kilogram.", "at": 20.8 }
+    ]
+  },
+  "objects": [
+    { "id": "title_s10", "type": "text", "params": { "text": "Archimedes' principle", "size": "heading", "weight": "bold" }, "place": { "slot": "title_bar" }, "layer": "overlay" },
+    {
+      "id": "rule",
+      "type": "note",
+      "params": { "title": "Archimedes' principle", "icon": "sparkle", "text": "The buoyant force on an object equals the **weight of the fluid it pushes aside**.", "width": 500, "role": "accent" },
+      "place": { "slot": "equation_panel.top", "offset": { "x": 0, "y": 6 } }
+    },
+    {
+      "id": "eq",
+      "type": "equation",
+      "params": { "parts": [{ "id": "fb", "tex": "F_b" }, { "id": "eq", "tex": "=" }, { "id": "rho", "tex": "\\rho" }, { "id": "v", "tex": "V" }, { "id": "g", "tex": "g" }], "size": 84, "box": true },
+      "place": { "slot": "equation_panel.center", "offset": { "x": 0, "y": 30 } },
+      "metadata": { "name": "Archimedes' equation", "description": "Buoyant force = density of the fluid × volume pushed aside × g." }
+    },
+    { "id": "lbl_rho", "type": "label", "params": { "text": "ρ = density of the fluid (kg/m³)", "style": "pill", "color": "accent", "size": "small" }, "place": { "relativeTo": "eq", "side": "below", "gap": 34 } },
+    { "id": "lbl_v", "type": "label", "params": { "text": "V = volume pushed aside (m³)", "style": "pill", "color": "fluid.dark", "size": "small" }, "place": { "relativeTo": "eq", "side": "below", "gap": 34 } },
+    { "id": "lbl_g", "type": "label", "params": { "text": "g = 9.81 N/kg (gravity)", "style": "pill", "color": "force_gravity", "size": "small" }, "place": { "relativeTo": "eq", "side": "below", "gap": 34 } },
+    { "id": "to_stone", "type": "arrow", "params": { "from": "lbl_v.left", "to": "stone.right", "curve": 50, "startGap": 10, "endGap": 16, "dashed": true, "headSize": 18 }, "style": { "stroke": "fluid.dark", "strokeWidth": 4 } }
+  ],
+  "timeline": [
+    { "id": "t0", "action": "write", "target": "title_s10", "start": { "at": 0.1 } },
+    { "id": "n1", "action": "create", "target": "rule", "start": { "at": 0.6 } },
+    { "id": "n2", "action": "highlight", "target": "rule", "style": "glow", "start": { "after": "n1", "delay": 2 }, "duration": 1.8 },
+    { "id": "e1", "action": "write", "target": "eq", "terms": ["fb", "eq", "rho", "v", "g"], "start": { "at": "beat:b2", "delay": 0.2 }, "duration": 3 },
+    { "id": "h1", "action": "highlight", "target": "eq", "terms": ["rho"], "style": "color", "start": { "at": "beat:b3", "delay": 0.2 }, "duration": 3.9 },
+    { "id": "l1", "action": "create", "target": "lbl_rho", "start": { "with": "h1", "delay": 0.3 } },
+    { "id": "l1x", "action": "remove", "target": "lbl_rho", "start": { "at": "beat:b4" }, "duration": 0.4 },
+    { "id": "h2", "action": "highlight", "target": "eq", "terms": ["v"], "style": "color", "start": { "at": "beat:b4", "delay": 0.3 }, "duration": 3.9 },
+    { "id": "l2", "action": "create", "target": "lbl_v", "start": { "with": "h2", "delay": 0.3 } },
+    { "id": "l2a", "action": "create", "target": "to_stone", "start": { "after": "l2" }, "duration": 1 },
+    { "id": "l2x", "action": "remove", "target": "lbl_v", "start": { "at": "beat:b5" }, "duration": 0.4 },
+    { "id": "l2y", "action": "remove", "target": "to_stone", "start": { "with": "l2x" }, "duration": 0.4 },
+    { "id": "h3", "action": "highlight", "target": "eq", "terms": ["g"], "style": "color", "start": { "at": "beat:b5", "delay": 0.3 }, "duration": 2.6 },
+    { "id": "l3", "action": "create", "target": "lbl_g", "start": { "with": "h3", "delay": 0.3 } },
+    { "id": "x1", "action": "remove", "target": "lbl_g", "start": { "at": 23.7 }, "duration": 0.5 },
+    { "id": "x2", "action": "remove", "target": "rule", "start": { "with": "x1" }, "duration": 0.5 },
+    { "id": "x3", "action": "remove", "target": "title_s10", "start": { "with": "x1" }, "duration": 0.5 }
+  ]
+}

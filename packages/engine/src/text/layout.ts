@@ -60,20 +60,56 @@ export function glyph(ch: string, weight: FontWeight): Glyph {
 /** Characters in `text` that no bundled font can draw. */
 export function unsupportedChars(text: string): string[] {
   const out = new Set<string>();
-  for (const ch of text.replace(/\*\*/g, "")) if (!hasGlyph(ch)) out.add(ch);
+  for (const ch of stripMarkup(text)) if (!hasGlyph(ch)) out.add(ch);
   return [...out];
 }
+
+export type Script = "base" | "sub" | "sup";
 
 export interface Run {
   text: string;
   emph: boolean;
+  script: Script;
 }
 
-/** Split `**emphasis**` markup into runs. Unbalanced markers are kept literally. */
+/**
+ * Split markup into runs: `**emphasis**`, `_{subscript}` and `^{superscript}`
+ * (e.g. "F_{b}", "V_{sub}", "x^{2}"). Unbalanced markers are kept literally.
+ */
 export function parseRuns(text: string): Run[] {
-  const parts = text.split("**");
-  if (parts.length % 2 === 0) return [{ text, emph: false }];
-  return parts.map((t, i) => ({ text: t, emph: i % 2 === 1 })).filter((r) => r.text.length > 0);
+  const emphOk = (text.split("**").length - 1) % 2 === 0;
+  const runs: Run[] = [];
+  let emph = false;
+  let script: Script = "base";
+  let buf = "";
+  const push = () => {
+    if (buf) runs.push({ text: buf, emph, script });
+    buf = "";
+  };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i] as string;
+    if (emphOk && ch === "*" && text[i + 1] === "*") {
+      push();
+      emph = !emph;
+      i++;
+      continue;
+    }
+    if ((ch === "_" || ch === "^") && text[i + 1] === "{") {
+      const close = text.indexOf("}", i + 2);
+      if (close > i + 2) {
+        push();
+        script = ch === "_" ? "sub" : "sup";
+        buf = text.slice(i + 2, close);
+        push();
+        script = "base";
+        i = close;
+        continue;
+      }
+    }
+    buf += ch;
+  }
+  push();
+  return runs;
 }
 
 export const stripMarkup = (text: string): string =>
@@ -91,6 +127,10 @@ export interface PlacedGlyph {
   emph: boolean;
   /** Index of the word this glyph belongs to (spaces belong to no word: -1). */
   word: number;
+  /** Font size of this glyph (px): smaller for sub/superscripts. */
+  size: number;
+  /** Baseline shift (px, y down): positive for subscripts, negative for superscripts. */
+  dy: number;
 }
 
 export interface TextLine {
@@ -129,7 +169,7 @@ export interface TextStyle {
 
 interface Token {
   kind: "word" | "space" | "newline";
-  glyphs: { ch: string; weight: FontWeight; emph: boolean }[];
+  glyphs: { ch: string; weight: FontWeight; emph: boolean; script: Script }[];
 }
 
 function tokenize(text: string, baseWeight: FontWeight): Token[] {
@@ -148,7 +188,7 @@ function tokenize(text: string, baseWeight: FontWeight): Token[] {
         cur = { kind, glyphs: [] };
         tokens.push(cur);
       }
-      cur.glyphs.push({ ch, weight, emph: run.emph });
+      cur.glyphs.push({ ch, weight, emph: run.emph, script: run.script });
     }
   }
   return tokens;
@@ -178,16 +218,18 @@ function computeLayout(text: string, style: TextStyle): TextLayout {
   const missing = unsupportedChars(text);
 
   const measure = (glyphs: Token["glyphs"], prev: string | null) => {
-    const out: { ch: string; x: number; w: number; weight: FontWeight; emph: boolean }[] = [];
+    const out: Omit<PlacedGlyph, "word">[] = [];
     let x = 0;
     let last = prev;
     for (const g of glyphs) {
-      const kern = last ? (FONTS[g.weight].kern[last + g.ch] ?? 0) * scale : 0;
+      const f = g.script === "base" ? 1 : 0.7;
+      const kern = last && g.script === "base" ? (FONTS[g.weight].kern[last + g.ch] ?? 0) * scale : 0;
       x += kern;
-      const w = glyph(g.ch, g.weight).a * scale + spacing;
-      out.push({ ch: g.ch, x, w, weight: g.weight, emph: g.emph });
+      const w = glyph(g.ch, g.weight).a * scale * f + spacing;
+      const dy = g.script === "sub" ? size * 0.22 : g.script === "sup" ? -size * 0.38 : 0;
+      out.push({ ch: g.ch, x, w, weight: g.weight, emph: g.emph, size: size * f, dy });
       x += w;
-      last = g.ch;
+      last = g.script === "base" ? g.ch : null;
     }
     return { glyphs: out, width: x };
   };

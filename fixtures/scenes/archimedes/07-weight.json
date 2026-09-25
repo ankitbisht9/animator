@@ -1,0 +1,50 @@
+{
+  "dsl_version": "1.0",
+  "id": "s07_weight",
+  "title": "Force 1: weight",
+  "educational_purpose": "Name the first force (weight, downward) and show it comes from mass times g, with computed values.",
+  "duration": 19,
+  "layout": "stage_with_caption",
+  "narration": {
+    "beats": [
+      { "id": "b1", "text": "Now let's look at the **forces** acting on the block.", "at": 0 },
+      { "id": "b2", "text": "Gravity pulls the block **down**. This force is its **weight**, W.", "at": 5 },
+      { "id": "b3", "text": "Weight is the mass multiplied by g, the pull of gravity on every kilogram.", "at": 11.5 }
+    ]
+  },
+  "objects": [
+    { "id": "title_s07", "type": "text", "params": { "text": "Force 1: weight", "size": "heading", "weight": "bold" }, "place": { "slot": "title_bar" }, "layer": "overlay" },
+    {
+      "id": "f_w",
+      "type": "vector_arrow",
+      "params": { "from": "blk.center", "direction": "down", "magnitude": { "bind": "hold7.weight" }, "scale": 16, "role": "force_gravity", "label": { "bind": "hold7.weight", "format": "W = 0.0 N" }, "labelSide": "left" },
+      "layer": "foreground",
+      "metadata": { "name": "Weight", "description": "Gravity pulls the block down with a force equal to its weight, W = m × g." }
+    },
+    {
+      "id": "eq_w",
+      "type": "equation",
+      "params": { "parts": [{ "id": "w", "tex": "W" }, { "id": "eq", "tex": "=" }, { "id": "m", "tex": "m" }, { "id": "x", "tex": "\\times" }, { "id": "g", "tex": "g" }], "size": 64, "box": true },
+      "place": { "slot": "stage.right", "offset": { "x": -30, "y": -150 } }
+    },
+    { "id": "m_ro", "type": "readout", "params": { "label": "Mass, m", "value": { "bind": "hold7.mass" }, "format": "0.0", "unit": "kg", "role": "object_a", "size": "body" }, "place": { "relativeTo": "eq_w", "side": "below", "gap": 34, "align": "start" } },
+    { "id": "g_ro", "type": "readout", "params": { "label": "Gravity, g", "value": { "bind": "hold7.g" }, "format": "0.00", "unit": "N/kg", "role": "accent", "size": "body" }, "place": { "relativeTo": "m_ro", "side": "right", "gap": 20, "align": "start" } },
+    { "id": "w_ro", "type": "readout", "params": { "label": "Weight, W", "value": { "bind": "hold7.weight" }, "format": "0.0", "unit": "N", "role": "force_gravity" }, "place": { "relativeTo": "m_ro", "side": "below", "gap": 26, "align": "start" } }
+  ],
+  "solvers": [{ "id": "hold7", "type": "buoyancy", "container": "tank", "body": "blk", "mode": "hold", "unitsPerMeter": 1200 }],
+  "timeline": [
+    { "id": "t0", "action": "write", "target": "title_s07", "start": { "at": 0.1 } },
+    { "id": "a1", "action": "create", "target": "f_w", "start": { "at": "beat:b2", "delay": 0.3 }, "duration": 1.1 },
+    { "id": "a2", "action": "highlight", "target": "f_w", "style": "glow", "start": { "after": "a1", "delay": 0.2 }, "duration": 1.6 },
+    { "id": "e1", "action": "write", "target": "eq_w", "terms": ["w", "eq", "m", "x", "g"], "start": { "at": "beat:b3" }, "duration": 2 },
+    { "id": "e2", "action": "create", "target": "m_ro", "start": { "after": "e1" } },
+    { "id": "e3", "action": "create", "target": "g_ro", "start": { "with": "e2", "delay": 0.3 } },
+    { "id": "e4", "action": "create", "target": "w_ro", "start": { "after": "e3" }, "duration": 1.2 },
+    { "id": "e5", "action": "highlight", "target": "w_ro", "style": "box", "start": { "after": "e4" }, "duration": 1.4 },
+    { "id": "x1", "action": "remove", "target": "eq_w", "start": { "at": 18.3 }, "duration": 0.5 },
+    { "id": "x2", "action": "remove", "target": "m_ro", "start": { "with": "x1" }, "duration": 0.5 },
+    { "id": "x3", "action": "remove", "target": "g_ro", "start": { "with": "x1" }, "duration": 0.5 },
+    { "id": "x4", "action": "remove", "target": "w_ro", "start": { "with": "x1" }, "duration": 0.5 },
+    { "id": "x5", "action": "remove", "target": "title_s07", "start": { "with": "x1" }, "duration": 0.5 }
+  ]
+}

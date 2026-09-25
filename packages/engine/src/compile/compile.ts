@@ -1039,7 +1039,14 @@ class Compiler {
         }
         this.addSeg(
           this.channelOf(target, a.property),
-          { k: "expr", t0: start, t1: end, src: a.id ?? "?", expr },
+          {
+            k: "expr",
+            t0: start,
+            t1: end,
+            src: a.id ?? "?",
+            expr,
+            ...(a.format !== undefined ? { format: a.format } : {}),
+          },
           `${target.id}.${a.property}`,
           where,
         );
@@ -1398,7 +1405,9 @@ class Compiler {
     pending.sort((a, b) => a.seg.t1 - b.seg.t1);
     for (const { seg, ch } of pending) {
       const ctx = evaluateObjects(this.cs, seg.t1);
-      const v = sampleChannel(ch, seg.t1, ctx.env);
+      // End values are raw numbers (formatted expressions format them when read).
+      const v =
+        seg.k === "expr" ? ctx.env.exprValue(seg.expr, seg.t1 - seg.t0, seg.t1) : sampleChannel(ch, seg.t1, ctx.env);
       seg.end = typeof v === "number" && Number.isFinite(v) ? roundTo(v, 6) : 0;
     }
   }

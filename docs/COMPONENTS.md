@@ -305,13 +305,13 @@ Entrance: `pop` · Supports: label-like
 
 ### `burst`
 
-A one-shot celebration burst (confetti, stars or rays) for 'aha!' moments. Create it; it plays during its entrance and then fades away.
+A one-shot burst: confetti, stars or rays for 'aha!' moments, or a water splash (droplets arcing up and falling back). Create it; it plays during its entrance and then fades away.
 
 Entrance: `write` · Supports: write
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `kind` | `"confetti"` \| `"stars"` \| `"rays"` |  | `"confetti"` |  |
+| `kind` | `"confetti"` \| `"stars"` \| `"rays"` \| `"splash"` |  | `"confetti"` |  |
 | `count` | integer |  | `26` |  |
 | `radius` | number |  | `170` |  |
 | `role` | [ColorRef](#colorref) |  | `"highlight"` |  |
@@ -479,7 +479,9 @@ Anchors (plus box anchors): `water_surface`, `water_center`, `floor`, `rim`, `ri
 | `rippleX` | number |  | `0` |  |
 | `outflow` | number |  | `0` | overflow_can only: strength of the stream pouring from the spout (driven by the buoyancy solver) |
 | `bubbles` | boolean |  | `true` | Gentle ambient bubbles |
-| `mark` | number |  |  | Dashed line at this fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right |
+| `mark` | number |  |  | A reference fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right |
+| `showMark` | boolean |  | `false` | Draw the dashed reference line at 'mark' |
+| `depth` | number |  |  | Depth into the screen in px (plan view); defaults to the inner width. Slimmer tanks show bigger level changes. |
 | `unitsPerMeter` | number |  | `400` |  |
 
 ```json

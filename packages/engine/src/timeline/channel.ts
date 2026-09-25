@@ -5,6 +5,7 @@
  */
 import { mixHex } from "../color/color";
 import type { Expr } from "../expr/expr";
+import { formatNumber } from "../expr/format";
 import { ease } from "../interp/easing";
 import { clamp } from "../math/num";
 import type { Vec2 } from "../math/vec";
@@ -69,9 +70,13 @@ export function segmentValue(seg: Segment, t: number, env: SampleEnv): ChannelVa
       return keysValue(seg, t);
     case "solver":
       return env.solverValue(seg.solver, seg.channel, Math.min(t, seg.t1)) * seg.gain + seg.offset;
-    case "expr":
-      if (!active && seg.end !== undefined) return seg.end;
-      return env.exprValue(seg.expr, Math.min(t, seg.t1) - seg.t0, Math.min(t, seg.t1));
+    case "expr": {
+      const v =
+        !active && seg.end !== undefined
+          ? seg.end
+          : env.exprValue(seg.expr, Math.min(t, seg.t1) - seg.t0, Math.min(t, seg.t1));
+      return seg.format !== undefined ? formatNumber(v, seg.format) : v;
+    }
     case "follow": {
       if (!active && seg.end !== undefined) return seg.end;
       const p = env.anchorOf(seg.leader, seg.anchor);

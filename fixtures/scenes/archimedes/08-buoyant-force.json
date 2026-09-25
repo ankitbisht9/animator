@@ -1,0 +1,67 @@
+{
+  "dsl_version": "1.0",
+  "id": "s08_buoyant_force",
+  "title": "Force 2: the buoyant force",
+  "educational_purpose": "Introduce the upward buoyant force, show it balances the weight while floating, and that pushing deeper increases it.",
+  "duration": 26,
+  "layout": "stage_with_caption",
+  "narration": {
+    "beats": [
+      { "id": "b1", "text": "But the block doesn't sink to the bottom. The water pushes **up** on it!", "at": 0 },
+      { "id": "b2", "text": "This upward push is called the **buoyant force**.", "at": 6 },
+      { "id": "b3", "text": "While the block floats, the two forces **balance**: the push up equals the weight.", "at": 11.5 },
+      { "id": "b4", "text": "Push the block deeper, and the water pushes back even **harder**!", "at": 18 }
+    ]
+  },
+  "objects": [
+    { "id": "title_s08", "type": "text", "params": { "text": "Force 2: the buoyant force", "size": "heading", "weight": "bold" }, "place": { "slot": "title_bar" }, "layer": "overlay" },
+    {
+      "id": "f_b",
+      "type": "vector_arrow",
+      "params": { "from": "blk.center", "direction": "up", "magnitude": { "bind": "push8.buoyantForce" }, "scale": 16, "role": "force_buoyant", "label": { "bind": "push8.buoyantForce", "format": "F_{b} = 0.0 N" }, "labelSide": "right" },
+      "layer": "foreground",
+      "metadata": { "name": "Buoyant force", "description": "The water pushes up on the block. The deeper it sits, the bigger the push." }
+    },
+    { "id": "bal", "type": "badge", "params": { "text": "BALANCED", "role": "positive", "icon": "balance", "size": "label" }, "place": { "relativeTo": "tank", "side": "right", "gap": 200, "align": "start" } },
+    {
+      "id": "bal_eq",
+      "type": "equation",
+      "params": { "parts": [{ "id": "fb", "tex": "F_b" }, { "id": "eq", "tex": "=" }, { "id": "w", "tex": "W" }], "size": 64, "box": true },
+      "place": { "relativeTo": "bal", "side": "below", "gap": 28, "align": "start" }
+    },
+    {
+      "id": "hand",
+      "type": "vector_arrow",
+      "params": { "from": "blk.top_left", "direction": "down", "origin": "head", "magnitude": 1, "scale": 1, "minLength": 80, "role": "force_applied", "label": "push", "labelSide": "left" },
+      "layer": "foreground",
+      "metadata": { "name": "Your push", "description": "Pushing the block deeper into the water." }
+    },
+    { "id": "harder", "type": "badge", "params": { "text": "BIGGER PUSH BACK", "role": "force_buoyant", "icon": "arrow_up", "size": "label" }, "place": { "relativeTo": "tank", "side": "right", "gap": 200, "align": "start" } }
+  ],
+  "solvers": [{ "id": "push8", "type": "buoyancy", "container": "tank", "body": "blk", "mode": "lower", "holdDepth": 1, "unitsPerMeter": 1200 }],
+  "timeline": [
+    { "id": "t0", "action": "write", "target": "title_s08", "start": { "at": 0.1 } },
+    { "id": "a1", "action": "create", "target": "f_b", "start": { "at": 1.8 }, "duration": 1.3 },
+    { "id": "a2", "action": "highlight", "target": "f_b", "style": "glow", "start": { "at": "beat:b2", "delay": 0.4 }, "duration": 1.8 },
+    { "id": "b1", "action": "create", "target": "bal", "start": { "at": "beat:b3", "delay": 0.4 } },
+    { "id": "b2", "action": "write", "target": "bal_eq", "terms": ["fb", "eq", "w"], "start": { "after": "b1" }, "duration": 1.6 },
+    { "id": "b3", "action": "highlight", "target": "f_w", "style": "pulse", "start": { "after": "b2" }, "duration": 1.2 },
+    { "id": "b4", "action": "highlight", "target": "f_b", "style": "pulse", "start": { "with": "b3" }, "duration": 1.2 },
+    { "id": "b5", "action": "remove", "target": "bal", "start": { "at": "beat:b4" }, "duration": 0.5 },
+    { "id": "b6", "action": "remove", "target": "bal_eq", "start": { "with": "b5" }, "duration": 0.5 },
+    { "id": "c1", "action": "create", "target": "hand", "start": { "at": "beat:b4", "delay": 0.4 }, "duration": 0.7 },
+    { "id": "c2", "action": "run_solver", "target": "push8", "start": { "after": "c1" }, "duration": 4 },
+    { "id": "c3", "action": "create", "target": "harder", "start": { "after": "c2", "delay": -1.4 } },
+    { "id": "c4", "action": "highlight", "target": "f_b", "style": "glow", "start": { "after": "c3" }, "duration": 1.4 }
+  ],
+  "interactions": [
+    {
+      "id": "q_deeper",
+      "at": 25.4,
+      "question": "When you push the block deeper into the water, the buoyant force...",
+      "choices": ["gets bigger", "stays the same", "gets smaller"],
+      "answer": 0,
+      "explain": "More of the block is under water, so it pushes aside more water, and the water pushes back harder."
+    }
+  ]
+}

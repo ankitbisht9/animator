@@ -120,7 +120,7 @@ export function validateContinuity(prev: SceneState | null, next: SceneT): Valid
   const out: ValidationIssue[] = [];
   const continuing = next.transition_in.type === "continue";
   for (const s of Object.values(prev.objects)) {
-    if (s.visible && !s.persist && continuing) {
+    if (s.visible && !s.persist && !s.decorative && continuing) {
       out.push(
         issue(
           "ABRUPT_DISAPPEARANCE",

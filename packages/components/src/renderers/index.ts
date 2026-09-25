@@ -15,6 +15,7 @@ import {
   BalanceR,
   BallR,
   BlockR,
+  ContainerFrontR,
   ContainerR,
   FlowParticlesR,
   ManometerR,
@@ -80,4 +81,9 @@ export const RENDERERS: Record<string, Renderer> = {
   badge: BadgeR,
   speech_bubble: SpeechBubbleR,
   burst: BurstR,
+};
+
+/** Optional second pass drawn in front of the other objects of the same layer (e.g. water in front of a submerged body). */
+export const FRONT_RENDERERS: Record<string, Renderer> = {
+  container: ContainerFrontR,
 };

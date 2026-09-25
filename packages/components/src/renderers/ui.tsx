@@ -334,7 +334,24 @@ export function BurstR({ o, theme, seed }: RenderProps) {
     const x = Math.cos(a) * d;
     const y = Math.sin(a) * d + u * u * 40;
     const c = palette[i % palette.length] ?? main;
-    if (kind === "rays") {
+    if (kind === "splash") {
+      // Droplets thrown up and outwards, falling back under gravity.
+      const aUp = Math.PI + (0.12 + 0.76 * (i / Math.max(1, count - 1))) * Math.PI;
+      const speed = radius * (0.65 + 0.5 * rand01(sd, i, 2));
+      const sx = Math.cos(aUp) * speed * u;
+      const sy2 = Math.sin(aUp) * speed * u + 2.2 * radius * u * u;
+      const r = 3 + rand01(sd, i, 3) * 5;
+      out.push(
+        <circle
+          key={i}
+          cx={fmt(sx)}
+          cy={fmt(sy2)}
+          r={fmt(r * (1 - 0.4 * u))}
+          fill={main}
+          opacity={fmt(0.9 * fade, 3)}
+        />,
+      );
+    } else if (kind === "rays") {
       const r0 = radius * 0.25 * e;
       out.push(
         <line

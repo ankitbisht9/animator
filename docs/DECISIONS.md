@@ -313,3 +313,48 @@ Message schemas are Zod in `packages/engine/src/protocol`, exported to `contract
 turned into Pydantic models (`contracts/python`, datamodel-code-generator with a pinned formatter). Contract
 tests assert that live worker answers equal the committed contracts and replay golden request/response
 fixtures from `fixtures/rpc`.
+
+---
+
+## ADR-021 Containers draw in two passes
+
+**Decision.** A component may register a second renderer in `FRONT_RENDERERS`. `SceneView` draws each layer
+in order: every object's normal pass, then the front passes of that layer. The container's front pass
+draws a translucent veil of the liquid clipped to the inner walls, the surface line, the glass walls, the
+ticks and the spout. Its back pass draws the liquid body, bands and bubbles.
+
+**Why.** A block or stone inside a tank must look submerged: the part under the surface should be tinted
+by the water and the glass should be in front of it. Painter's order can't put a body both in front of the
+liquid and behind the glass when the liquid and the glass belong to one object, and asking the LLM to split containers into several objects
+would break identity (P6). The split lives in the renderer, uses the same `layout*` geometry as the
+spec (ADR-016), and adds nothing to the DSL. Objects on the `foreground` layer (force arrows) still draw
+over everything.
+
+---
+
+## ADR-022 Sub/superscripts in text, formatted bindings
+
+**Decision.** Glyph text markup gains `_{…}` and `^{…}` (0.7× size, shifted baseline) next to `**emph**`.
+The layout stays deterministic and per-glyph (size and `dy` per placed glyph). A `bind` action takes an
+optional `format` (`"Δh = 0.0 cm"`, the same number formats readouts use). The engine formats the value
+when it samples the channel, and the segment's end value stays a raw number.
+
+**Why.** Physics labels need `F_b` without switching to an equation object, and live values belong
+inside sentences and labels as well as in readouts. The engine does the formatting, so the number shown
+comes from the solver (P3). No string templating is exposed.
+
+---
+
+## ADR-023 Fixture lessons are held to zero warnings
+
+**Decision.** Every lesson in `fixtures/scenes` must lift, validate and compile, scene by scene with
+continuity, with no errors and no warnings. A warning that a fixture triggers on purpose is listed in
+`packages/engine/test/fixtures.test.ts`, which enforces this. The authoring loop is `check-fixtures.ts`,
+then `probe-lesson.ts` (resolved boxes and values at a time), then `render_keyframes.py` (PNG stills from
+the real render page), then fixes.
+
+**Why.** The Archimedes lesson is the quality bar the LLM pipeline is measured against (Gate A), and the
+validators are what the correction loop will rely on. If hand-authored scenes need warnings silenced,
+either the scene or the rule is wrong, and each such case was resolved as one or the other. Examples:
+per-scene titles instead of one drifting title, and decorative objects exempt from the abrupt-disappearance
+check.

@@ -1,0 +1,280 @@
+{
+  "dsl_version": "1.0",
+  "id": "s05_level_rises",
+  "title": "The water level rises",
+  "educational_purpose": "Measure the rise of the water level against the start mark; pushing the block deeper pushes more water aside and the level rises more.",
+  "duration": 24,
+  "layout": "stage_with_caption",
+  "narration": {
+    "beats": [
+      {
+        "id": "b1",
+        "text": "Compare the water level now with where it **started**.",
+        "at": 0
+      },
+      {
+        "id": "b2",
+        "text": "It went **up**! The block now fills space where water used to be.",
+        "at": 6
+      },
+      {
+        "id": "b3",
+        "text": "Now push the block all the way under, so it pushes aside even more water...",
+        "at": 12.2
+      },
+      {
+        "id": "b4",
+        "text": "...and the level rises even **higher**.",
+        "at": 18.4
+      }
+    ]
+  },
+  "objects": [
+    {
+      "id": "title_s05",
+      "type": "text",
+      "params": {
+        "text": "The water level rises",
+        "size": "heading",
+        "weight": "bold"
+      },
+      "place": {
+        "slot": "title_bar"
+      },
+      "layer": "overlay"
+    },
+    {
+      "id": "dh",
+      "type": "dimension",
+      "params": {
+        "from": "tank.mark_right",
+        "to": "tank.inner_right",
+        "offset": 48,
+        "role": "fluid.dark",
+        "label": {
+          "bind": "push.levelHeightCm - 0.45 * push.innerHeightCm",
+          "format": "Δh = 0.0 cm"
+        }
+      },
+      "metadata": {
+        "name": "Rise of the water level",
+        "description": "How far the water surface has risen above the start mark."
+      }
+    },
+    {
+      "id": "rise",
+      "type": "readout",
+      "params": {
+        "label": "Water level rose by",
+        "value": {
+          "bind": "push.levelHeightCm - 0.45 * push.innerHeightCm"
+        },
+        "format": "0.0",
+        "unit": "cm",
+        "role": "fluid",
+        "size": "body"
+      },
+      "place": {
+        "relativeTo": "tank",
+        "side": "right",
+        "gap": 170,
+        "align": "start"
+      }
+    },
+    {
+      "id": "hand",
+      "type": "vector_arrow",
+      "params": {
+        "from": "blk.top",
+        "direction": "down",
+        "origin": "head",
+        "magnitude": 1,
+        "scale": 1,
+        "minLength": 80,
+        "role": "force_applied",
+        "label": "push",
+        "labelSide": "right"
+      },
+      "metadata": {
+        "name": "Your push",
+        "description": "We push the block down into the water."
+      }
+    }
+  ],
+  "solvers": [
+    {
+      "id": "push",
+      "type": "buoyancy",
+      "container": "tank",
+      "body": "blk",
+      "mode": "lower",
+      "holdDepth": 1,
+      "unitsPerMeter": 1200
+    }
+  ],
+  "timeline": [
+    {
+      "id": "t0",
+      "action": "write",
+      "target": "title_s05",
+      "start": {
+        "at": 0.1
+      }
+    },
+    {
+      "id": "c1",
+      "action": "camera_move",
+      "focus": [
+        "tank",
+        "rise",
+        "start_tag"
+      ],
+      "padding": 80,
+      "start": {
+        "at": 0.4
+      },
+      "duration": 1.8
+    },
+    {
+      "id": "c2",
+      "action": "highlight",
+      "target": "start_tag",
+      "style": "underline",
+      "start": {
+        "after": "c1"
+      },
+      "duration": 1.8
+    },
+    {
+      "id": "d1",
+      "action": "create",
+      "target": "dh",
+      "start": {
+        "at": "beat:b2"
+      },
+      "duration": 1.2
+    },
+    {
+      "id": "d2",
+      "action": "create",
+      "target": "rise",
+      "start": {
+        "after": "d1"
+      }
+    },
+    {
+      "id": "d3",
+      "action": "highlight",
+      "target": "rise",
+      "style": "glow",
+      "start": {
+        "after": "d2",
+        "delay": 0.8
+      },
+      "duration": 1.4
+    },
+    {
+      "id": "h1",
+      "action": "create",
+      "target": "hand",
+      "start": {
+        "at": "beat:b3",
+        "delay": 0.2
+      },
+      "duration": 0.7
+    },
+    {
+      "id": "h2",
+      "action": "run_solver",
+      "target": "push",
+      "start": {
+        "after": "h1"
+      },
+      "duration": 5
+    },
+    {
+      "id": "h3",
+      "action": "highlight",
+      "target": "dh",
+      "style": "pulse",
+      "start": {
+        "at": "beat:b4",
+        "delay": 0.4
+      },
+      "duration": 1.2
+    },
+    {
+      "id": "h4",
+      "action": "remove",
+      "target": "hand",
+      "start": {
+        "at": 20.6
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "c3",
+      "action": "camera_move",
+      "center": {
+        "x": 800,
+        "y": 450
+      },
+      "zoom": 1,
+      "start": {
+        "at": 21.8
+      },
+      "duration": 1.4
+    },
+    {
+      "id": "x1",
+      "action": "remove",
+      "target": "dh",
+      "start": {
+        "at": 22.9
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x2",
+      "action": "remove",
+      "target": "rise",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x3",
+      "action": "remove",
+      "target": "start_tag",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x4",
+      "action": "transform",
+      "target": "tank",
+      "changes": [
+        {
+          "param": "showMark",
+          "to": false
+        }
+      ],
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.2
+    },
+    {
+      "id": "x5",
+      "action": "remove",
+      "target": "title_s05",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    }
+  ]
+}

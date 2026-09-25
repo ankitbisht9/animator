@@ -290,6 +290,7 @@ Timing: `start` is `{at}` (seconds, `cue:<id>`, `beat:<id>`, `beat_end:<id>`), `
 | `target` | string | yes |  | Id of the object this action affects |
 | `property` | string | yes |  |  |
 | `bind` | string | yes |  | Expression; may use t (seconds since action start) |
+| `format` | string |  |  | For text params: number format, e.g. 'F = 0.0 N' |
 
 ### `camera_move`
 
@@ -457,7 +458,7 @@ Type: `"none"` \| `"happy"` \| `"surprised"` \| `"worried"` \| `"calm"` \| `"win
 
 ### IconName
 
-Type: enum (16 values)
+Type: enum (17 values)
 
 ### Material
 
@@ -634,7 +635,7 @@ Type: `"regular"` \| `"semibold"` \| `"bold"`
 
 **Solvers** (outputs are bindable as `<solver id>.<output>`):
 
-- `buoyancy`: `buoyantForce` (N), `weight` (N), `apparentWeight` (N), `netForce` (N), `submergedVolume` (m³), `submergedVolumeCm3` (cm³), `displacedVolume` (m³), `displacedMass` (kg), `displacedWeight` (N), `submergedFraction` (), `submergedDepth` (m), `submergedPx` (px), `level` (), `levelRise` (m), `levelRiseCm` (cm), `spilledVolume` (m³), `spilledVolumeCm3` (cm³), `spilledWeight` (N), `bodyVolume` (m³), `bodyVolumeCm3` (cm³), `mass` (kg), `bodyDensity` (kg/m³), `fluidDensity` (kg/m³), `g` (m/s²), `equilibriumFraction` (), `floats` ()
+- `buoyancy`: `buoyantForce` (N), `weight` (N), `apparentWeight` (N), `netForce` (N), `submergedVolume` (m³), `submergedVolumeCm3` (cm³), `displacedVolume` (m³), `displacedVolumeCm3` (cm³), `displacedMass` (kg), `displacedWeight` (N), `submergedFraction` (), `submergedDepth` (m), `submergedPx` (px), `level` (), `levelRise` (m), `levelRiseCm` (cm), `levelHeightCm` (cm), `innerHeight` (m), `innerHeightCm` (cm), `containerArea` (m²), `spilledVolume` (m³), `spilledVolumeCm3` (cm³), `spilledWeight` (N), `bodyVolume` (m³), `bodyVolumeCm3` (cm³), `mass` (kg), `bodyDensity` (kg/m³), `fluidDensity` (kg/m³), `g` (m/s²), `equilibriumFraction` (), `floats` ()
 - `fluid_flow`: `Q` (m³/s), `rho` (kg/m³), `g` (m/s²), `p_in` (Pa), `v_max` (m/s), `p_min` (Pa), `pressureDrop` (Pa), `ramp` ()
 - `projectile`: `x` (px), `y` (px), `vx` (m/s), `vy` (m/s), `speed` (m/s), `height` (m), `distance` (m), `flightTime` (s), `range` (m), `maxHeight` (m), `speed0` (m/s), `angle` (°), `g` (m/s²)
 - `pendulum`: `angle` (°), `omega` (rad/s), `speed` (m/s), `height` (m), `kinetic` (J/kg), `potential` (J/kg), `period` (s), `length` (m), `g` (m/s²)

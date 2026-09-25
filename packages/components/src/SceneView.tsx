@@ -16,7 +16,7 @@ import { type ReactNode, useMemo } from "react";
 import { Background } from "./Background";
 import { CaptionBar } from "./Caption";
 import { EmphasisBehind, EmphasisFront } from "./Emphasis";
-import { RENDERERS } from "./renderers";
+import { FRONT_RENDERERS, RENDERERS } from "./renderers";
 import { fmt, matrixAttr, withAlpha } from "./util";
 
 export interface SceneViewProps {
@@ -113,6 +113,29 @@ function ObjectView({
   );
 }
 
+/** Second pass of objects that draw something in front of their contents (e.g. water over a submerged body). */
+function ObjectFront({
+  o,
+  theme,
+  t,
+  seed,
+  prep,
+}: {
+  o: FrameObject;
+  theme: Theme;
+  t: number;
+  seed: number;
+  prep: unknown;
+}) {
+  const render = FRONT_RENDERERS[o.type];
+  if (!render) return null;
+  return (
+    <g transform={matrixAttr(o.matrix)} opacity={o.alpha < 1 ? fmt(o.alpha, 3) : undefined} pointerEvents="none">
+      {render({ o, theme, t, seed, prep })}
+    </g>
+  );
+}
+
 function Overlay({ overlay }: { overlay: NonNullable<FrameState["overlay"]> }) {
   const { style, color, amount } = overlay;
   if (style === "wipe" || style === "wipe_in") {
@@ -144,8 +167,21 @@ export function SceneView({
   const theme = getTheme(compiled.themeId);
   const prepById = useMemo(() => new Map(compiled.objects.map((o) => [o.id, o.prep])), [compiled]);
   const world = frame.objects.filter((o) => o.layer !== "overlay");
+  const behind = world.filter((o) => o.layer !== "foreground");
+  const ahead = world.filter((o) => o.layer === "foreground");
   const overlay = frame.objects.filter((o) => o.layer === "overlay");
   const showCaptions = (captions ?? compiled.captions) && frame.caption;
+  const front = (o: FrameObject) =>
+    FRONT_RENDERERS[o.type] ? (
+      <ObjectFront
+        key={`${o.id}-front`}
+        o={o}
+        theme={theme}
+        t={frame.t}
+        seed={compiled.seed}
+        prep={prepById.get(o.id)}
+      />
+    ) : null;
   const view = (o: FrameObject) => (
     <ObjectView
       key={o.id}
@@ -172,8 +208,14 @@ export function SceneView({
     >
       <SceneDefs theme={theme} />
       <Background style={frame.background.style} color={frame.background.color} theme={theme} />
-      <g transform={matrixAttr(cameraMatrix(frame.camera))}>{world.map(view)}</g>
+      <g transform={matrixAttr(cameraMatrix(frame.camera))}>
+        {behind.map(view)}
+        {behind.map(front)}
+        {ahead.map(view)}
+        {ahead.map(front)}
+      </g>
       {overlay.map(view)}
+      {overlay.map(front)}
       {showCaptions && frame.caption && (
         <CaptionBar text={frame.caption.text} progress={frame.caption.progress} theme={theme} />
       )}

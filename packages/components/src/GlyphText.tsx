@@ -21,7 +21,6 @@ export interface GlyphTextProps {
 }
 
 function GlyphTextInner({ layout, color, emphColor, reveal = 1, x = 0, y = 0, wordColor }: GlyphTextProps) {
-  const scale = layout.size / 1000;
   const total = layout.glyphCount;
   let index = 0;
   const out = [];
@@ -37,12 +36,12 @@ function GlyphTextInner({ layout, color, emphColor, reveal = 1, x = 0, y = 0, wo
       if (f <= 0) continue;
       const fill = wordColor?.(g.word) ?? (g.emph && emphColor ? emphColor : color);
       const gx = x + line.x + g.x;
-      const gy = y + line.baseline + (1 - f) * layout.size * 0.22;
+      const gy = y + line.baseline + g.dy + (1 - f) * layout.size * 0.22;
       out.push(
         <path
           key={`${li}-${gi}`}
           d={glyph(g.ch, g.weight).d}
-          transform={`translate(${fmt(gx)} ${fmt(gy)}) scale(${fmt(scale, 5)})`}
+          transform={`translate(${fmt(gx)} ${fmt(gy)}) scale(${fmt(g.size / 1000, 5)})`}
           fill={fill}
           opacity={f < 1 ? fmt(f, 3) : undefined}
         />,

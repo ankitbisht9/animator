@@ -29,7 +29,13 @@ const TAU = Math.PI * 2;
 
 // ------------------------------------------------------------------ container
 
-export function ContainerR({ o, theme, t, seed }: RenderProps) {
+/**
+ * Containers draw in two passes so bodies look like they are *in* the water:
+ * the back pass (liquid body, bubbles) goes behind other objects of the same layer,
+ * the front pass (a translucent water veil below the surface, the surface line,
+ * glass walls, ticks, spout) goes in front of them.
+ */
+function containerParts({ o, theme, t, seed }: RenderProps): { back: ReactNode; front: ReactNode } {
   const p = o.params;
   const l = containerLayout(p);
   const W = l.width;
@@ -172,7 +178,7 @@ export function ContainerR({ o, theme, t, seed }: RenderProps) {
     }
   }
 
-  return (
+  const back = (
     <g>
       <defs>
         <clipPath id={ids.clip}>
@@ -205,6 +211,13 @@ export function ContainerR({ o, theme, t, seed }: RenderProps) {
         {hasLiquid && <path d={liquid} fill={`url(#${ids.liquid})`} />}
         {bands}
         {bubbles}
+      </g>
+    </g>
+  );
+  const front = (
+    <g>
+      <g clipPath={`url(#${ids.clip})`}>
+        {hasLiquid && <path d={liquid} fill={fluid} opacity={0.3} />}
         {hasLiquid && (
           <path
             d={wave}
@@ -273,7 +286,7 @@ export function ContainerR({ o, theme, t, seed }: RenderProps) {
         opacity={0.3}
       />
       {ticks}
-      {typeof p.mark === "number" && (
+      {typeof p.mark === "number" && p.showMark === true && (
         <line
           x1={fmt(x0 + 4)}
           y1={fmt(floor - p.mark * (floor - top))}
@@ -288,7 +301,11 @@ export function ContainerR({ o, theme, t, seed }: RenderProps) {
       )}
     </g>
   );
+  return { back, front };
 }
+
+export const ContainerR = (p: RenderProps) => containerParts(p).back;
+export const ContainerFrontR = (p: RenderProps) => containerParts(p).front;
 
 // ------------------------------------------------------------------ bodies
 

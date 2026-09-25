@@ -1,0 +1,443 @@
+{
+  "dsl_version": "1.0",
+  "id": "s09_eureka",
+  "title": "The overflow experiment",
+  "educational_purpose": "The key experiment: the weight a stone loses in water equals the weight of the water it pushes out of an overflow can.",
+  "duration": 27,
+  "layout": "stage_with_caption",
+  "transition_in": {
+    "type": "fade",
+    "duration": 0.8
+  },
+  "narration": {
+    "beats": [
+      {
+        "id": "b1",
+        "text": "A new experiment. A stone hangs from a **spring scale**, above a can filled with water right up to its spout.",
+        "at": 0
+      },
+      {
+        "id": "b2",
+        "text": "In the air, the scale shows the stone's full **weight**.",
+        "at": 7.5
+      },
+      {
+        "id": "b3",
+        "text": "Now lower the stone into the water. The reading **drops**, and water spills out into the cup.",
+        "at": 12.5
+      },
+      {
+        "id": "b4",
+        "text": "The weight the stone loses is **exactly** the weight of the water it pushed out. Eureka!",
+        "at": 20.5
+      }
+    ]
+  },
+  "objects": [
+    {
+      "id": "title_s09",
+      "type": "text",
+      "params": {
+        "text": "The overflow experiment",
+        "size": "heading",
+        "weight": "bold"
+      },
+      "place": {
+        "slot": "title_bar"
+      },
+      "layer": "overlay"
+    },
+    {
+      "id": "can",
+      "type": "container",
+      "params": {
+        "shape": "overflow_can",
+        "width": 260,
+        "height": 280,
+        "wall": 10,
+        "level": 0.7,
+        "spoutLevel": 0.7,
+        "depth": 130,
+        "unitsPerMeter": 1000
+      },
+      "place": {
+        "x": 500,
+        "y": 520
+      },
+      "metadata": {
+        "name": "Overflow can",
+        "description": "Filled right up to the spout: any water pushed aside spills out."
+      }
+    },
+    {
+      "id": "cup",
+      "type": "container",
+      "params": {
+        "shape": "beaker",
+        "width": 150,
+        "height": 150,
+        "wall": 8,
+        "level": 0,
+        "bubbles": false,
+        "ticks": true,
+        "unitsPerMeter": 1000
+      },
+      "place": {
+        "at": "can.spout",
+        "anchor": "rim",
+        "offset": {
+          "x": 6,
+          "y": 80
+        }
+      },
+      "metadata": {
+        "name": "Catch cup",
+        "description": "Collects the water that spills out."
+      }
+    },
+    {
+      "id": "stone",
+      "type": "block",
+      "params": {
+        "width": 100,
+        "height": 100,
+        "material": "stone"
+      },
+      "place": {
+        "at": "can.water_surface",
+        "anchor": "bottom",
+        "offset": {
+          "x": 0,
+          "y": -24
+        }
+      },
+      "metadata": {
+        "name": "Stone",
+        "description": "A 10 cm stone cube: 1 litre, 2.6 kg."
+      }
+    },
+    {
+      "id": "sc",
+      "type": "spring_scale",
+      "params": {
+        "max": 30,
+        "height": 150,
+        "hook": 32
+      },
+      "place": {
+        "at": "stone.attach_top",
+        "anchor": "hook",
+        "offset": {
+          "x": 0,
+          "y": -44
+        },
+        "follow": true
+      },
+      "metadata": {
+        "name": "Spring scale",
+        "description": "Shows how hard the stone pulls down on it (in newtons)."
+      }
+    },
+    {
+      "id": "string",
+      "type": "rope",
+      "params": {
+        "from": "sc.hook",
+        "to": "stone.attach_top",
+        "thickness": 3
+      },
+      "decorative": true
+    },
+    {
+      "id": "r_read",
+      "type": "readout",
+      "params": {
+        "label": "Scale reading",
+        "value": {
+          "bind": "eur.apparentWeight"
+        },
+        "format": "0.0",
+        "unit": "N",
+        "role": "force_applied"
+      },
+      "place": {
+        "slot": "stage.right",
+        "offset": {
+          "x": 0,
+          "y": -190
+        }
+      }
+    },
+    {
+      "id": "r_lost",
+      "type": "readout",
+      "params": {
+        "label": "Weight lost",
+        "value": {
+          "bind": "eur.weight - eur.apparentWeight"
+        },
+        "format": "0.0",
+        "unit": "N",
+        "role": "force_buoyant"
+      },
+      "place": {
+        "relativeTo": "r_read",
+        "side": "below",
+        "gap": 24,
+        "align": "start"
+      }
+    },
+    {
+      "id": "r_spill",
+      "type": "readout",
+      "params": {
+        "label": "Weight of spilled water",
+        "value": {
+          "bind": "eur.spilledWeight"
+        },
+        "format": "0.0",
+        "unit": "N",
+        "role": "fluid"
+      },
+      "place": {
+        "relativeTo": "r_lost",
+        "side": "below",
+        "gap": 24,
+        "align": "start"
+      }
+    },
+    {
+      "id": "same",
+      "type": "bracket",
+      "params": {
+        "from": "r_lost.top_right",
+        "to": "r_spill.bottom_right",
+        "side": "left",
+        "label": "equal!",
+        "role": "positive",
+        "depth": 22
+      }
+    },
+    {
+      "id": "eureka",
+      "type": "badge",
+      "params": {
+        "text": "EUREKA!",
+        "role": "highlight",
+        "icon": "sparkle",
+        "size": "heading"
+      },
+      "place": {
+        "relativeTo": "r_spill",
+        "side": "below",
+        "gap": 30,
+        "align": "center"
+      }
+    },
+    {
+      "id": "stars",
+      "type": "burst",
+      "params": {
+        "kind": "stars",
+        "radius": 160,
+        "count": 22
+      },
+      "place": {
+        "at": "eureka.center"
+      }
+    }
+  ],
+  "solvers": [
+    {
+      "id": "eur",
+      "type": "buoyancy",
+      "container": "can",
+      "body": "stone",
+      "mode": "lower",
+      "holdDepth": 1,
+      "catchContainer": "cup",
+      "scale": "sc",
+      "unitsPerMeter": 1000
+    }
+  ],
+  "timeline": [
+    {
+      "id": "t0",
+      "action": "write",
+      "target": "title_s09",
+      "start": {
+        "at": 0.4
+      }
+    },
+    {
+      "id": "s1",
+      "action": "create",
+      "target": "can",
+      "start": {
+        "at": 0.6
+      }
+    },
+    {
+      "id": "s2",
+      "action": "create",
+      "target": "cup",
+      "start": {
+        "with": "s1",
+        "delay": 0.3
+      }
+    },
+    {
+      "id": "s3",
+      "action": "create",
+      "target": "stone",
+      "start": {
+        "after": "s1"
+      }
+    },
+    {
+      "id": "s4",
+      "action": "create",
+      "target": "sc",
+      "start": {
+        "with": "s3"
+      }
+    },
+    {
+      "id": "s5",
+      "action": "create",
+      "target": "string",
+      "start": {
+        "with": "s3",
+        "delay": 0.3
+      }
+    },
+    {
+      "id": "r1",
+      "action": "create",
+      "target": "r_read",
+      "start": {
+        "at": "beat:b2",
+        "delay": 0.3
+      }
+    },
+    {
+      "id": "r2",
+      "action": "highlight",
+      "target": "sc",
+      "style": "glow",
+      "start": {
+        "after": "r1"
+      },
+      "duration": 1.6
+    },
+    {
+      "id": "e1",
+      "action": "run_solver",
+      "target": "eur",
+      "start": {
+        "at": "beat:b3",
+        "delay": 0.4
+      },
+      "duration": 6.5
+    },
+    {
+      "id": "e2",
+      "action": "create",
+      "target": "r_lost",
+      "start": {
+        "with": "e1",
+        "delay": 2
+      }
+    },
+    {
+      "id": "e3",
+      "action": "create",
+      "target": "r_spill",
+      "start": {
+        "with": "e1",
+        "delay": 2.6
+      }
+    },
+    {
+      "id": "f1",
+      "action": "create",
+      "target": "same",
+      "start": {
+        "at": "beat:b4",
+        "delay": 0.8
+      }
+    },
+    {
+      "id": "f2",
+      "action": "create",
+      "target": "eureka",
+      "start": {
+        "after": "f1"
+      }
+    },
+    {
+      "id": "f3",
+      "action": "create",
+      "target": "stars",
+      "start": {
+        "with": "f2",
+        "delay": 0.2
+      },
+      "duration": 1.5
+    },
+    {
+      "id": "x1",
+      "action": "remove",
+      "target": "r_read",
+      "start": {
+        "at": 26.2
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x2",
+      "action": "remove",
+      "target": "r_lost",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x3",
+      "action": "remove",
+      "target": "r_spill",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x4",
+      "action": "remove",
+      "target": "same",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x5",
+      "action": "remove",
+      "target": "eureka",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x6",
+      "action": "remove",
+      "target": "title_s09",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    }
+  ]
+}

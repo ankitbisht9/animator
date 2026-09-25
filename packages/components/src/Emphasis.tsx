@@ -36,12 +36,16 @@ export function EmphasisBehind({ o }: { o: FrameObject }) {
         />
       );
     case "pulse": {
-      const r = Math.hypot(b.w, b.h) / 2;
+      // A ring that hugs the object's shape and ripples outward.
+      const grow = 8 + 34 * e.u;
+      const rx = Math.min(b.w, b.h) / 2 + grow;
       return (
-        <circle
-          cx={fmt(b.x + b.w / 2)}
-          cy={fmt(b.y + b.h / 2)}
-          r={fmt(r + 10 + 40 * e.u)}
+        <rect
+          x={fmt(b.x - grow)}
+          y={fmt(b.y - grow)}
+          width={fmt(b.w + 2 * grow)}
+          height={fmt(b.h + 2 * grow)}
+          rx={fmt(rx)}
           fill="none"
           stroke={e.color}
           strokeWidth={fmt(6 * (1 - e.u) + 1)}

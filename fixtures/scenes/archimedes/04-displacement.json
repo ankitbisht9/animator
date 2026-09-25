@@ -1,0 +1,380 @@
+{
+  "dsl_version": "1.0",
+  "id": "s04_displacement",
+  "title": "Pushing water aside",
+  "educational_purpose": "Show displacement: to go in, the block must push water out of the way, and that water can only go up.",
+  "duration": 23,
+  "layout": "stage_with_caption",
+  "narration": {
+    "beats": [
+      {
+        "id": "b1",
+        "text": "Let's lift the block out, mark the water level, and lower it back in slowly.",
+        "at": 0
+      },
+      {
+        "id": "b2",
+        "text": "To get in, the block has to **push water out of the way**.",
+        "at": 6.5
+      },
+      {
+        "id": "b3",
+        "text": "The water it pushes aside is called the **displaced water**.",
+        "at": 12.5
+      },
+      {
+        "id": "b4",
+        "text": "That water has nowhere to go, except **up**.",
+        "at": 18
+      }
+    ]
+  },
+  "objects": [
+    {
+      "id": "title_s04",
+      "type": "text",
+      "params": {
+        "text": "Pushing water aside",
+        "size": "heading",
+        "weight": "bold"
+      },
+      "place": {
+        "slot": "title_bar"
+      },
+      "layer": "overlay"
+    },
+    {
+      "id": "start_tag",
+      "type": "label",
+      "params": {
+        "text": "start level",
+        "style": "plain",
+        "color": "muted",
+        "size": "small"
+      },
+      "place": {
+        "at": "tank.mark_left",
+        "anchor": "right",
+        "offset": {
+          "x": -18,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": "push_l",
+      "type": "arrow",
+      "params": {
+        "from": {
+          "x": 482,
+          "y": 574
+        },
+        "to": {
+          "x": 404,
+          "y": 552
+        },
+        "curve": 26,
+        "headSize": 18
+      },
+      "style": {
+        "stroke": "surface",
+        "strokeWidth": 5
+      },
+      "decorative": true
+    },
+    {
+      "id": "push_r",
+      "type": "arrow",
+      "params": {
+        "from": {
+          "x": 618,
+          "y": 574
+        },
+        "to": {
+          "x": 696,
+          "y": 552
+        },
+        "curve": -26,
+        "headSize": 18
+      },
+      "style": {
+        "stroke": "surface",
+        "strokeWidth": 5
+      },
+      "decorative": true
+    },
+    {
+      "id": "up_l",
+      "type": "arrow",
+      "params": {
+        "from": {
+          "x": 388,
+          "y": 612
+        },
+        "to": {
+          "x": 388,
+          "y": 548
+        },
+        "headSize": 18
+      },
+      "style": {
+        "stroke": "surface",
+        "strokeWidth": 5
+      },
+      "decorative": true
+    },
+    {
+      "id": "up_r",
+      "type": "arrow",
+      "params": {
+        "from": {
+          "x": 712,
+          "y": 612
+        },
+        "to": {
+          "x": 712,
+          "y": 548
+        },
+        "headSize": 18
+      },
+      "style": {
+        "stroke": "surface",
+        "strokeWidth": 5
+      },
+      "decorative": true
+    },
+    {
+      "id": "disp_tag",
+      "type": "label",
+      "params": {
+        "text": "displaced water",
+        "style": "tag",
+        "color": "fluid.dark",
+        "pointTo": {
+          "x": 700,
+          "y": 548
+        }
+      },
+      "place": {
+        "relativeTo": "tank",
+        "side": "right",
+        "gap": 150,
+        "align": "center"
+      },
+      "metadata": {
+        "name": "Displaced water",
+        "description": "The water the block pushes out of its way as it goes in."
+      }
+    }
+  ],
+  "solvers": [
+    {
+      "id": "lift",
+      "type": "buoyancy",
+      "container": "tank",
+      "body": "blk",
+      "mode": "lower",
+      "holdDepth": 0,
+      "unitsPerMeter": 1200
+    },
+    {
+      "id": "dip",
+      "type": "buoyancy",
+      "container": "tank",
+      "body": "blk",
+      "mode": "lower",
+      "holdDepth": 0.6,
+      "unitsPerMeter": 1200
+    }
+  ],
+  "timeline": [
+    {
+      "id": "t0",
+      "action": "write",
+      "target": "title_s04",
+      "start": {
+        "at": 0.1
+      }
+    },
+    {
+      "id": "l1",
+      "action": "run_solver",
+      "target": "lift",
+      "start": {
+        "at": 0.6
+      },
+      "duration": 3
+    },
+    {
+      "id": "l2",
+      "action": "transform",
+      "target": "blk",
+      "changes": [
+        {
+          "param": "face",
+          "to": "none"
+        }
+      ],
+      "start": {
+        "with": "l1",
+        "delay": 1
+      },
+      "duration": 0.4
+    },
+    {
+      "id": "m1",
+      "action": "transform",
+      "target": "tank",
+      "changes": [
+        {
+          "param": "showMark",
+          "to": true
+        }
+      ],
+      "start": {
+        "after": "l1",
+        "delay": 0.3
+      },
+      "duration": 0.2
+    },
+    {
+      "id": "m2",
+      "action": "create",
+      "target": "start_tag",
+      "start": {
+        "after": "m1"
+      }
+    },
+    {
+      "id": "d1",
+      "action": "run_solver",
+      "target": "dip",
+      "start": {
+        "at": "beat:b2",
+        "delay": 0.2
+      },
+      "duration": 8
+    },
+    {
+      "id": "p1",
+      "action": "create",
+      "target": "push_l",
+      "start": {
+        "with": "d1",
+        "delay": 1.2
+      },
+      "duration": 0.9
+    },
+    {
+      "id": "p2",
+      "action": "create",
+      "target": "push_r",
+      "start": {
+        "with": "p1"
+      },
+      "duration": 0.9
+    },
+    {
+      "id": "p3",
+      "action": "create",
+      "target": "disp_tag",
+      "start": {
+        "at": "beat:b3",
+        "delay": 0.3
+      }
+    },
+    {
+      "id": "p4",
+      "action": "highlight",
+      "target": "disp_tag",
+      "style": "pulse",
+      "start": {
+        "after": "p3"
+      },
+      "duration": 1.2
+    },
+    {
+      "id": "u1",
+      "action": "create",
+      "target": "up_l",
+      "start": {
+        "at": "beat:b4",
+        "delay": 0.3
+      },
+      "duration": 0.8
+    },
+    {
+      "id": "u2",
+      "action": "create",
+      "target": "up_r",
+      "start": {
+        "with": "u1"
+      },
+      "duration": 0.8
+    },
+    {
+      "id": "u3",
+      "action": "highlight",
+      "target": "tank",
+      "style": "box",
+      "start": {
+        "after": "u2"
+      },
+      "duration": 1.6
+    },
+    {
+      "id": "x1",
+      "action": "remove",
+      "target": "push_l",
+      "start": {
+        "at": 21.9
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x2",
+      "action": "remove",
+      "target": "push_r",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x3",
+      "action": "remove",
+      "target": "up_l",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x4",
+      "action": "remove",
+      "target": "up_r",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x5",
+      "action": "remove",
+      "target": "disp_tag",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x6",
+      "action": "remove",
+      "target": "title_s04",
+      "start": {
+        "with": "x1"
+      },
+      "duration": 0.5
+    }
+  ]
+}

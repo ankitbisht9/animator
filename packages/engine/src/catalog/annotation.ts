@@ -31,6 +31,7 @@ export const ICON_NAMES = [
   "sparkle",
   "target",
   "book",
+  "ship",
 ] as const;
 export const IconName = z.enum(ICON_NAMES).meta({ id: "IconName" });
 
@@ -170,7 +171,8 @@ export function vectorLayout(p: Params, theme: Theme): VectorLayout {
     else if (side === "right") normal = { x: 1, y: 0 };
     else if (side === "above") normal = { x: 0, y: -1 };
     else if (side === "below") normal = { x: 0, y: 1 };
-    const along = side === "end" ? 1 : side === "start" ? 0 : 0.55;
+    // Near the tip by default: arrows often start inside the object they act on.
+    const along = side === "end" ? 1 : side === "start" ? 0.15 : 0.72;
     const base = add(tail, mul(dir, length * along));
     const reach = (Math.abs(normal.x) * pill.w) / 2 + (Math.abs(normal.y) * pill.h) / 2;
     const center = add(base, mul(normal, headWidth / 2 + 12 + reach));

@@ -1,0 +1,306 @@
+{
+  "dsl_version": "1.0",
+  "id": "s12_summary",
+  "title": "The big idea",
+  "educational_purpose": "Summarize the chain of ideas and answer the opening question about the steel ship.",
+  "duration": 25,
+  "layout": "stage_with_caption",
+  "transition_in": {
+    "type": "fade",
+    "duration": 0.8
+  },
+  "narration": {
+    "beats": [
+      {
+        "id": "b1",
+        "text": "Let's sum up what we discovered.",
+        "at": 0
+      },
+      {
+        "id": "b2",
+        "text": "An object in a fluid pushes some of the fluid **aside**.",
+        "at": 4
+      },
+      {
+        "id": "b3",
+        "text": "The fluid pushes back up with the **buoyant force**, equal to the weight of the fluid pushed aside.",
+        "at": 9.5
+      },
+      {
+        "id": "b4",
+        "text": "If that push can match the object's weight, it **floats**. If not, it **sinks**.",
+        "at": 16
+      },
+      {
+        "id": "b5",
+        "text": "That's why a huge steel ship floats: its hollow shape pushes aside a lot of water!",
+        "at": 21
+      }
+    ]
+  },
+  "objects": [
+    {
+      "id": "title_s12",
+      "type": "text",
+      "params": {
+        "text": "Archimedes' principle: the big idea",
+        "size": "heading",
+        "weight": "bold"
+      },
+      "place": {
+        "slot": "title_bar"
+      },
+      "layer": "overlay"
+    },
+    {
+      "id": "tank12",
+      "type": "container",
+      "params": {
+        "shape": "tank",
+        "width": 380,
+        "height": 300,
+        "wall": 10,
+        "level": 0.45,
+        "depth": 132,
+        "unitsPerMeter": 1200,
+        "ticks": true
+      },
+      "place": {
+        "slot": "stage.left",
+        "offset": {
+          "x": 110,
+          "y": 40
+        }
+      }
+    },
+    {
+      "id": "blk12",
+      "type": "block",
+      "params": {
+        "width": 120,
+        "height": 120,
+        "material": "wood",
+        "face": "happy"
+      },
+      "place": {
+        "at": "tank12.water_surface",
+        "anchor": "center",
+        "offset": {
+          "x": 0,
+          "y": 12
+        }
+      }
+    },
+    {
+      "id": "fw12",
+      "type": "vector_arrow",
+      "params": {
+        "from": "blk12.center",
+        "direction": "down",
+        "magnitude": {
+          "bind": "hold12.weight"
+        },
+        "scale": 16,
+        "role": "force_gravity",
+        "label": "W",
+        "labelSide": "left"
+      },
+      "layer": "foreground"
+    },
+    {
+      "id": "fb12",
+      "type": "vector_arrow",
+      "params": {
+        "from": "blk12.center",
+        "direction": "up",
+        "magnitude": {
+          "bind": "hold12.buoyantForce"
+        },
+        "scale": 16,
+        "role": "force_buoyant",
+        "label": "F_{b}",
+        "labelSide": "right"
+      },
+      "layer": "foreground"
+    },
+    {
+      "id": "sum",
+      "type": "card",
+      "params": {
+        "title": "What we learned",
+        "items": [
+          "An object in a fluid pushes some fluid **aside**.",
+          "The fluid pushes back **up**: the buoyant force.",
+          "Buoyant force = weight of the fluid pushed aside.",
+          "It **floats** if that push can match its weight."
+        ],
+        "marker": "number",
+        "width": 640,
+        "size": "label"
+      },
+      "place": {
+        "slot": "stage.right",
+        "offset": {
+          "x": -90,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": "ship",
+      "type": "badge",
+      "params": {
+        "text": "That's how ships float!",
+        "role": "highlight",
+        "icon": "ship",
+        "size": "label"
+      },
+      "place": {
+        "relativeTo": "sum",
+        "side": "below",
+        "gap": 30
+      }
+    },
+    {
+      "id": "yay",
+      "type": "burst",
+      "params": {
+        "kind": "confetti",
+        "radius": 260,
+        "count": 36
+      },
+      "place": {
+        "at": "sum.center"
+      }
+    }
+  ],
+  "solvers": [
+    {
+      "id": "hold12",
+      "type": "buoyancy",
+      "container": "tank12",
+      "body": "blk12",
+      "mode": "hold",
+      "unitsPerMeter": 1200
+    }
+  ],
+  "timeline": [
+    {
+      "id": "t0",
+      "action": "write",
+      "target": "title_s12",
+      "start": {
+        "at": 0.6
+      }
+    },
+    {
+      "id": "d1",
+      "action": "create",
+      "target": "tank12",
+      "start": {
+        "at": 0.8
+      }
+    },
+    {
+      "id": "d2",
+      "action": "create",
+      "target": "blk12",
+      "start": {
+        "after": "d1",
+        "delay": -0.2
+      }
+    },
+    {
+      "id": "d3",
+      "action": "create",
+      "target": "fw12",
+      "start": {
+        "after": "d2"
+      }
+    },
+    {
+      "id": "d4",
+      "action": "create",
+      "target": "fb12",
+      "start": {
+        "with": "d3",
+        "delay": 0.3
+      }
+    },
+    {
+      "id": "c1",
+      "action": "create",
+      "target": "sum",
+      "start": {
+        "at": "beat:b2"
+      },
+      "style": "write",
+      "duration": 16
+    },
+    {
+      "id": "h1",
+      "action": "highlight",
+      "target": "fb12",
+      "style": "glow",
+      "start": {
+        "at": "beat:b3",
+        "delay": 1
+      },
+      "duration": 1.8
+    },
+    {
+      "id": "h2",
+      "action": "highlight",
+      "target": "blk12",
+      "style": "pulse",
+      "start": {
+        "at": "beat:b4",
+        "delay": 1.5
+      },
+      "duration": 1.4
+    },
+    {
+      "id": "s1",
+      "action": "create",
+      "target": "ship",
+      "start": {
+        "at": "beat:b5",
+        "delay": 0.8
+      }
+    },
+    {
+      "id": "e1",
+      "action": "create",
+      "target": "yay",
+      "start": {
+        "with": "s1",
+        "delay": 0.3
+      },
+      "duration": 1.8
+    },
+    {
+      "id": "s2",
+      "action": "highlight",
+      "target": "ship",
+      "style": "glow",
+      "start": {
+        "after": "s1"
+      },
+      "duration": 1.6
+    }
+  ],
+  "interactions": [
+    {
+      "id": "q_ship",
+      "at": 24.4,
+      "question": "Why does a heavy steel ship float?",
+      "choices": [
+        "Steel is lighter than water",
+        "Its hollow shape pushes aside enough water to match its weight",
+        "The engines hold it up"
+      ],
+      "answer": 1,
+      "explain": "The hull is mostly air inside, so the ship pushes aside a huge volume of water. That water weighs as much as the whole ship."
+    }
+  ]
+}

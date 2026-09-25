@@ -1164,7 +1164,8 @@
         "arrow_down",
         "sparkle",
         "target",
-        "book"
+        "book",
+        "ship"
       ]
     },
     "TextSize": {
@@ -1768,7 +1769,8 @@
               "enum": [
                 "confetti",
                 "stars",
-                "rays"
+                "rays",
+                "splash"
               ]
             },
             "count": {
@@ -1870,7 +1872,7 @@
         "type"
       ],
       "additionalProperties": false,
-      "description": "A one-shot celebration burst (confetti, stars or rays) for 'aha!' moments. Create it; it plays during its entrance and then fades away."
+      "description": "A one-shot burst: confetti, stars or rays for 'aha!' moments, or a water splash (droplets arcing up and falling back). Create it; it plays during its entrance and then fades away."
     },
     "Object_callout": {
       "type": "object",
@@ -2470,10 +2472,21 @@
               "type": "boolean"
             },
             "mark": {
-              "description": "Dashed line at this fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right",
+              "description": "A reference fill fraction (e.g. the starting level); anchors mark, mark_left, mark_right",
               "type": "number",
               "minimum": 0,
               "maximum": 1
+            },
+            "showMark": {
+              "default": false,
+              "description": "Draw the dashed reference line at 'mark'",
+              "type": "boolean"
+            },
+            "depth": {
+              "description": "Depth into the screen in px (plan view); defaults to the inner width. Slimmer tanks show bigger level changes.",
+              "type": "number",
+              "minimum": 10,
+              "maximum": 1400
             },
             "unitsPerMeter": {
               "default": 400,
@@ -7926,6 +7939,11 @@
               "type": "string",
               "maxLength": 240,
               "description": "Expression; may use t (seconds since action start)"
+            },
+            "format": {
+              "description": "For text params: number format, e.g. 'F = 0.0 N'",
+              "type": "string",
+              "maxLength": 32
             }
           },
           "required": [

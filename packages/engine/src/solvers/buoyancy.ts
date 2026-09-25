@@ -76,6 +76,7 @@ export const OUTPUTS = [
   { name: "submergedVolume", unit: "m³", description: "Volume of the body below the surface" },
   { name: "submergedVolumeCm3", unit: "cm³", description: "Submerged volume in cubic centimetres" },
   { name: "displacedVolume", unit: "m³", description: "Volume of fluid pushed aside (= submerged volume)" },
+  { name: "displacedVolumeCm3", unit: "cm³", description: "Displaced volume in cubic centimetres" },
   { name: "displacedMass", unit: "kg", description: "Mass of the displaced fluid" },
   { name: "displacedWeight", unit: "N", description: "Weight of the displaced fluid (= buoyant force)" },
   { name: "submergedFraction", unit: "", description: "Fraction of the body below the surface (0..1)" },
@@ -84,6 +85,10 @@ export const OUTPUTS = [
   { name: "level", unit: "", description: "Container fill fraction (0..1)" },
   { name: "levelRise", unit: "m", description: "Rise of the water level since the solver started" },
   { name: "levelRiseCm", unit: "cm", description: "Rise of the water level in centimetres" },
+  { name: "levelHeightCm", unit: "cm", description: "Height of the water surface above the floor" },
+  { name: "innerHeight", unit: "m", description: "Inner height of the container" },
+  { name: "innerHeightCm", unit: "cm", description: "Inner height of the container in centimetres" },
+  { name: "containerArea", unit: "m²", description: "Plan area of the container (width x depth)" },
   { name: "spilledVolume", unit: "m³", description: "Fluid that left through the spout" },
   { name: "spilledVolumeCm3", unit: "cm³", description: "Spilled fluid in cubic centimetres" },
   { name: "spilledWeight", unit: "N", description: "Weight of the spilled fluid" },
@@ -128,7 +133,8 @@ export function runBuoyancy(defIn: SolverDefT, ctx: SolverRunContext): SolverOut
   const innerH = (cl.inner.floor - cl.inner.top) * s;
   const x0 = cm[4] + s * cl.inner.x0;
   const x1 = cm[4] + s * cl.inner.x1;
-  const A = (innerW / U) ** 2;
+  const depthPx = (typeof cont.params.depth === "number" ? cont.params.depth : innerW / s) * s;
+  const A = (innerW / U) * (depthPx / U);
 
   const bs = Math.hypot(bodyObj.rawMatrix[0], bodyObj.rawMatrix[1]) || 1;
   const bp = bodyObj.params;
@@ -147,7 +153,7 @@ export function runBuoyancy(defIn: SolverDefT, ctx: SolverRunContext): SolverOut
     body = { kind: "block", h, a: w * w, r: 0, volume: w * w * h };
   }
   const center = { x: bodyObj.rawMatrix[4], y: bodyObj.rawMatrix[5] };
-  if (bodyWpx >= innerW - 2) {
+  if (bodyWpx >= innerW - 2 || bodyWpx >= depthPx) {
     return fail(
       "SOLVER_BODY_TOO_BIG",
       `Body '${def.body}' (${Math.round(bodyWpx)} px wide) does not fit inside '${def.container}' (${Math.round(innerW)} px inside).`,
@@ -247,7 +253,9 @@ export function runBuoyancy(defIn: SolverDefT, ctx: SolverRunContext): SolverOut
   if (catchObj) {
     const cc = containerLayout(catchObj.params);
     const cs = Math.hypot(catchObj.rawMatrix[0], catchObj.rawMatrix[1]) || 1;
-    catchA = (((cc.inner.x1 - cc.inner.x0) * cs) / U) ** 2;
+    const cw = (cc.inner.x1 - cc.inner.x0) * cs;
+    const cd = (typeof catchObj.params.depth === "number" ? catchObj.params.depth : cw / cs) * cs;
+    catchA = (cw / U) * (cd / U);
     catchH = ((cc.inner.floor - cc.inner.top) * cs) / U;
     catchL0 = clamp(pNum(catchObj.params, "level", 0), 0, 1);
   }
@@ -288,6 +296,7 @@ export function runBuoyancy(defIn: SolverDefT, ctx: SolverRunContext): SolverOut
     push("submergedVolume", vs);
     push("submergedVolumeCm3", vs * 1e6);
     push("displacedVolume", vs);
+    push("displacedVolumeCm3", vs * 1e6);
     push("displacedMass", rhoF * vs);
     push("displacedWeight", fb);
     push("submergedFraction", body.h > 0 ? sDepth / body.h : 0);
@@ -295,6 +304,7 @@ export function runBuoyancy(defIn: SolverDefT, ctx: SolverRunContext): SolverOut
     push("submergedPx", sDepth * U);
     push("levelRise", L - L0);
     push("levelRiseCm", (L - L0) * 100);
+    push("levelHeightCm", L * 100);
     push("spilledVolume", spilled);
     push("spilledVolumeCm3", spilled * 1e6);
     push("spilledWeight", rhoF * spilled * g);
@@ -330,6 +340,9 @@ export function runBuoyancy(defIn: SolverDefT, ctx: SolverRunContext): SolverOut
       fluidDensity: rhoF,
       g,
       equilibriumFraction: roundTo(Math.min(1, rhoB / rhoF), 6),
+      innerHeight: roundTo(hIn, 6),
+      innerHeightCm: roundTo(hIn * 100, 4),
+      containerArea: roundTo(A, 8),
       floats: floats ? 1 : 0,
     },
     outcome: { state, floats, material: materialName },

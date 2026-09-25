@@ -1,0 +1,404 @@
+{
+  "dsl_version": "1.0",
+  "id": "s11_worked_example",
+  "title": "A worked example",
+  "educational_purpose": "Plug real numbers into the equation (computed by the engine) and check the result against the scale measurement.",
+  "duration": 27,
+  "layout": "stage_with_equation",
+  "narration": {
+    "beats": [
+      {
+        "id": "b1",
+        "text": "Let's check with real numbers. Our stone is a 10 cm cube: 1 litre, which is 0.001 cubic metres.",
+        "at": 0
+      },
+      {
+        "id": "b2",
+        "text": "Put in the density of water, the volume and g.",
+        "at": 7
+      },
+      {
+        "id": "b3",
+        "text": "Multiply them, and out comes the buoyant force.",
+        "at": 13
+      },
+      {
+        "id": "b4",
+        "text": "It matches the weight the stone lost on the scale. The principle **works**!",
+        "at": 19.5
+      }
+    ]
+  },
+  "values": [
+    {
+      "id": "rho_w",
+      "value": 1000,
+      "unit": "kg/m³",
+      "description": "Density of water"
+    },
+    {
+      "id": "vol",
+      "value": 0.001,
+      "unit": "m³",
+      "description": "Volume of the stone (1 litre)"
+    },
+    {
+      "id": "grav",
+      "value": 9.81,
+      "unit": "N/kg",
+      "description": "Gravity"
+    },
+    {
+      "id": "fb",
+      "expr": "rho_w * vol * grav",
+      "unit": "N",
+      "description": "Buoyant force"
+    }
+  ],
+  "objects": [
+    {
+      "id": "title_s11",
+      "type": "text",
+      "params": {
+        "text": "Let's check with numbers",
+        "size": "heading",
+        "weight": "bold"
+      },
+      "place": {
+        "slot": "title_bar"
+      },
+      "layer": "overlay"
+    },
+    {
+      "id": "eq_num",
+      "type": "equation",
+      "params": {
+        "parts": [
+          {
+            "id": "eq",
+            "tex": "="
+          },
+          {
+            "id": "n1",
+            "tex": "1000"
+          },
+          {
+            "id": "x1",
+            "tex": "\\times"
+          },
+          {
+            "id": "n2",
+            "tex": "0.001"
+          },
+          {
+            "id": "x2",
+            "tex": "\\times"
+          },
+          {
+            "id": "n3",
+            "tex": "9.81"
+          }
+        ],
+        "size": 54
+      },
+      "place": {
+        "slot": "equation_panel.center",
+        "offset": {
+          "x": 0,
+          "y": -100
+        }
+      }
+    },
+    {
+      "id": "u1",
+      "type": "label",
+      "params": {
+        "text": "kg/m³",
+        "style": "plain",
+        "color": "muted",
+        "size": "small"
+      },
+      "place": {
+        "at": "eq_num.term_n1",
+        "anchor": "top",
+        "offset": {
+          "x": 0,
+          "y": 36
+        }
+      }
+    },
+    {
+      "id": "u2",
+      "type": "label",
+      "params": {
+        "text": "m³",
+        "style": "plain",
+        "color": "muted",
+        "size": "small"
+      },
+      "place": {
+        "at": "eq_num.term_n2",
+        "anchor": "top",
+        "offset": {
+          "x": 0,
+          "y": 36
+        }
+      }
+    },
+    {
+      "id": "u3",
+      "type": "label",
+      "params": {
+        "text": "N/kg",
+        "style": "plain",
+        "color": "muted",
+        "size": "small"
+      },
+      "place": {
+        "at": "eq_num.term_n3",
+        "anchor": "top",
+        "offset": {
+          "x": 0,
+          "y": 36
+        }
+      }
+    },
+    {
+      "id": "res",
+      "type": "readout",
+      "params": {
+        "label": "Buoyant force",
+        "value": {
+          "bind": "fb"
+        },
+        "format": "0.0",
+        "unit": "N",
+        "role": "force_buoyant"
+      },
+      "place": {
+        "relativeTo": "eq_num",
+        "side": "below",
+        "gap": 70
+      }
+    },
+    {
+      "id": "lost",
+      "type": "readout",
+      "params": {
+        "label": "Weight lost on the scale",
+        "value": {
+          "bind": "hold11.weight - hold11.apparentWeight"
+        },
+        "format": "0.0",
+        "unit": "N",
+        "role": "force_applied",
+        "size": "body"
+      },
+      "place": {
+        "relativeTo": "res",
+        "side": "below",
+        "gap": 24
+      }
+    },
+    {
+      "id": "match",
+      "type": "badge",
+      "params": {
+        "text": "SAME!",
+        "role": "positive",
+        "icon": "check",
+        "size": "label"
+      },
+      "place": {
+        "relativeTo": "lost",
+        "side": "below",
+        "gap": 20
+      }
+    }
+  ],
+  "solvers": [
+    {
+      "id": "hold11",
+      "type": "buoyancy",
+      "container": "can",
+      "body": "stone",
+      "mode": "hold",
+      "catchContainer": "cup",
+      "scale": "sc",
+      "unitsPerMeter": 1000
+    }
+  ],
+  "timeline": [
+    {
+      "id": "t0",
+      "action": "write",
+      "target": "title_s11",
+      "start": {
+        "at": 0.1
+      }
+    },
+    {
+      "id": "m1",
+      "action": "move",
+      "target": "eq",
+      "to": {
+        "slot": "equation_panel.top",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "start": {
+        "at": 0.6
+      },
+      "duration": 1.4
+    },
+    {
+      "id": "m2",
+      "action": "scale",
+      "target": "eq",
+      "to": 0.8,
+      "start": {
+        "with": "m1"
+      },
+      "duration": 1.4
+    },
+    {
+      "id": "w1",
+      "action": "write",
+      "target": "eq_num",
+      "terms": [
+        "eq",
+        "n1",
+        "x1",
+        "n2",
+        "x2",
+        "n3"
+      ],
+      "start": {
+        "at": "beat:b2",
+        "delay": 0.3
+      },
+      "duration": 3.4
+    },
+    {
+      "id": "w2",
+      "action": "create",
+      "target": "u1",
+      "start": {
+        "with": "w1",
+        "delay": 1
+      },
+      "style": "fade"
+    },
+    {
+      "id": "w3",
+      "action": "create",
+      "target": "u2",
+      "start": {
+        "with": "w1",
+        "delay": 2
+      },
+      "style": "fade"
+    },
+    {
+      "id": "w4",
+      "action": "create",
+      "target": "u3",
+      "start": {
+        "with": "w1",
+        "delay": 3
+      },
+      "style": "fade"
+    },
+    {
+      "id": "r1",
+      "action": "create",
+      "target": "res",
+      "start": {
+        "at": "beat:b3",
+        "delay": 0.4
+      },
+      "duration": 1.6
+    },
+    {
+      "id": "r2",
+      "action": "highlight",
+      "target": "res",
+      "style": "glow",
+      "start": {
+        "after": "r1"
+      },
+      "duration": 1.6
+    },
+    {
+      "id": "c1",
+      "action": "create",
+      "target": "lost",
+      "start": {
+        "at": "beat:b4",
+        "delay": 0.2
+      },
+      "duration": 1.2
+    },
+    {
+      "id": "c2",
+      "action": "create",
+      "target": "match",
+      "start": {
+        "after": "c1"
+      }
+    },
+    {
+      "id": "c3",
+      "action": "highlight",
+      "target": "sc",
+      "style": "box",
+      "start": {
+        "with": "c2"
+      },
+      "duration": 1.8
+    },
+    {
+      "id": "x_u1",
+      "action": "remove",
+      "target": "u1",
+      "start": {
+        "at": "beat:b4"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x_u2",
+      "action": "remove",
+      "target": "u2",
+      "start": {
+        "at": "beat:b4"
+      },
+      "duration": 0.5
+    },
+    {
+      "id": "x_u3",
+      "action": "remove",
+      "target": "u3",
+      "start": {
+        "at": "beat:b4"
+      },
+      "duration": 0.5
+    }
+  ],
+  "interactions": [
+    {
+      "id": "q_denser",
+      "at": 26.4,
+      "question": "What if we lowered the same stone into a liquid denser than water?",
+      "choices": [
+        "The scale would read less than in water",
+        "The scale would read the same",
+        "The scale would read more than in water"
+      ],
+      "answer": 0,
+      "explain": "A denser liquid means a bigger Ï, so a bigger buoyant force: the stone seems to lose even more weight."
+    }
+  ]
+}
