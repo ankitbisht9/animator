@@ -1,12 +1,34 @@
-import { DSL_VERSION, ENGINE_VERSION } from "@animator/engine";
+import { Home } from "./pages/Home";
+import { LessonPage } from "./pages/LessonPage";
+import { Playground } from "./pages/Playground";
+import { RenderPage } from "./pages/RenderPage";
+import { Link, usePath } from "./router";
 
 export function App() {
+  const path = usePath();
+  if (path === "/render") return <RenderPage />;
+  const lesson = /^\/lesson\/([a-z0-9_-]+)\/?$/.exec(path);
   return (
-    <main style={{ fontFamily: "system-ui", padding: 32 }}>
-      <h1>Animator</h1>
-      <p>
-        Engine {ENGINE_VERSION}, DSL {DSL_VERSION}. The player and DSL Playground arrive in Phase 2.
-      </p>
-    </main>
+    <div className="app">
+      <header className="topbar">
+        <Link href="/" className="brand">
+          <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+            <rect x="2" y="2" width="28" height="28" rx="9" fill="var(--accent)" />
+            <circle cx="12" cy="18" r="5" fill="#ffc43d" />
+            <path d="M17 12l7 4-7 4z" fill="#fff" />
+          </svg>
+          Animator
+        </Link>
+        <nav>
+          <Link href="/" className={path === "/" ? "active" : ""}>
+            Lessons
+          </Link>
+          <Link href="/playground" className={path === "/playground" ? "active" : ""}>
+            DSL Playground
+          </Link>
+        </nav>
+      </header>
+      <main>{lesson?.[1] ? <LessonPage slug={lesson[1]} /> : path === "/playground" ? <Playground /> : <Home />}</main>
+    </div>
   );
 }

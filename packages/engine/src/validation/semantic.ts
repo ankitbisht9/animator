@@ -32,7 +32,7 @@ export function worldObjects(scene: SceneT, prev: SceneState | null | undefined)
   const continuing = scene.transition_in.type === "continue";
   if (prev) {
     for (const s of Object.values(prev.objects)) {
-      if (s.lifecycle === "removed") continue;
+      if (s.lifecycle === "removed" || !s.persist) continue;
       if (!continuing && !keep.has(s.id)) continue;
       world.set(s.id, { id: s.id, type: s.type, source: "carried" });
     }

@@ -1,0 +1,172 @@
+{
+  "dsl_version": "1.0",
+  "id": "tour_motion",
+  "title": "Motion and camera",
+  "educational_purpose": "Show relative timing, arcs, labels that follow, and camera focus.",
+  "duration": 9,
+  "transition_in": {
+    "type": "fade",
+    "duration": 0.6
+  },
+  "narration": {
+    "beats": [
+      {
+        "id": "b1",
+        "text": "Objects move along smooth paths."
+      },
+      {
+        "id": "b2",
+        "text": "Labels **follow** what they describe."
+      },
+      {
+        "id": "b3",
+        "text": "The camera can zoom in on the detail."
+      }
+    ]
+  },
+  "objects": [
+    {
+      "id": "ball",
+      "type": "circle",
+      "params": {
+        "radius": 46
+      },
+      "place": {
+        "slot": "stage.bottom_left"
+      },
+      "style": {
+        "fill": "object_a"
+      },
+      "metadata": {
+        "name": "Ball",
+        "description": "Moves along an arc."
+      }
+    },
+    {
+      "id": "target",
+      "type": "rectangle",
+      "params": {
+        "width": 160,
+        "height": 26,
+        "cornerRadius": 13
+      },
+      "place": {
+        "slot": "stage.bottom_right",
+        "offset": {
+          "x": 0,
+          "y": 60
+        }
+      },
+      "style": {
+        "fill": "positive",
+        "strokeWidth": 0
+      }
+    },
+    {
+      "id": "note",
+      "type": "text",
+      "params": {
+        "text": "**Relative** timing keeps things in step",
+        "size": "label"
+      },
+      "place": {
+        "slot": "stage.top"
+      }
+    },
+    {
+      "id": "ball_label",
+      "type": "text",
+      "params": {
+        "text": "ball",
+        "size": "label",
+        "weight": "semibold"
+      },
+      "place": {
+        "relativeTo": "ball",
+        "side": "above",
+        "gap": 14,
+        "follow": true
+      },
+      "style": {
+        "text": "object_a.dark"
+      }
+    }
+  ],
+  "timeline": [
+    {
+      "id": "c1",
+      "action": "create",
+      "target": "ball",
+      "start": {
+        "at": 0.4
+      }
+    },
+    {
+      "id": "c2",
+      "action": "create",
+      "target": "target",
+      "start": {
+        "with": "c1",
+        "delay": 0.2
+      },
+      "style": "grow"
+    },
+    {
+      "id": "m1",
+      "action": "move",
+      "target": "ball",
+      "to": {
+        "relativeTo": "target",
+        "side": "above",
+        "gap": 0
+      },
+      "path": "arc",
+      "arcHeight": 260,
+      "start": {
+        "after": "c1",
+        "delay": 0.3
+      },
+      "duration": 2
+    },
+    {
+      "id": "l1",
+      "action": "create",
+      "target": "ball_label",
+      "start": {
+        "at": "beat:b2"
+      },
+      "style": "pop"
+    },
+    {
+      "id": "w1",
+      "action": "write",
+      "target": "note",
+      "start": {
+        "with": "l1"
+      }
+    },
+    {
+      "id": "cam",
+      "action": "camera_move",
+      "focus": [
+        "ball",
+        "target"
+      ],
+      "padding": 140,
+      "start": {
+        "at": "beat:b3"
+      },
+      "duration": 1.6
+    },
+    {
+      "id": "hl",
+      "action": "highlight",
+      "target": "ball",
+      "style": "glow",
+      "start": {
+        "after": "cam"
+      },
+      "duration": 1.2
+    }
+  ]
+}

@@ -21,6 +21,7 @@ import { clamp, rad2deg, roundTo } from "../math/num";
 import { hashString } from "../math/prng";
 import { center, type Rect, unionAll } from "../math/rect";
 import type { Vec2 } from "../math/vec";
+import { validateContinuity } from "../scene-state/state";
 import type { SceneState } from "../scene-state/types";
 import { getSolver } from "../solvers/registry";
 import { stripMarkup } from "../text/layout";
@@ -62,6 +63,7 @@ export function compileScene(input: SceneT, opts: CompileOptions = {}): CompileR
   const { scene, issues: norm } = normalizeScene(input);
   issues.push(...norm);
   issues.push(...validateSemantics(scene, opts.prev));
+  issues.push(...validateContinuity(opts.prev ?? null, scene));
   if (hasErrors(issues)) return { ok: false, issues };
   const compiler = new Compiler(scene, opts.prev ?? null, issues);
   let compiled: CompiledScene;

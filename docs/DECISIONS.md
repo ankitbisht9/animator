@@ -217,3 +217,18 @@ and `bind` without a duration last until the scene ends. Beats without `at` (and
 them) are spread evenly between their anchored neighbours. Write-on durations scale with text length
 (0.035 s per character, clamped). The only silent repairs are clamping object opacity, sorting keyframes
 and trimming times to 3 decimals, each reported as a `normalization` issue.
+
+---
+
+## ADR-011 Golden frames at two levels
+
+**Decision.**
+1. **SVG golden frames** (Vitest, `packages/components/test/__snapshots__`): `<SceneView>` rendered to static
+   markup at fixed times for fixture scenes. Platform-independent (no rasterization), so they run in CI
+   everywhere and catch any change in structure, geometry or color.
+2. **PNG golden frames** (pytest + Playwright, `apps/api/tests/golden/<platform>/`): the real `/render` page
+   in Chromium, compared with a tolerance (< 0.2% of pixels differing by more than 8/255). Rasterization
+   differs slightly between operating systems, so goldens are per platform. Windows goldens are committed;
+   Linux goldens will be generated inside the pinned Docker export environment (Phase 6). Until then the
+   Linux comparison is skipped with an explicit reason.
+3. **Pixel determinism**: the same frames rendered in forward and reverse order must hash identically.

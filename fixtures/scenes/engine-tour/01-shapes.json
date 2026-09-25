@@ -1,0 +1,32 @@
+{
+  "dsl_version": "1.0",
+  "id": "tour_shapes",
+  "title": "Shapes and entrances",
+  "educational_purpose": "Show the primitive shapes and how objects enter the stage.",
+  "duration": 8,
+  "narration": {
+    "beats": [
+      { "id": "b1", "text": "Every picture starts with **simple shapes**." },
+      { "id": "b2", "text": "They can pop, draw themselves, or slide in." },
+      { "id": "b3", "text": "And we can point at the one that **matters**." }
+    ]
+  },
+  "objects": [
+    { "id": "title", "type": "text", "params": { "text": "Shapes and **entrances**", "size": "heading", "weight": "bold" }, "place": { "slot": "title_bar" } },
+    { "id": "sun", "type": "circle", "params": { "radius": 70 }, "place": { "slot": "stage.left" }, "style": { "fill": "highlight" }, "metadata": { "name": "Circle", "description": "A circle with radius 70 px." } },
+    { "id": "card", "type": "rectangle", "params": { "width": 240, "height": 150, "cornerRadius": 22 }, "place": { "slot": "stage.center" }, "style": { "fill": "object_b", "strokeWidth": 0 } },
+    { "id": "gem", "type": "polygon", "params": { "sides": 6, "radius": 80 }, "place": { "slot": "stage.right" }, "style": { "fill": "fluid" } },
+    { "id": "wave", "type": "path", "params": { "d": "M0 0 C 80 -90 160 90 240 0 S 400 -90 480 0" }, "place": { "relativeTo": "card", "side": "below", "gap": 60 }, "style": { "stroke": "accent", "strokeWidth": 7 } },
+    { "id": "sun_label", "type": "text", "params": { "text": "circle", "size": "label", "weight": "semibold" }, "place": { "relativeTo": "sun", "side": "above", "gap": 18 }, "style": { "text": "muted" } }
+  ],
+  "timeline": [
+    { "id": "t1", "action": "write", "target": "title", "start": { "at": 0.2 } },
+    { "id": "s1", "action": "create", "target": "sun", "start": { "at": "beat:b2" }, "style": "pop" },
+    { "id": "s2", "action": "create", "target": "card", "start": { "after": "s1", "delay": -0.3 }, "style": "draw" },
+    { "id": "s3", "action": "create", "target": "gem", "start": { "after": "s2", "delay": -0.4 }, "style": "slide_up" },
+    { "id": "s4", "action": "draw", "target": "wave", "start": { "with": "s3" } },
+    { "id": "s5", "action": "create", "target": "sun_label", "start": { "after": "s1" }, "style": "fade" },
+    { "id": "h1", "action": "highlight", "target": "gem", "style": "circle", "start": { "at": "beat:b3" }, "duration": 2 },
+    { "id": "r1", "action": "rotate", "target": "gem", "by": 60, "start": { "with": "h1" }, "duration": 1.5 }
+  ]
+}

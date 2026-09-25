@@ -11,6 +11,7 @@ export * from "./interp/easing";
 export * from "./layout/placement";
 export * from "./layout/templates";
 export * from "./math";
+export * from "./scene-state/state";
 export * from "./scene-state/types";
 export * from "./solvers/registry";
 export * from "./text";

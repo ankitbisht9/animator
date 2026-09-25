@@ -7,7 +7,7 @@ update here.
 |---|---|
 | 0 Foundations | done |
 | 1 DSL and timeline core | done |
-| 2 Evaluation engine + SVG slice | not started |
+| 2 Evaluation engine + SVG slice | done |
 | 3 Tier 1 components, layout, camera | not started |
 | 4 Solvers, bindings, SceneState, worker protocol | not started |
 | 5 Hand-authored Archimedes, **Gate A** | not started |
@@ -55,3 +55,22 @@ update here.
   (`fixtures/invalid`, 23 cases).
 - Tests: 71 engine tests incl. fast-check properties (evaluate purity, tween continuity/endpoints, easing
   monotonicity, PRNG purity) and compile determinism.
+
+## Phase 2: Evaluation engine and SVG rendering slice
+
+- `evaluate(compiled, t) -> FrameState` with visual and layout matrices, entrance/exit and emphasis
+  effects, group bounds, captions, transitions, camera.
+- `@animator/components`: `<SceneView>` (FrameState -> SVG), glyph-path text, backgrounds, caption bar
+  with word-by-word reading highlight, emphasis overlays (glow, box, circle, underline, pulse, flash),
+  soft-shadow filter, Tier 0 renderers.
+- Web app (`apps/web`): lesson player (pure-time playback clock, scrubber with scene segments, speed,
+  captions toggle, fullscreen, keyboard shortcuts, scene list with status, clickable transcript,
+  hover-to-inspect objects while paused, checkpoint questions), DSL Playground (CodeMirror, live
+  validation issues, play/scrub), headless `/render` page (`__loadLesson`, `__renderFrame`,
+  `__renderAt`; fresh subtree per frame).
+- Scene continuity: `sceneEndState` (engine-computed), `WorldRegistry`, carry-over into the next scene,
+  continuity warnings (abrupt disappearance, identity drift), `summarizeState` for the LLM.
+- Python render driver (`animator.export`): static site with SPA fallback, Chromium session;
+  `scripts/render_keyframes.py` renders scene keyframes to PNG.
+- Tests: SVG golden frames (10, platform-independent), renderer coverage, markup safety, PNG golden frames
+  (Windows) with tolerance, pixel determinism in forward/reverse order, lesson building.
