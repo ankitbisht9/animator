@@ -11,7 +11,13 @@ update here.
 | 3 Tier 1 components, layout, camera | done |
 | 4 Solvers, bindings, SceneState, worker protocol | done |
 | 5 Hand-authored Archimedes, **Gate A** | done, Gate A approved 2026-09-25 |
-| 6 Video export MVP, **Gate B** | done on the host, awaiting Gate B review; pinned Docker image not yet verified |
+| 6 Video export MVP, **Gate B** | done on the host (Docker deferred by the user) |
+| 7 API, jobs, OpenAI infrastructure, planner + storyboard | done (no database, by request: file store) |
+| 8 Animation planner, validators, correction loop, critics | done, verified offline; critics off by default |
+| 9 End-to-end + eval harness, **Gate C** | built and verified offline; live eval and bake-off blocked: the API key's account is deactivated |
+| 10 Progressive generation | done |
+| 11 Long-form (chunks, continuity, export) | done offline; a live 15-minute Bernoulli run needs a working key |
+| 12 Hardening, debug page, docs, TTS plan | done |
 
 ## Phase 0: Foundations
 
@@ -180,3 +186,64 @@ update here.
 - Tests: 117 engine, 12 worker, 40 components, 3 web, 42 Python (20 new export tests with a fake renderer
   and real ffmpeg), 9 browser e2e (new: determinism with 1 vs 3 browsers, crash-and-retry, colour
   fidelity), 1 skipped (the Docker TODO).
+
+## Phases 7-12: the AI pipeline, progressive playback, long form, hardening
+
+Built locally without Docker or a database, as requested. The seams for scaling are interfaces: a SQL store,
+a job queue and a Redis hub plug in without touching the pipeline (ADR-029).
+
+- **Phase 7: API and OpenAI infrastructure** (ADR-027).
+  - `animator.llm`: a provider-neutral `LLMClient` with OpenAI, fake and record/replay implementations
+    (`ANIMATOR_LLM_PROVIDER`).
+  - Per-stage model chains with fallbacks (`ANIMATOR_MODEL_FALLBACKS=gpt-5,gpt-4.1,gpt-4o`). Capabilities live in
+    `config/models.json`: reasoning levels are mapped per model, and non-reasoning models get no effort and a
+    clamped output limit.
+  - Our own retries with backoff, jitter and `Retry-After`. A rejected key, including a deactivated account, and
+    empty quota fail fast with a clear message.
+  - Refusal, truncation and bad JSON detection. Cost accounting from `config/pricing.json`, and a
+    per-generation budget hard stop.
+  - Stage 1 (educational planner) and Stage 2 (storyboard, per chapter) with strict schemas from Pydantic models.
+  - `GenerationStore` (JSON files under `var/generations/`), `GenerationRunner` (asyncio: persisted after every
+    step, resumable, cancellable), and the FastAPI endpoints with SSE.
+  - Logging redacts anything shaped like a key.
+- **Phase 8: animation planner, validation and correction** (ADR-028).
+  - Stage 3 uses the engine's LLM-facing schema from the worker, with the DSL reference, component catalog and
+    Archimedes exemplars as a cached static prefix (`docs/PROMPTS.md`).
+  - Engine issues go back to the model as structured corrections, with escalation on the final attempt and a
+    repair prompt when a reply was unusable.
+  - Optional text and visual critics: the visual critic renders keyframes in headless Chromium and sends them to
+    a vision model.
+  - Degraded scenes are simplified and flagged, and the lesson continues.
+- **Phase 9: end to end and evaluation** (ADR-031).
+  - Topic to a complete, playable lesson, verified offline with a scripted LLM and the real engine.
+  - `python -m animator.eval` / `make eval`: 16 topics across domains; metrics for first-pass validity, fixes,
+    degraded rate, time to first play and cost per minute of video; `--set` overrides for a model bake-off.
+  - **Blocked:** a live run needs a working OpenAI key. The provided key's account is deactivated, which the
+    client reports on the first call.
+- **Phase 10: progressive generation** (ADR-030).
+  - The lesson page plays scenes as they arrive over SSE, compiling them in the browser with an incremental cache.
+  - Pending scenes and chapters show in the list and scrubber, and seeking is limited to what is ready.
+  - A "Preparing the next scene" overlay covers buffering, and playback resumes automatically.
+  - Optional pacing ("save cost") keeps generation a buffer ahead of the viewer.
+  - Cancel, resume after an outage or engine failure, and resume after a server restart.
+  - Verified in a headless browser against `scripts/dev_fake_llm.py`.
+- **Phase 11: long form.**
+  - Chapters of 45-90 s are storyboarded just ahead of generation, with the next one prefetched; continuity
+    carries across chapters through the engine's end state.
+  - A chapter whose storyboard fails gets one scene outlined from the plan, and later chapters continue.
+  - A finished lesson exports to MP4 through the API (per-scene segments, cached, then concatenated).
+- **Phase 12: hardening.**
+  - Debug page `/debug/<id>`: plan, briefs, attempts with engine issues and critic notes, DSL (opens in the
+    Playground), and every LLM call with tokens, cost, latency and retries.
+  - Failure injection tests: OpenAI 429/5xx/401/quota/refusal/truncation/bad JSON, budget stop, worker crash on a
+    scene (degraded), engine outage (paused), failing storyboard, cancel, restart-resume.
+  - Per-scene render error boundary holding the last good frame.
+  - `docs/PROMPTS.md`, `docs/TTS.md` (narration audio plan), README usage.
+- **Found and fixed:** the storage layer's `list` method shadowed the builtin in type annotations (renamed
+  `recent`); EventSource reconnected forever after a finished lesson, so the stream now ends and the client closes
+  it.
+- **Tests:** 117 engine, 12 worker, 40 components, 4 web, 81 Python, 10 browser e2e (new: an exported MP4 from a
+  generated lesson), 1 skipped (Docker TODO). New Python suites:
+  - `test_llm.py`: 19 tests against the real SDK over a mock transport;
+  - `test_pipeline.py`: 17 with a scripted LLM and the real engine;
+  - `test_generations_api.py` (HTTP and SSE) and `test_eval.py`.

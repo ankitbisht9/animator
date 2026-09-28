@@ -16,6 +16,17 @@ from animator import REPO_ROOT
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
 
+STAGES = (
+    "educational_planner",
+    "storyboard",
+    "animation_planner",
+    "correction",
+    "correction_final",
+    "critic",
+    "visual_critic",
+    "lightweight",
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -54,6 +65,12 @@ class Settings(BaseSettings):
     animator_model_lightweight: str = ""
     animator_effort_lightweight: ReasoningEffort = "low"
     animator_pricing_file: Path = Path("config/pricing.json")
+    # Tried in order when a stage's model is unavailable to this API key (404/403).
+    animator_model_fallbacks: str = ""
+    animator_models_file: Path = Path("config/models.json")
+    # openai = live calls; record = live calls saved as replay fixtures; replay = offline from fixtures.
+    animator_llm_provider: Literal["openai", "record", "replay"] = "openai"
+    animator_llm_fixtures_dir: Path = Path("fixtures/llm/latest")
 
     # --- Pipeline (used from Phase 8) ---
     animator_max_correction_attempts: int = 3
@@ -64,9 +81,12 @@ class Settings(BaseSettings):
     animator_buffer_target_seconds: float = 90.0
     animator_min_ready_scenes: int = 2
     animator_duration_tolerance: float = 0.15
+    animator_generation_concurrency: int = Field(default=2, ge=1, le=16)
+    animator_scene_max_output_tokens: int = 48_000
+    animator_visual_critic_keyframes: int = Field(default=3, ge=1, le=8)
 
     # --- Storage: no database for now (see ADR-003) ---
-    animator_storage_backend: Literal["memory", "files"] = "memory"
+    animator_storage_backend: Literal["memory", "files"] = "files"
     animator_data_dir: Path = Path("var")
 
     # --- Engine worker ---
@@ -96,6 +116,25 @@ class Settings(BaseSettings):
     def resolve(self, path: Path) -> Path:
         """Resolve a repo-relative path from configuration."""
         return path if path.is_absolute() else REPO_ROOT / path
+
+    def stage_model(self, stage: str) -> tuple[list[str], ReasoningEffort]:
+        """Model chain (configured model first, then the fallbacks) and effort for a stage."""
+        if stage not in STAGES:
+            raise ValueError(f"unknown pipeline stage '{stage}'")
+        primary = str(getattr(self, f"animator_model_{stage}")).strip()
+        effort: ReasoningEffort = getattr(self, f"animator_effort_{stage}")
+        chain = [primary] if primary else []
+        for m in self.animator_model_fallbacks.split(","):
+            m = m.strip()
+            if m and m not in chain:
+                chain.append(m)
+        if not chain:
+            raise ValueError(f"no model configured for stage '{stage}' (ANIMATOR_MODEL_{stage.upper()})")
+        return chain, effort
+
+    @property
+    def has_openai_key(self) -> bool:
+        return self.openai_api_key is not None and bool(self.openai_api_key.get_secret_value().strip())
 
 
 @lru_cache(maxsize=1)

@@ -90,7 +90,52 @@ and frame hashes. `--audio track.wav` muxes an audio track, padded or trimmed to
 identical frames and a byte-identical MP4 on the same machine. The pinned Docker image
 (`docker/export.Dockerfile`), which will make this hold across machines, is not verified yet (ADR-026).
 
+## Creating a lesson
+
+1. Put a working `OPENAI_API_KEY` in `.env` (see below), then run `make dev`.
+2. Open the web app, type a topic ("Explain Archimedes' principle"), choose the audience and length, and click
+   **Create lesson**.
+3. The lesson page shows live progress: planning, storyboarding each chapter, then writing, checking and fixing
+   each scene. Scenes start playing as soon as the first one is ready; if playback catches up with generation, a
+   "Preparing the next scene" overlay waits and playback resumes by itself.
+4. **Export MP4** renders the finished lesson to video. **Debug** (`/debug/<id>`) shows the whole trace: the plan,
+   each scene's brief, every attempt with the engine's issues, the scene DSL (open it in the Playground), and every
+   AI call with tokens, cost and latency.
+
+Generations are saved as JSON under `var/generations/` (no database). A lesson in progress when the server stops
+resumes when it starts again. **Resume** continues a paused one, for example after an outage or after you fix the
+key.
+
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in `OPENAI_API_KEY`. Every model ID, reasoning effort and budget is
-an environment variable; prices live in `config/pricing.json`. There is no database yet (ADR-003).
+Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KEY`.
+
+- `OPENAI_ORG_ID` and `OPENAI_PROJECT_ID`: leave empty. A project key (`sk-proj-...`) already identifies its
+  project. Set the organization only if you use an older user key that belongs to several organizations (its id
+  looks like `org-...`, under Settings > Organization on platform.openai.com).
+- Models per stage: `ANIMATOR_MODEL_*` and `ANIMATOR_EFFORT_*`. If a model is not available to your key, the next
+  one in `ANIMATOR_MODEL_FALLBACKS` (default `gpt-5,gpt-4.1,gpt-4o`) is used automatically. Which models take a
+  reasoning effort is in `config/models.json`; prices (for cost reports and the budget) are in
+  `config/pricing.json`.
+- Cost control: `LLM_BUDGET_USD_PER_GENERATION` (hard stop per lesson), and the "Save cost" option on the form,
+  which only generates a little ahead of what you watch.
+- `ANIMATOR_LLM_PROVIDER`: `openai` (live), `record` (live, and also saves every call under
+  `ANIMATOR_LLM_FIXTURES_DIR` for offline replay), `replay` (offline from those recordings).
+- Optional quality passes: `ANIMATOR_ENABLE_LLM_CRITIC`, `ANIMATOR_ENABLE_VISUAL_CRITIC` (reviews rendered
+  keyframes with a vision model; slower and more expensive).
+
+No database yet (ADR-003); every setting is an environment variable, nothing is hardcoded.
+
+### Working on the UI without an API key
+
+`uv run python scripts/dev_fake_llm.py --port 8000 --delay 4` runs the API with a scripted fake LLM. Every topic
+gets the hand-authored Archimedes lesson, with delays that imitate real generation. Start the web app as usual.
+It exercises the whole UI (progress, progressive playback, debug page, export), but says nothing about real lesson
+quality.
+
+## Evaluation
+
+`make eval` (or `uv run python -m animator.eval --only archimedes,photosynthesis`) generates the topics in
+`config/eval_topics.json` with the live models. It writes `var/eval/<run>/report.md` with first-pass validity,
+fixes per scene, the degraded rate, time to first play and cost per minute of video. For a model bake-off, run it
+once per configuration with `--set ANIMATOR_MODEL_ANIMATION_PLANNER=...` and compare the reports.

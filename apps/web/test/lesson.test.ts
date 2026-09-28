@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLesson, locate } from "../src/lesson/lesson";
+import { buildLesson, type LessonCache, locate } from "../src/lesson/lesson";
 
 const scene = (id: string, duration: number, extra: Record<string, unknown> = {}) => ({
   dsl_version: "1.0",
@@ -37,5 +37,17 @@ describe("lesson building", () => {
     expect(lesson.scenes[1]?.issues.some((i) => i.severity === "error")).toBe(true);
     expect(lesson.scenes[2]?.start).toBe(9);
     expect(lesson.scenes[2]?.ok).toBe(true);
+  });
+
+  it("reuses compiled scenes when later scenes arrive (progressive playback)", () => {
+    const cache: LessonCache = { keys: [], scenes: [] };
+    const a = buildLesson("L", [scene("a", 4)], cache);
+    const b = buildLesson("L", [scene("a", 4), scene("b", 6)], cache);
+    expect(b.scenes[0]).toBe(a.scenes[0]);
+    expect(b.scenes[1]?.start).toBe(4);
+    expect(b.duration).toBe(10);
+    const c = buildLesson("L", [scene("a", 5), scene("b", 6)], cache);
+    expect(c.scenes[0]).not.toBe(b.scenes[0]);
+    expect(c.scenes[1]?.start).toBe(5);
   });
 });

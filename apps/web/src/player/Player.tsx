@@ -2,16 +2,34 @@
  * The lesson player: stage, controls, scene list, hover inspector and
  * checkpoint questions. Interactivity lives here in UI state; the frame on
  * screen is always evaluate(scene, localT), exactly what export renders.
+ *
+ * Progressive playback: while a lesson is still being generated, upcoming scenes are shown
+ * as pending. Reaching the end of what is ready holds the last frame with a "preparing the
+ * next scene" overlay and resumes by itself when the next scene arrives (spec Section 13).
  */
 import { SceneView } from "@animator/components";
 import { CANVAS, cameraMatrix, evaluate, type FrameObject, stripMarkup } from "@animator/engine";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Lesson, locate } from "../lesson/lesson";
 import { formatTime, PlaybackClock } from "./clock";
+
+export interface PendingScene {
+  /** Stable identity (scene id, or chapter id before it is storyboarded). */
+  key: string;
+  title: string;
+  duration: number;
+  status: string;
+}
 
 interface Props {
   lesson: Lesson;
   autoPlay?: boolean;
+  /** Scenes planned but not playable yet (in order, after the lesson's scenes). */
+  pending?: PendingScene[];
+  /** More scenes are coming: reaching the end means buffering, not the end. */
+  generating?: boolean;
+  /** Called with the playhead about every 2 s while playing (pacing). */
+  onTime?: (t: number) => void;
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -23,7 +41,35 @@ function prettyId(id: string): string {
     .replace(/^\w/, (c) => c.toUpperCase());
 }
 
-export function Player({ lesson, autoPlay = false }: Props) {
+/**
+ * A render error in one scene must not break the page (spec Section 17): the boundary logs it and
+ * shows `fallback` (the last good frame); `onOk` reports every successful render so the player
+ * knows which frame that is.
+ */
+class SceneBoundary extends Component<
+  { sceneId: string; children: ReactNode; fallback: ReactNode; onOk: () => void },
+  { failed: boolean }
+> {
+  override state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  override componentDidCatch(error: unknown) {
+    console.error("scene render error", this.props.sceneId, error);
+  }
+  override componentDidMount() {
+    if (!this.state.failed) this.props.onOk();
+  }
+  override componentDidUpdate(prev: { sceneId: string }) {
+    if (prev.sceneId !== this.props.sceneId && this.state.failed) this.setState({ failed: false });
+    else if (!this.state.failed) this.props.onOk();
+  }
+  override render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+export function Player({ lesson, autoPlay = false, pending = [], generating = false, onTime }: Props) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
@@ -31,9 +77,14 @@ export function Player({ lesson, autoPlay = false }: Props) {
   const [hover, setHover] = useState<string | null>(null);
   const [question, setQuestion] = useState<{ sceneIndex: number; id: string } | null>(null);
   const [answered, setAnswered] = useState<Record<string, number>>({});
+  const [buffering, setBuffering] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const questionRef = useRef(question);
   questionRef.current = question;
+  const generatingRef = useRef(generating);
+  generatingRef.current = generating;
+  const tRef = useRef(t);
+  tRef.current = t;
 
   // Global checkpoint times.
   const checkpoints = useMemo(
@@ -45,28 +96,59 @@ export function Player({ lesson, autoPlay = false }: Props) {
   );
   const answeredRef = useRef(answered);
   answeredRef.current = answered;
+  const limitRef = useRef<(from: number, to: number) => number | null>(() => null);
+  limitRef.current = (from, to) => {
+    const hit = checkpoints.find((c) => c.at > from && c.at <= to && answeredRef.current[c.id] === undefined);
+    if (!hit) return null;
+    setQuestion({ sceneIndex: hit.sceneIndex, id: hit.id });
+    return hit.at;
+  };
 
-  const clock = useMemo(
-    () =>
-      new PlaybackClock(
-        lesson.duration,
-        (time, isPlaying) => {
-          setT(time);
-          setPlaying(isPlaying);
-        },
-        (from, to) => {
-          const hit = checkpoints.find((c) => c.at > from && c.at <= to && answeredRef.current[c.id] === undefined);
-          if (!hit) return null;
-          setQuestion({ sceneIndex: hit.sceneIndex, id: hit.id });
-          return hit.at;
-        },
-      ),
-    [lesson, checkpoints],
-  );
+  // One clock for the life of the player: new scenes extend it without resetting the playhead.
+  const clockRef = useRef<PlaybackClock | null>(null);
+  if (clockRef.current === null) {
+    clockRef.current = new PlaybackClock(
+      lesson.duration,
+      (time, isPlaying) => {
+        setT(time);
+        setPlaying(isPlaying);
+        const c = clockRef.current;
+        if (!isPlaying && c && generatingRef.current && time >= c.duration - 1e-6 && c.duration > 0) {
+          setBuffering(true);
+        }
+      },
+      (from, to) => limitRef.current(from, to),
+    );
+  }
+  const clock = clockRef.current;
+  useEffect(() => () => clock.dispose(), [clock]);
   useEffect(() => {
     if (autoPlay) clock.play();
-    return () => clock.dispose();
   }, [clock, autoPlay]);
+
+  // The lesson grew (or was replaced): extend the clock; leave buffering when there is more to play.
+  const lastDuration = useRef(lesson.duration);
+  useEffect(() => {
+    const grew = lesson.duration > lastDuration.current + 1e-6;
+    lastDuration.current = lesson.duration;
+    clock.duration = lesson.duration;
+    if (clock.t > lesson.duration) clock.seek(lesson.duration);
+    if (grew && buffering) {
+      setBuffering(false);
+      clock.play();
+    }
+  }, [lesson, clock, buffering]);
+  useEffect(() => {
+    if (!generating && buffering) setBuffering(false);
+  }, [generating, buffering]);
+
+  // Report the playhead (pacing) while playing or buffering.
+  useEffect(() => {
+    if (!onTime) return;
+    onTime(tRef.current);
+    const id = window.setInterval(() => onTime(tRef.current), 2000);
+    return () => window.clearInterval(id);
+  }, [onTime]);
 
   const loc = locate(lesson, t);
   const scene = loc?.scene;
@@ -74,10 +156,15 @@ export function Player({ lesson, autoPlay = false }: Props) {
     () => (scene?.compiled ? evaluate(scene.compiled, loc?.local ?? 0) : null),
     [scene, loc?.local],
   );
+  // The last frame that rendered without error (held on screen if a later frame fails).
+  const lastGood = useRef<{ compiled: NonNullable<typeof scene>["compiled"]; frame: typeof frame } | null>(null);
+  const markGood = () => {
+    if (scene?.compiled && frame) lastGood.current = { compiled: scene.compiled, frame };
+  };
 
   const onKey = useCallback(
     (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.closest("input, textarea, .cm-editor")) return;
+      if ((e.target as HTMLElement)?.closest("input, textarea, select, .cm-editor")) return;
       if (e.code === "Space") {
         e.preventDefault();
         if (!questionRef.current) clock.toggle();
@@ -111,27 +198,51 @@ export function Player({ lesson, autoPlay = false }: Props) {
   const q = question
     ? lesson.scenes[question.sceneIndex]?.compiled?.interactions.find((x) => x.id === question.id)
     : null;
+  const nextPending = pending[0];
+  const empty = lesson.scenes.length === 0;
 
   return (
     <div className="player">
       <div className="player-main">
         <div className="stage" ref={stageRef}>
           {scene?.compiled && frame ? (
-            <SceneView
-              compiled={scene.compiled}
-              frame={frame}
-              captions={captions}
-              interactive={!playing}
-              hoverId={playing ? null : hover}
-              onHover={setHover}
-            />
+            <SceneBoundary
+              sceneId={scene.id}
+              onOk={markGood}
+              fallback={
+                lastGood.current?.compiled && lastGood.current.frame ? (
+                  <>
+                    <SceneView
+                      compiled={lastGood.current.compiled}
+                      frame={lastGood.current.frame}
+                      captions={captions}
+                    />
+                    <div className="render-warning">This part could not be drawn; showing the last good frame.</div>
+                  </>
+                ) : (
+                  <DegradedScene title={scene.title} message="This scene could not be drawn." />
+                )
+              }
+            >
+              <SceneView
+                compiled={scene.compiled}
+                frame={frame}
+                captions={captions}
+                interactive={!playing}
+                hoverId={playing ? null : hover}
+                onHover={setHover}
+              />
+            </SceneBoundary>
+          ) : empty ? (
+            <Preparing title={nextPending?.title} first />
           ) : (
             <DegradedScene
               title={scene?.title ?? "Scene"}
               message={scene?.issues.find((i) => i.severity === "error")?.message}
             />
           )}
-          {!playing && hovered && tip && (
+          {buffering && !empty && <Preparing title={nextPending?.title} />}
+          {!playing && hovered && tip && !buffering && (
             <div className="inspector" style={{ left: tip.left, top: tip.top }}>
               <div className="inspector-title">{hovered.name ?? prettyId(hovered.id)}</div>
               {hovered.description && <div className="inspector-desc">{hovered.description}</div>}
@@ -145,7 +256,7 @@ export function Player({ lesson, autoPlay = false }: Props) {
               <div className="inspector-type">{hovered.type.replace(/_/g, " ")}</div>
             </div>
           )}
-          {!playing && !q && (
+          {!playing && !q && !buffering && !empty && (
             <button type="button" className="stage-play" onClick={() => clock.play()} aria-label="Play">
               <svg viewBox="0 0 24 24" width="44" height="44" aria-hidden="true">
                 <path d="M8 5v14l11-7z" fill="currentColor" />
@@ -199,12 +310,16 @@ export function Player({ lesson, autoPlay = false }: Props) {
         </div>
         <Controls
           lesson={lesson}
+          pending={pending}
           t={t}
           playing={playing}
           rate={rate}
           captions={captions}
-          onToggle={() => !question && clock.toggle()}
-          onSeek={(x) => clock.seek(x)}
+          onToggle={() => !question && !empty && clock.toggle()}
+          onSeek={(x) => {
+            setBuffering(false);
+            clock.seek(x);
+          }}
           onRate={(r) => {
             clock.rate = r;
             setRate(r);
@@ -223,7 +338,10 @@ export function Player({ lesson, autoPlay = false }: Props) {
               type="button"
               key={s.id}
               className={`scene-item ${active ? "active" : ""}`}
-              onClick={() => clock.seek(s.start + 0.001)}
+              onClick={() => {
+                setBuffering(false);
+                clock.seek(s.start + 0.001);
+              }}
             >
               <span className={`scene-dot ${!s.ok ? "degraded" : done ? "done" : active ? "playing" : ""}`}>
                 {s.index + 1}
@@ -233,6 +351,17 @@ export function Player({ lesson, autoPlay = false }: Props) {
             </button>
           );
         })}
+        {pending.map((p, i) => (
+          <div className="scene-item pending" key={p.key}>
+            <span className={`scene-dot pending ${p.status === "planned" || p.status === "chapter" ? "" : "busy"}`}>
+              {p.status === "chapter" ? "…" : lesson.scenes.length + i + 1}
+            </span>
+            <span className="scene-name">{p.title}</span>
+            <span className="scene-time">
+              {p.status === "chapter" ? "later" : p.status === "planned" ? "queued" : "making…"}
+            </span>
+          </div>
+        ))}
         {scene?.compiled && (
           <div className="transcript">
             <div className="transcript-title">In this scene</div>
@@ -253,6 +382,18 @@ export function Player({ lesson, autoPlay = false }: Props) {
   );
 }
 
+function Preparing({ title, first = false }: { title?: string; first?: boolean }) {
+  return (
+    <div className="preparing">
+      <div className="preparing-card">
+        <div className="spinner" aria-hidden="true" />
+        <div className="preparing-title">{first ? "Creating your lesson…" : "Preparing the next scene…"}</div>
+        {title && <div className="preparing-next">Up next: {title}</div>}
+      </div>
+    </div>
+  );
+}
+
 function DegradedScene({ title, message }: { title: string; message?: string }) {
   return (
     <div className="degraded">
@@ -265,6 +406,7 @@ function DegradedScene({ title, message }: { title: string; message?: string }) 
 
 function Controls(props: {
   lesson: Lesson;
+  pending: PendingScene[];
   t: number;
   playing: boolean;
   rate: number;
@@ -275,13 +417,16 @@ function Controls(props: {
   onCaptions: () => void;
   onFullscreen: () => void;
 }) {
-  const { lesson, t } = props;
+  const { lesson, t, pending } = props;
+  const total = Math.max(1e-6, lesson.duration + pending.reduce((a, p) => a + p.duration, 0));
   const barRef = useRef<HTMLDivElement>(null);
   const seekFromEvent = (clientX: number) => {
     const r = barRef.current?.getBoundingClientRect();
     if (!r) return;
-    props.onSeek(((clientX - r.left) / r.width) * lesson.duration);
+    // Seeking is limited to the ready part (spec Section 13).
+    props.onSeek(Math.min(lesson.duration, ((clientX - r.left) / r.width) * total));
   };
+  let pendingStart = lesson.duration;
   return (
     <div className="controls">
       <button type="button" className="icon-btn" onClick={props.onToggle} aria-label={props.playing ? "Pause" : "Play"}>
@@ -294,7 +439,7 @@ function Controls(props: {
         </svg>
       </button>
       <span className="time">
-        {formatTime(t)} / {formatTime(lesson.duration)}
+        {formatTime(t)} / {formatTime(total)}
       </span>
       <div
         className="scrubber"
@@ -302,7 +447,7 @@ function Controls(props: {
         role="slider"
         aria-label="Seek"
         aria-valuemin={0}
-        aria-valuemax={Math.round(lesson.duration)}
+        aria-valuemax={Math.round(total)}
         aria-valuenow={Math.round(t)}
         tabIndex={0}
         onPointerDown={(e) => {
@@ -315,12 +460,24 @@ function Controls(props: {
           <div
             key={s.id}
             className={`segment ${s.ok ? "" : "degraded"}`}
-            style={{ left: `${(s.start / lesson.duration) * 100}%`, width: `${(s.duration / lesson.duration) * 100}%` }}
+            style={{ left: `${(s.start / total) * 100}%`, width: `${(s.duration / total) * 100}%` }}
             title={s.title}
           />
         ))}
-        <div className="progress" style={{ width: `${(t / lesson.duration) * 100}%` }} />
-        <div className="knob" style={{ left: `${(t / lesson.duration) * 100}%` }} />
+        {pending.map((p) => {
+          const left = pendingStart;
+          pendingStart += p.duration;
+          return (
+            <div
+              key={p.key}
+              className="segment pending"
+              style={{ left: `${(left / total) * 100}%`, width: `${(p.duration / total) * 100}%` }}
+              title={`${p.title} (not ready yet)`}
+            />
+          );
+        })}
+        <div className="progress" style={{ width: `${(t / total) * 100}%` }} />
+        <div className="knob" style={{ left: `${(t / total) * 100}%` }} />
       </div>
       <select
         className="speed"

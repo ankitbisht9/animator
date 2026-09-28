@@ -1,3 +1,5 @@
+import { DebugPage } from "./pages/DebugPage";
+import { GenerationPage } from "./pages/GenerationPage";
 import { Home } from "./pages/Home";
 import { LessonPage } from "./pages/LessonPage";
 import { Playground } from "./pages/Playground";
@@ -8,6 +10,8 @@ export function App() {
   const path = usePath();
   if (path === "/render") return <RenderPage />;
   const lesson = /^\/lesson\/([a-z0-9_-]+)\/?$/.exec(path);
+  const generated = /^\/g\/(g_[0-9a-f]{12})\/?$/.exec(path);
+  const debug = /^\/debug\/(g_[0-9a-f]{12})\/?$/.exec(path);
   return (
     <div className="app">
       <header className="topbar">
@@ -28,7 +32,19 @@ export function App() {
           </Link>
         </nav>
       </header>
-      <main>{lesson?.[1] ? <LessonPage slug={lesson[1]} /> : path === "/playground" ? <Playground /> : <Home />}</main>
+      <main>
+        {lesson?.[1] ? (
+          <LessonPage slug={lesson[1]} />
+        ) : generated?.[1] ? (
+          <GenerationPage key={generated[1]} id={generated[1]} />
+        ) : debug?.[1] ? (
+          <DebugPage id={debug[1]} />
+        ) : path === "/playground" ? (
+          <Playground />
+        ) : (
+          <Home />
+        )}
+      </main>
     </div>
   );
 }

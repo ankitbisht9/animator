@@ -1,0 +1,12 @@
+{
+  "notes": "What each model accepts. The LLM client uses this to shape requests (reasoning effort is only sent to reasoning models, mapped to the nearest level the model supports). Models not listed are assumed to accept every effort level; if the API rejects `reasoning`, the client retries once without it. Edit this file, not the code.",
+  "models": {
+    "gpt-6-astra": { "reasoning": true, "efforts": ["none", "low", "medium", "high", "xhigh", "max"], "vision": true },
+    "gpt-6-sol": { "reasoning": true, "efforts": ["none", "low", "medium", "high", "xhigh", "max"], "vision": true },
+    "gpt-6-luna": { "reasoning": true, "efforts": ["none", "low", "medium", "high"], "vision": true },
+    "gpt-5": { "reasoning": true, "efforts": ["minimal", "low", "medium", "high"], "vision": true },
+    "gpt-5-mini": { "reasoning": true, "efforts": ["minimal", "low", "medium", "high"], "vision": true },
+    "gpt-4.1": { "reasoning": false, "vision": true, "max_output_tokens": 32768 },
+    "gpt-4o": { "reasoning": false, "vision": true, "max_output_tokens": 16384 }
+  }
+}

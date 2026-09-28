@@ -465,3 +465,108 @@ the system drive (Docker's disk image is on C:). At the user's request, Docker i
 - Determinism is proven on the host (ADR-025) but not yet across machines.
 - Before building again, move Docker Desktop's disk image off the full drive (Settings > Resources >
   Advanced > Disk image location). The build needs about 6-8 GB.
+
+---
+
+## ADR-027 LLM layer: provider-neutral client, model fallbacks, our own retries
+
+**Decision.** `animator.llm` defines `LLMClient.generate(LLMRequest, CallContext) -> LLMResult` and the
+provider-neutral types. It has three implementations: `OpenAILLM` (Responses API, strict JSON-schema
+output), `FakeLLM` (scripted, for tests), and `RecordingLLM`/`ReplayLLM` (fixtures keyed by a hash of the
+request content). `ANIMATOR_LLM_PROVIDER=openai|record|replay` selects one; nothing outside the package imports
+`openai`.
+
+- **Model chain per stage.** The stage's model comes first, then `ANIMATOR_MODEL_FALLBACKS`
+  (default `gpt-5,gpt-4.1,gpt-4o`). A model the key cannot use (404, 403, `model_not_found`) is skipped and
+  remembered.
+- **Capabilities.** `config/models.json` says which models take a reasoning effort and at which levels. Unsupported
+  levels map to the nearest one, and non-reasoning models get no effort parameter and a clamped output limit. A
+  400 about an unsupported `reasoning` parameter is retried once without it.
+- **Retries** are ours, not the SDK's (so they are counted and logged): exponential backoff with jitter on
+  429/5xx/timeouts, honouring `Retry-After`. A rejected key (401, including a deactivated account) and
+  `insufficient_quota` are never retried.
+- **Failed attempts.** Refusals, `incomplete` responses and non-JSON output raise and count as failed attempts.
+  Every call, successful or not, is reported with usage and cost (`config/pricing.json`, longest-prefix match for
+  dated snapshots). The per-generation `Budget` is checked before each call: a hard stop.
+
+**Why.** The key given during development belonged to a deactivated account, and model availability differs
+between accounts. Fallbacks and a clear, non-retried auth error make both situations visible and recoverable,
+instead of slow failures.
+
+---
+
+## ADR-028 Scene loop: engine-validated drafts, bounded corrections, flagged fallbacks
+
+**Decision.** For each scene:
+1. The animation planner drafts it.
+2. The engine worker compiles it with the previous scene's end state.
+3. Errors go back as structured issues to a correction model for up to `ANIMATOR_MAX_CORRECTION_ATTEMPTS` (3).
+   The last attempt escalates to `ANIMATOR_MODEL_CORRECTION_FINAL`. A reply that was unusable (refused,
+   truncated, malformed) gets a repair prompt instead, and counts as an attempt.
+4. Optional critics (text summary, or rendered keyframes for the vision model) can spend one more attempt on
+   "revise" with major issues.
+5. If every attempt fails, the scene becomes a clearly flagged simplified scene: title, key idea, narration as
+   captions, and a "Simplified scene" badge on a fade transition (DEGRADED), and the lesson continues.
+6. A scene that repeatedly crashes the worker (after the pool's restart-and-retry) is degraded the same way. If
+   even the fallback cannot compile, the engine is down and the generation pauses.
+7. A chapter whose storyboard keeps failing gets one scene outlined from the plan.
+
+The pipeline pins `id` and `dsl_version`. Everything else in a scene is the model's, and only the engine
+validates it (P4, P8).
+
+---
+
+## ADR-029 Jobs without a database: file store and an asyncio runner
+
+**Decision.** Following ADR-003 and the user's request, there is no database yet. `GenerationStore` is an
+interface. `FileStore` (the default) writes one JSON document per generation atomically, plus an append-only
+`calls.jsonl`, under `var/generations/<id>/`; `MemoryStore` is used in tests. `GenerationRunner` is the
+asyncio job runner:
+- plan, then per-chapter storyboards (the next chapter is prefetched while the current one's scenes generate),
+  then scenes in order;
+- persistence after every step, and live events for SSE;
+- cancel, and resume (`paused` after an outage or engine failure; everything in progress on a restart). Ready
+  scenes are never regenerated;
+- concurrency limits (`ANIMATOR_GENERATION_CONCURRENCY`, `LLM_MAX_CONCURRENCY`);
+- optional pacing (`paced`: stay `ANIMATOR_BUFFER_TARGET_SECONDS` ahead of the viewer's reported playhead).
+
+**Scaling path.** A SQL store (SQLite, then Postgres) implements `GenerationStore`. A queue (Arq, Celery, RQ)
+replaces `GenerationRunner` behind the same `start/cancel/resume/playhead` surface. The pub/sub `Hub` moves to
+Redis when there is more than one API process. The pipeline does not change.
+
+---
+
+## ADR-030 Progressive playback in the browser
+
+**Decision.** The lesson page subscribes to `/api/generations/{id}/events`. It gets a snapshot with every
+playable scene, then updates and new scenes; the stream ends after a final state, and the client stops
+EventSource from reconnecting. Scenes are compiled in the browser by the same engine (P2). `buildLesson` takes
+a cache, so already-compiled scenes are reused as new ones arrive.
+
+The player keeps one clock for its whole life:
+- **Pending scenes and chapters** show in the scene list and the scrubber. Seeking is limited to the ready part.
+- **Buffering.** Reaching the end of what is ready holds the last frame under a "Preparing the next scene"
+  overlay, and playback resumes by itself when the next scene arrives.
+- **Render errors.** An error boundary holds the last good frame (spec Section 17).
+- **Pacing.** The playhead is reported every 2 s for paced generation.
+
+**Evidence.** In a headless browser against the scripted-LLM dev server (`scripts/dev_fake_llm.py`): the first
+scene was playable after 3 calls, the overlay appeared when playback at 2x caught up, and playback resumed 5.7 s
+later on the next scene.
+
+---
+
+## ADR-031 Live evaluation and model bake-off
+
+**Decision.** `python -m animator.eval` (`make eval`) runs `config/eval_topics.json`: 16 topics across
+physics, maths, biology, computer science and economics. It uses the live pipeline and a file store under
+`var/eval/<run>/`, and writes `report.md` and `report.json` with these metrics:
+- first-pass validity, ready within 3 corrections, corrections per scene, degraded rate;
+- layout warnings per scene, time to first play, the worst generation-to-playback ratio;
+- cost, and cost per minute of video.
+
+A bake-off runs the set once per configuration with `--set ANIMATOR_MODEL_...=...` and compares the reports.
+
+**Status.** Not run yet: the development key's account is deactivated (the harness stops cleanly on a rejected
+key). The stage defaults stay as specified (Sol, with Astra for the final correction) until a bake-off justifies
+changes. Record the result here.

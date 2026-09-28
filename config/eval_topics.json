@@ -1,0 +1,81 @@
+{
+  "notes": "Live eval set (spec Section 19): topics across domains to prove generality, not only physics. Short durations keep a full run affordable; override with --duration-min.",
+  "topics": [
+    {
+      "id": "archimedes",
+      "topic": "Explain Archimedes' principle",
+      "audience": "high-school student",
+      "duration_min": 3
+    },
+    { "id": "bernoulli", "topic": "Explain Bernoulli's theorem", "audience": "high-school student", "duration_min": 3 },
+    {
+      "id": "pythagoras",
+      "topic": "Explain the Pythagorean theorem",
+      "audience": "middle-school student",
+      "duration_min": 2
+    },
+    { "id": "projectile", "topic": "Explain projectile motion", "audience": "high-school student", "duration_min": 2 },
+    {
+      "id": "inclined_plane",
+      "topic": "Explain forces on an inclined plane",
+      "audience": "high-school student",
+      "duration_min": 2
+    },
+    {
+      "id": "pendulum",
+      "topic": "Why does a pendulum keep a steady rhythm?",
+      "audience": "middle-school student",
+      "duration_min": 2
+    },
+    {
+      "id": "hookes_law",
+      "topic": "Explain Hooke's law for springs",
+      "audience": "high-school student",
+      "duration_min": 2
+    },
+    {
+      "id": "circuits",
+      "topic": "Explain simple electric circuits and Ohm's law",
+      "audience": "high-school student",
+      "duration_min": 2
+    },
+    {
+      "id": "photosynthesis",
+      "topic": "How does photosynthesis work?",
+      "audience": "middle-school student",
+      "duration_min": 2
+    },
+    { "id": "water_cycle", "topic": "Explain the water cycle", "audience": "primary-school child", "duration_min": 2 },
+    {
+      "id": "binary_search",
+      "topic": "How does binary search work?",
+      "audience": "university student",
+      "duration_min": 2
+    },
+    {
+      "id": "supply_demand",
+      "topic": "Explain supply and demand",
+      "audience": "high-school student",
+      "duration_min": 2
+    },
+    {
+      "id": "fractions",
+      "topic": "What does it mean to add fractions?",
+      "audience": "primary-school child",
+      "duration_min": 2
+    },
+    { "id": "compound_interest", "topic": "Explain compound interest", "audience": "curious adult", "duration_min": 2 },
+    {
+      "id": "density",
+      "topic": "Why do some things float and others sink? (density)",
+      "audience": "primary-school child",
+      "duration_min": 2
+    },
+    {
+      "id": "levers",
+      "topic": "How does a lever make lifting easier?",
+      "audience": "middle-school student",
+      "duration_min": 2
+    }
+  ]
+}

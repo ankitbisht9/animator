@@ -91,6 +91,26 @@ rendered as glyph paths from bundled Lexend metrics, so measurement equals rende
 and exports never wait on font loading. Equations are MathJax SVG parsed into a safe glyph tree with
 per-term groups. Nothing accepts raw SVG strings.
 
+## LLM pipeline and jobs
+
+```
+POST /api/generations {topic, audience, duration_min}
+  -> GenerationRunner (asyncio; state in var/generations/<id>/ after every step)
+       Stage 1  educational planner  -> EducationalPlan (chapters of 45-90 s)
+       Stage 2  storyboard, per chapter (next chapter prefetched)  -> scenes with beats, identity, engagement
+       Stage 3  animation planner, per scene, from the previous scene's engine end state -> Scene DSL
+                -> engine worker compile/validate -> structured issues -> correction (bounded, escalating)
+                -> optional critics -> READY, or a flagged simplified scene (DEGRADED)
+  -> SSE /api/generations/<id>/events  -> the browser compiles and plays scenes as they arrive
+```
+
+`animator.llm` is the only code that talks to a model provider. `LLMClient` has live, fake and
+record/replay implementations. Each stage's model chain falls back through `ANIMATOR_MODEL_FALLBACKS`, and
+every call is logged with tokens, cost, latency and retries (ADR-027). `animator.pipeline` holds the stages,
+the prompt packs (`docs/PROMPTS.md`) and the scene loop (ADR-028). `animator.jobs` holds the store interface
+and the runner (ADR-029): no database yet; a SQL store and a queue plug in behind the same interfaces. The
+debug page (`/debug/<id>`) shows the whole trace: plan, briefs, attempts with engine issues, DSL and LLM calls.
+
 ## Export
 
 `animator.export` (Python) serves the built web app, starts N headless Chromium processes on its

@@ -16,6 +16,7 @@ help:
 	@echo codegen       regenerate contracts/ and generated docs
 	@echo check-codegen fail if codegen output differs from what is committed
 	@echo export-demo   render the Archimedes lesson to MP4 on this machine
+	@echo eval          run the live eval set (calls OpenAI; ARGS="--only archimedes")
 	@echo export        render LESSON=slug to MP4 on this machine
 	@echo export-demo-docker  same as export-demo, inside the pinned Docker image (TODO: not yet verified)
 	@echo docker-build  build the pinned export image
@@ -90,9 +91,9 @@ test-docker: docker-build
 goldens-docker: docker-build
 	$(DOCKER_RUN) -e UPDATE_GOLDENS=1 -v "$(CURDIR)/apps/api/tests/golden:/app/apps/api/tests/golden" 		$(EXPORT_IMAGE) python -m pytest -m e2e apps/api/tests/test_render_e2e.py
 
-eval:
-	@echo TODO(Phase 9): the live LLM eval suite is not implemented yet.
-	@exit 1
+# Live: calls OpenAI (needs OPENAI_API_KEY). Pass options with ARGS, e.g. ARGS="--only archimedes".
+eval: build-worker
+	$(UV) run python -m animator.eval $(ARGS)
 
 spikes: build
 	$(UV) run python scripts/spikes/export_throughput.py

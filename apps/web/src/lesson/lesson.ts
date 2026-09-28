@@ -38,11 +38,32 @@ function degradedDuration(raw: unknown): number {
   return typeof d === "number" && d > 0 && d <= 120 ? d : 5;
 }
 
-export function buildLesson(title: string, rawScenes: unknown[]): Lesson {
+/**
+ * Reuse for incremental builds (scenes arriving one by one): scenes whose source is unchanged,
+ * and all scenes before them unchanged, keep their compiled form.
+ */
+export interface LessonCache {
+  keys: string[];
+  scenes: LessonScene[];
+}
+
+export function buildLesson(title: string, rawScenes: unknown[], cache?: LessonCache): Lesson {
   const scenes: LessonScene[] = [];
   let prev: SceneState | null = null;
   let start = 0;
+  let reusing = cache !== undefined;
+  const keys: string[] = [];
   rawScenes.forEach((raw, index) => {
+    const key = JSON.stringify(raw);
+    keys.push(key);
+    const cached = cache?.scenes[index];
+    if (reusing && cached && cache?.keys[index] === key) {
+      scenes.push(cached);
+      prev = cached.endState ?? prev;
+      start += cached.duration;
+      return;
+    }
+    reusing = false;
     const lifted = lift(raw);
     let compiled: CompiledScene | null = null;
     let issues: ValidationIssue[] = lifted.issues;
@@ -64,6 +85,10 @@ export function buildLesson(title: string, rawScenes: unknown[]): Lesson {
     scenes.push({ index, id, title: sceneTitle, start, duration, ok, compiled, issues, endState });
     start += duration;
   });
+  if (cache) {
+    cache.keys = keys;
+    cache.scenes = scenes;
+  }
   return { title, scenes, duration: start };
 }
 
