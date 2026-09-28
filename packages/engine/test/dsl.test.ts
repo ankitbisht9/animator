@@ -92,6 +92,28 @@ describe("LLM-facing schema", () => {
     });
   });
 
+  it("never puts a keyword next to $ref (OpenAI rejects the whole schema)", () => {
+    walk(schema, (n) => {
+      if (typeof n.$ref === "string") expect(Object.keys(n)).toEqual(["$ref"]);
+    });
+  });
+
+  it("keeps descriptions of optional references on their nullable wrapper", () => {
+    const defs = schema.$defs as Record<string, Json>;
+    const arrow = defs.Object_vector_arrow;
+    if (!arrow) throw new Error("vector_arrow missing from the schema");
+    const wrapper = (arrow.properties as Json).params as Json; // params is optional
+    const params = (wrapper.anyOf as Json[])[0] as Json;
+    expect((params.properties as Json).from).toEqual({ $ref: "#/$defs/Point" }); // required: a bare ref
+    let described = 0;
+    walk(schema, (n) => {
+      const alts = n.anyOf as Json[] | undefined;
+      if (alts?.length === 2 && typeof alts[0]?.$ref === "string" && alts[1]?.type === "null" && n.description)
+        described++;
+    });
+    expect(described).toBeGreaterThan(0);
+  });
+
   it("drops keywords strict mode does not need", () => {
     walk(schema, (n) => {
       for (const k of ["default", "minimum", "maximum", "pattern", "oneOf", "const", "minLength", "maxItems"])

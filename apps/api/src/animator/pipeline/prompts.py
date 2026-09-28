@@ -42,7 +42,13 @@ class Prompt:
     text: str
 
 
-def load_prompt(name: str, version: int = 1) -> Prompt:
+def load_prompt(name: str, version: int | None = None) -> Prompt:
+    """A prompt pack by version; the newest one when no version is given."""
+    if version is None:
+        found = [int(p.stem.rsplit(".v", 1)[1]) for p in PROMPTS_DIR.glob(f"{name}.v*.md")]
+        if not found:
+            raise FileNotFoundError(f"no prompt pack '{name}' in {PROMPTS_DIR}")
+        version = max(found)
     path = PROMPTS_DIR / f"{name}.v{version}.md"
     return Prompt(f"{name}.v{version}", path.read_text(encoding="utf-8"))
 

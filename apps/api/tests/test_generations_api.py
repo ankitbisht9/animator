@@ -40,7 +40,7 @@ def test_create_follow_and_inspect_a_lesson(worker_script: Path) -> None:
         assert cfg["stages"]["animation_planner"]["models"] == ["m-scene"]
         assert "secret" not in json.dumps(cfg)
 
-        res = client.post("/api/generations", json={"topic": "Archimedes' principle", "duration_min": 1.5})
+        res = client.post("/api/generations", json={"topic": "Archimedes' principle", "duration_min": 3})
         assert res.status_code == 201
         gen_id = res.json()["id"]
 

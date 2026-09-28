@@ -41,7 +41,21 @@ function nullable(schema: Json): Json {
     if (Array.isArray(schema.enum)) out.enum = [...schema.enum, null];
     return out;
   }
+  if (typeof schema.$ref === "string") {
+    // A $ref must stand alone in strict mode: keep its description on the wrapper instead.
+    const wrapped: Json = { anyOf: [{ $ref: schema.$ref }, { type: "null" }] };
+    if (typeof schema.description === "string") wrapped.description = schema.description;
+    return wrapped;
+  }
   return { anyOf: [schema, { type: "null" }] };
+}
+
+/** Strict mode rejects any keyword next to `$ref` (OpenAI: "$ref cannot have keywords"). */
+function bareRefs(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(bareRefs);
+  if (!isObj(node)) return node;
+  if (typeof node.$ref === "string") return { $ref: node.$ref };
+  return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, bareRefs(v)]));
 }
 
 function strictify(node: unknown): unknown {
@@ -93,6 +107,6 @@ export function canonicalJsonSchema(): Json {
 /** LLM-facing, strict-mode compatible JSON Schema. */
 export function llmJsonSchema(): Json {
   const canonical = canonicalJsonSchema();
-  const strict = strictify(canonical) as Json;
+  const strict = bareRefs(strictify(canonical)) as Json;
   return { $schema: "https://json-schema.org/draft/2020-12/schema", ...strict };
 }

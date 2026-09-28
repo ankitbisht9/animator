@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     openai_project_id: str | None = None
     openai_base_url: str | None = None
     openai_store: bool = False
-    openai_timeout_s: float = 120.0
+    openai_timeout_s: float = 600.0  # scene calls take 1-2 min at high effort
     openai_max_retries: int = 4
     llm_max_concurrency: int = 4
     llm_budget_usd_per_generation: float = 5.0

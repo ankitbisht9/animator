@@ -1181,7 +1181,19 @@ export function PressureGaugeR({ o, theme }: RenderProps) {
         strokeLinecap="round"
       />
       <circle r={fmt(r * 0.1)} fill={darken(needle, 0.1)} />
-      <GlyphText layout={l.value} color={theme.colors.text} x={-l.value.width / 2} y={r * 0.42} />
+      {!l.valueInside && (
+        <rect
+          x={fmt(l.valueAt.x - 8)}
+          y={fmt(l.valueAt.y - 5)}
+          width={fmt(l.value.width + 16)}
+          height={fmt(l.value.height + 10)}
+          rx={10}
+          fill={theme.colors.surface}
+          stroke={darken(metal, 0.1)}
+          strokeWidth={2}
+        />
+      )}
+      <GlyphText layout={l.value} color={theme.colors.text} x={l.valueAt.x} y={l.valueAt.y} />
       {l.label && (
         <GlyphText layout={l.label} color={theme.colors.text} x={-l.label.width / 2} y={-r - 8 - l.label.height} />
       )}

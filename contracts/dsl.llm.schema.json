@@ -62,13 +62,13 @@
     "camera": {
       "anyOf": [
         {
-          "description": "Initial camera; omitted = continue from the previous scene",
           "$ref": "#/$defs/CameraInit"
         },
         {
           "type": "null"
         }
-      ]
+      ],
+      "description": "Initial camera; omitted = continue from the previous scene"
     },
     "transition_in": {
       "anyOf": [
@@ -9993,7 +9993,6 @@
               "type": "object",
               "properties": {
                 "from": {
-                  "description": "Tail point (or tip, with origin: 'head')",
                   "$ref": "#/$defs/Point"
                 },
                 "direction": {
@@ -10945,24 +10944,24 @@
             "to": {
               "anyOf": [
                 {
-                  "description": "Destination (slot, relative placement, anchor pin or raw x/y)",
                   "$ref": "#/$defs/Place"
                 },
                 {
                   "type": "null"
                 }
-              ]
+              ],
+              "description": "Destination (slot, relative placement, anchor pin or raw x/y)"
             },
             "by": {
               "anyOf": [
                 {
-                  "description": "Relative displacement in pixels",
                   "$ref": "#/$defs/Vec"
                 },
                 {
                   "type": "null"
                 }
-              ]
+              ],
+              "description": "Relative displacement in pixels"
             },
             "path": {
               "type": [

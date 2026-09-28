@@ -618,7 +618,11 @@ export function gaugeLayout(p: Params, theme: Theme) {
     ? layoutText(pStr(p, "label"), { size: theme.typography.sizes.small, weight: 600, align: "center" })
     : null;
   const value_ = layoutText(text, { size: Math.max(19, r * 0.24), weight: 700, align: "center" });
-  return { r, stem, max, frac, angle, value: value_, label };
+  // The readout sits inside the lower dial when it fits; on small gauges it would spill over the
+  // dial (its size never drops below legibility), so it moves to a pill right of the dial.
+  const valueInside = value_.width <= r * 1.35;
+  const valueAt = valueInside ? { x: -value_.width / 2, y: r * 0.42 } : { x: r + 14, y: -value_.height / 2 };
+  return { r, stem, max, frac, angle, value: value_, valueInside, valueAt, label };
 }
 
 export const pressureGauge = defineComponentSpec({
@@ -639,8 +643,9 @@ export const pressureGauge = defineComponentSpec({
   geometry: (p, ctx) => {
     const l = gaugeLayout(p, ctx.theme);
     const labelH = l.label ? l.label.height + 8 : 0;
+    const right = l.valueInside ? l.r + 6 : l.valueAt.x + l.value.width + 10;
     return {
-      bbox: { x: -l.r - 6, y: -l.r - 6 - labelH, w: 2 * l.r + 12, h: 2 * l.r + l.stem + 12 + labelH },
+      bbox: { x: -l.r - 6, y: -l.r - 6 - labelH, w: l.r + 6 + right, h: 2 * l.r + l.stem + 12 + labelH },
       anchors: { stem: { x: 0, y: l.r + l.stem } },
     };
   },

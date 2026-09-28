@@ -465,3 +465,21 @@ async def test_the_first_chapter_plays_while_the_next_is_still_being_storyboarde
     await asyncio.wait_for(runner._tasks[gen.id], timeout=120)
     done = await runner.get(gen.id)
     assert done is not None and done.status == "complete" and len(done.scenes) == 4
+
+
+def test_short_lessons_are_one_chapter() -> None:
+    from animator.pipeline.models import EducationalPlan
+    from animator.pipeline.stages import one_chapter_if_short
+
+    p = EducationalPlan.model_validate(plan(3))
+    merged = one_chapter_if_short(p, 30)
+    assert len(merged.chapters) == 1 and merged.chapters[0].target_duration_s == 120.0
+    assert merged.chapters[0].key_ideas == ["idea", "idea", "idea"]
+    assert len(one_chapter_if_short(p, 180).chapters) == 3
+
+
+async def test_a_30_second_lesson_needs_one_storyboard_call(pool: EngineWorkerPool) -> None:
+    script = Script()
+    gen, _ = await run(pool, script, duration_min=0.5)
+    assert gen.status == "complete" and gen.chapters_done == ["c1"]
+    assert sum(1 for r in script.calls if r.stage == "storyboard") == 1

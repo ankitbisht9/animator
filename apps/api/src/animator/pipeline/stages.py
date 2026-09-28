@@ -21,7 +21,7 @@ from animator.llm import (
     LLMResult,
     Message,
 )
-from animator.pipeline.models import EducationalPlan, Generation, SceneRecord, StoryboardChapter
+from animator.pipeline.models import Chapter, EducationalPlan, Generation, SceneRecord, StoryboardChapter
 from animator.pipeline.prompts import PromptPack, compact
 from animator.pipeline.schemas import strict_schema
 
@@ -100,7 +100,9 @@ class Stages:
             max_output_tokens=max_out,
             generation_id=gen.id,
             label=label,
-            cache_key=f"animator-{stage}-{prompt_version}",
+            # Keyed by the prompt pack, not the stage: drafts and corrections share instructions,
+            # so they share the provider-side cache too.
+            cache_key=f"animator-{prompt_version}",
         )
 
     async def _retrying[M: BaseModel](
@@ -153,7 +155,7 @@ class Stages:
             gen,
             "plan",
         )
-        return await self._retrying(req, EducationalPlan, ctx)
+        return one_chapter_if_short(await self._retrying(req, EducationalPlan, ctx), r.duration_min * 60)
 
     # ------------------------------------------------------------------ stage 2
 
@@ -301,6 +303,22 @@ class Stages:
             f"critic scene {rec.index + 1}",
         )
         return await self._retrying(req, CriticReport, ctx, tries=2)
+
+
+def one_chapter_if_short(plan: EducationalPlan, duration_s: float) -> EducationalPlan:
+    """Lessons of 90 s or less are a single chapter (one storyboard call, scenes with room to breathe)."""
+    if duration_s > 90 or len(plan.chapters) <= 1:
+        return plan
+    first = plan.chapters[0]
+    merged = Chapter(
+        id=first.id,
+        title=plan.title,
+        goal=" ".join(c.goal for c in plan.chapters),
+        key_ideas=[i for c in plan.chapters for i in c.key_ideas],
+        target_duration_s=sum(c.target_duration_s for c in plan.chapters),
+        visual_approach=first.visual_approach,
+    )
+    return plan.model_copy(update={"chapters": [merged]})
 
 
 def stage_objects(gen: Generation) -> list[str]:

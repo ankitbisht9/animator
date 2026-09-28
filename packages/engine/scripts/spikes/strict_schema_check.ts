@@ -63,6 +63,8 @@ function checkNode(node: Json, where: string) {
   if (typeof node.$ref === "string") {
     const name = node.$ref.replace("#/$defs/", "");
     if (!defs[name]) problems.push(`${where}: dangling $ref ${node.$ref}`);
+    const siblings = Object.keys(node).filter((k) => k !== "$ref");
+    if (siblings.length) problems.push(`${where}: $ref cannot have keywords ${siblings.join(", ")}`);
   }
   for (const [k, v] of Object.entries(node)) {
     if (k === "$defs") continue;

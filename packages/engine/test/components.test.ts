@@ -5,6 +5,7 @@ import {
   EDUCATIONAL_CLEAN,
   evaluateObjects,
   flowTable,
+  gaugeLayout,
   getSpec,
   pipeLayout,
   readoutLayout,
@@ -33,6 +34,18 @@ describe("component geometry", () => {
     const natural = readoutLayout(base, theme).width;
     expect(readoutLayout({ ...base, minWidth: natural + 100 }, theme).width).toBe(natural + 100);
     expect(readoutLayout({ ...base, minWidth: 10 }, theme).width).toBe(natural);
+  });
+
+  it("a small gauge moves its reading beside the dial instead of spilling over it", () => {
+    const big = gaugeLayout({ value: 145, radius: 100, format: "0.0" }, theme);
+    const small = gaugeLayout({ value: 145, radius: 40, format: "0.0" }, theme);
+    expect(big.valueInside).toBe(true);
+    expect(small.valueInside).toBe(false);
+    expect(small.valueAt.x).toBeGreaterThan(small.r);
+    const spec = getSpec("pressure_gauge");
+    if (!spec) throw new Error("pressure_gauge spec missing");
+    const box = spec.geometry({ value: 145, radius: 40, format: "0.0" }, { theme, prep: null }).bbox;
+    expect(box.x + box.w).toBeGreaterThanOrEqual(small.valueAt.x + small.value.width);
   });
 
   it("container liquid surface follows the level", () => {
