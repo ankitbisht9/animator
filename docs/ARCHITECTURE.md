@@ -93,10 +93,21 @@ per-term groups. Nothing accepts raw SVG strings.
 
 ## Export
 
-The Python export service opens the web app's `/render` page in headless Chromium and calls
-`window.__renderFrame(frame)` (`t = frame / fps`, integer arithmetic). Each frame mounts a fresh SVG
-subtree so paint output never depends on the previous frame (see ADR-006). Frame ranges are split
-across browser instances and piped to ffmpeg.
+`animator.export` (Python) serves the built web app, starts N headless Chromium processes on its
+`/render` page and loads the lesson into each; the page compiles it with the same engine as the
+player and reports any invalid scene, which stops the export (P4, P5). Each scene becomes one
+**segment**: its frames are rendered at scene-local times on all browsers in parallel, handed to one
+ffmpeg process strictly in frame order, and verified with ffprobe. Every captured frame mounts a fresh
+SVG subtree, so pixels never depend on the previous frame (ADR-006). Segments are cached by a content
+key (the scene, every earlier scene, the render settings, the web build and the engine version), so
+scenes can be exported as they become final and unchanged scenes are never rendered twice. When all
+segments exist they are concatenated without re-encoding, an optional audio track is muxed in, and
+the result is verified (frame count, duration, codec, faststart). A failed segment restarts the
+browsers and is retried, then reported by scene. Alongside the video go an `.animation.json` bundle
+(re-renderable input) and an `.export.json` report (versions, per-scene timings, frame hashes).
+
+Exports that must be reproducible run in the pinned Docker image (`docker/export.Dockerfile`,
+ADR-026). There the same stored DSL gives identical frame hashes and a byte-identical MP4 (ADR-025).
 
 ## Security boundaries
 

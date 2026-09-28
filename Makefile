@@ -15,7 +15,11 @@ help:
 	@echo lint          Biome + tsc, Ruff + mypy
 	@echo codegen       regenerate contracts/ and generated docs
 	@echo check-codegen fail if codegen output differs from what is committed
-	@echo export-demo   render the hand-authored Archimedes lesson to MP4
+	@echo export-demo   render the Archimedes lesson to MP4 on this machine
+	@echo export        render LESSON=slug to MP4 on this machine
+	@echo export-demo-docker  same as export-demo, inside the pinned Docker image (TODO: not yet verified)
+	@echo docker-build  build the pinned export image
+	@echo test-docker   run the offline test suite inside the pinned image
 
 setup:
 	$(PNPM) install --frozen-lockfile
@@ -67,10 +71,24 @@ codegen:
 check-codegen: codegen
 	git diff --exit-code -- contracts docs/DSL.md docs/COMPONENTS.md
 
-export-demo:
-	@echo TODO(Phase 6): MP4 export is not implemented yet. For stills now: make build-web, then
-	@echo   uv run python scripts/render_keyframes.py archimedes --scene 0 --times 3 12
-	@exit 1
+docker-build:
+	$(DOCKER) build -f docker/export.Dockerfile -t $(EXPORT_IMAGE) .
+
+export-demo: build
+	$(UV) run python -m animator.export.demo
+
+export: build
+	$(UV) run python -m animator.export --lesson $(LESSON)
+
+# TODO(Phase 6, ADR-026): the pinned image is written but has not been built and verified yet.
+export-demo-docker: docker-build
+	$(DOCKER_RUN) -v "$(CURDIR)/var/exports:/app/var/exports" $(EXPORT_IMAGE) python -m animator.export.demo
+
+test-docker: docker-build
+	$(DOCKER_RUN) $(EXPORT_IMAGE) python -m pytest -m "not live"
+
+goldens-docker: docker-build
+	$(DOCKER_RUN) -e UPDATE_GOLDENS=1 -v "$(CURDIR)/apps/api/tests/golden:/app/apps/api/tests/golden" 		$(EXPORT_IMAGE) python -m pytest -m e2e apps/api/tests/test_render_e2e.py
 
 eval:
 	@echo TODO(Phase 9): the live LLM eval suite is not implemented yet.

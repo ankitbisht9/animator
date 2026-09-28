@@ -2,8 +2,9 @@
 
 Needs the built web app (`make build-web`) and Playwright's Chromium (`make setup`).
 Goldens are per-platform (anti-aliasing differs across OSes); regenerate with
-UPDATE_GOLDENS=1. Linux goldens are produced in the pinned Docker export
-environment (Phase 6); until then the Linux comparison is skipped, not faked.
+UPDATE_GOLDENS=1. Linux goldens belong to the pinned Docker export environment
+(`make goldens-docker`, ADR-026) and are only compared there: on any other Linux
+machine the comparison is skipped with a reason, not faked.
 """
 
 from __future__ import annotations
@@ -76,11 +77,12 @@ def _diff_ratio(a: bytes, b: bytes) -> float:
 async def test_golden_frames(session: RenderSession, lesson: str) -> None:
     await _load(session, lesson)
     update = os.environ.get("UPDATE_GOLDENS") == "1"
+    if sys.platform == "linux" and os.environ.get("ANIMATOR_PINNED_ENV") != "1":
+        pytest.skip("Linux golden frames are only valid inside the pinned export image (make test-docker)")
     if not update and not GOLDEN_DIR.exists():
-        pytest.skip(
-            f"no golden frames for platform '{sys.platform}' yet "
-            "(generated in the pinned Docker env, Phase 6)"
-        )
+        if os.environ.get("ANIMATOR_PINNED_ENV") == "1":
+            pytest.fail("no golden frames for the pinned image: run `make goldens-docker`")
+        pytest.skip(f"no golden frames for platform '{sys.platform}' on this machine")
     failures = []
     for frame in FRAMES[lesson]:
         png = await session.frame_png(frame, FPS)

@@ -13,7 +13,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DECISIONS.md](docs/DECIS
 - Node 24 and pnpm 10
 - [uv](https://docs.astral.sh/uv/) (installs Python 3.14 automatically)
 - GNU make (Windows: `winget install ezwinports.make`)
-- ffmpeg on `PATH` (for export)
+- ffmpeg on `PATH` (for export and its tests)
+- Docker (optional: only for the pinned export image)
 
 ## Commands
 
@@ -25,7 +26,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DECISIONS.md](docs/DECIS
 | `make lint` | Biome + tsc, Ruff + mypy |
 | `make codegen` | Regenerate `contracts/` and generated docs |
 | `make check-codegen` | Fail if regenerated output differs from what is committed |
-| `make export-demo` | Render the hand-authored Archimedes lesson to MP4 (Phase 6; not implemented yet) |
+| `make export-demo` | Render the hand-authored Archimedes lesson to MP4 (`var/exports/archimedes/`) |
+| `make export LESSON=slug` | Render any fixture lesson to MP4 |
+| `make export-demo-docker` / `make test-docker` | The same inside the pinned Docker image (written, not yet verified: ADR-026) |
 | `make spikes` | Re-run the Phase 0 spikes |
 
 ## Running it
@@ -69,6 +72,23 @@ uv run python scripts/render_keyframes.py archimedes --scene 8 --times 16 24
 ```
 
 `--scene` is 0-based; images go to `var/keyframes/archimedes/`.
+
+## Exporting video
+
+```
+make export-demo                     # Archimedes, 1080p30
+make export LESSON=gallery           # any fixture lesson, on this machine
+uv run python -m animator.export --lesson engine-tour --width 1280 --height 720 --workers 4
+uv run python -m animator.export --lesson archimedes --scenes 1-3      # some segments now...
+uv run python -m animator.export --lesson archimedes                   # ...the rest later (cached)
+uv run python -m animator.export --bundle var/exports/archimedes/archimedes.animation.json --name copy
+```
+
+Output goes to `var/exports/<name>/`: the MP4 (plus WebM with `--formats mp4,webm`), per-scene segments,
+an `.animation.json` bundle that can be re-rendered, and an `.export.json` report with versions, timings
+and frame hashes. `--audio track.wav` muxes an audio track, padded or trimmed to the video. The same lesson always gives
+identical frames and a byte-identical MP4 on the same machine. The pinned Docker image
+(`docker/export.Dockerfile`), which will make this hold across machines, is not verified yet (ADR-026).
 
 ## Configuration
 

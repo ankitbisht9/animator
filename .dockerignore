@@ -1,0 +1,16 @@
+# Keep the build context small and secrets out of images.
+.env
+.env.*
+!.env.example
+.git
+.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+var
+apps/web/dist
+packages/*/dist
+scripts/spikes/out
+*.log

@@ -10,7 +10,8 @@ update here.
 | 2 Evaluation engine + SVG slice | done |
 | 3 Tier 1 components, layout, camera | done |
 | 4 Solvers, bindings, SceneState, worker protocol | done |
-| 5 Hand-authored Archimedes, **Gate A** | done, awaiting Gate A review |
+| 5 Hand-authored Archimedes, **Gate A** | done, Gate A approved 2026-09-25 |
+| 6 Video export MVP, **Gate B** | done on the host, awaiting Gate B review; pinned Docker image not yet verified |
 
 ## Phase 0: Foundations
 
@@ -145,3 +146,37 @@ update here.
   width, one-shot bursts), 12 worker, 40 components (12 new
   Archimedes SVG golden frames), 3 web, 22 Python, 6 browser e2e (12 new Archimedes PNG goldens, pixel
   determinism across the whole lesson).
+
+## Phase 6: Video export MVP (Gate B)
+
+- `animator.export` (ADR-025): Python service that serves the built web app, runs N headless Chromium
+  processes on `/render`, and exports a lesson as one H.264 segment per scene.
+  - Frames are rendered at scene-local times, fed to ffmpeg in frame order, and checked with ffprobe.
+  - Segments are cached by content key, so scenes can be exported as they become final and interrupted
+    exports resume.
+  - Segments are concatenated without re-encoding into a verified MP4 (frame count, duration, codec,
+    faststart), with BT.709 colour and optional WebM.
+  - Each export also writes an `.animation.json` bundle (re-renderable with `--bundle`) and an
+    `.export.json` report.
+- Failure handling: invalid scenes stop the export and are named. A failed segment restarts the browsers
+  and is retried, then reported with its scene. The audio-track hook (`AudioSource`) pads or trims a track
+  to the video.
+- CLI: `python -m animator.export` (`--lesson | --bundle`, `--scenes`, size, fps, CRF, preset, workers,
+  formats, `--audio`). `make export-demo` renders Archimedes. `make export LESSON=...` renders any fixture.
+- Deliverable: `var/exports/archimedes/archimedes.mp4`.
+  - 1920x1080, 30 fps, 8,235 frames (exactly 274.5 s), H.264 yuv420p BT.709, 15.6 MB.
+  - Two independent exports (4 browsers from fixtures, 6 browsers from the bundle) gave identical hashes
+    for every frame and a byte-identical MP4.
+- Throughput: rendering takes 10-15 ms per frame. The PNG capture was the bottleneck; switching to
+  Chromium's fast PNG encoder (same pixels) made capture about 2.5x faster. The whole lesson renders at
+  about 10 fps (14 min).
+- Pinned Docker environment (ADR-026): `docker/export.Dockerfile` is written, with images pinned by digest
+  and tools by exact version, plus Make targets and a CI job. It is **not verified**: building it filled the
+  C: drive (where Docker Desktop keeps its disk), and the user chose to skip Docker for now.
+  `test_pinned_image_uses_the_pinned_tools` is skipped with this TODO. Linux golden frames are only
+  compared inside that image.
+- Found and fixed while running the project: `make dev` failed on Windows (uvicorn reload picks an event
+  loop that cannot spawn the engine worker), and opentype.js corrupted the `e`, `é` and `d` glyph outlines.
+- Tests: 117 engine, 12 worker, 40 components, 3 web, 42 Python (20 new export tests with a fake renderer
+  and real ffmpeg), 9 browser e2e (new: determinism with 1 vs 3 browsers, crash-and-retry, colour
+  fidelity), 1 skipped (the Docker TODO).

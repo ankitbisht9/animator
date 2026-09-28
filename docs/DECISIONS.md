@@ -380,3 +380,88 @@ as visible in the SceneState summary.
 world and was carried from scene to scene as an empty group. The LLM would have read about invisible
 objects in the state summary, or would have had to remember to remove every burst by hand. The engine
 knows the component plays once, so it handles this itself (P3).
+
+---
+
+## ADR-025 Export: per-scene segments, ordered parallel rendering, verified output
+
+**Decision.**
+- **Segments.** One H.264 segment per scene covers global frames `[frame(start), frame(end))`, rounding
+  half up. Segments tile the lesson exactly. Each frame is rendered at a *scene-local* time (`__renderAt`),
+  so a segment depends only on its own scene and the earlier scenes whose end state it inherits.
+- **Caching.** A segment is reused when its key matches: sha256 of the scenes up to it, the render settings
+  (size, fps, CRF, preset, formats), the web build id and the engine version. Scenes can therefore be
+  exported as they become final, and editing scene k re-renders k and later scenes only.
+- **Parallelism.** N browser processes render the frames of a segment concurrently from a shared cursor.
+  They are fed to a single ffmpeg process strictly in frame order, through a bounded look-ahead window.
+- **Encoding.** libx264 `yuv420p` at the configured CRF and preset with faststart. RGB is converted with the
+  BT.709 matrix to limited range and tagged BT.709, so colours match the browser in standard players.
+  `+bitexact` keeps version strings out of the container. Segments are joined by the concat demuxer
+  without re-encoding. WebM (VP9) is optional, encoded by the same ffmpeg process as a second output.
+- **Fail loudly.** Export refuses a lesson with any invalid scene and names it. Each segment and the final
+  file are checked with ffprobe (frame count, size, duration, codec, pixel format, faststart). A failed
+  segment deletes its partial files, restarts every browser and retries (`segment_retries`, default 2).
+  After that it raises `ExportError` with the scene's index and id. Finished segments are kept.
+- **Audio hook.** `AudioSource.track(lesson, duration, workdir) -> Path | None`. The track is muxed as AAC
+  and padded with silence or trimmed to the video's exact duration. The future TTS provider implements
+  this.
+- **Outputs.** `<name>.mp4`, `<name>.animation.json` (bundle: title, versions, themes, plan, storyboard,
+  assets, scenes; `--bundle` re-renders it) and `<name>.export.json` (settings, versions of engine,
+  Chromium, ffmpeg and web build, per-scene frames, attempts, time and fps, per-frame hash digest, and
+  output probes).
+
+**Why.** Scene-local rendering and content keys make segments self-contained, so they can be exported
+progressively (Phases 10 and 11) and cached. Ordered feeding keeps one encoder per segment, which gives
+exact frame counts and no seams inside a scene. Verifying with ffprobe turns a silently short or broken
+video into an error.
+
+**Evidence (Windows dev machine).**
+- **Tests.** Exporting the same lesson with 1 browser and with 3 browsers gives identical per-frame hashes
+  and a byte-identical MP4. A browser killed mid-scene is restarted, the scene is re-rendered, and the
+  output is byte-identical to a clean run. A frame decoded from the MP4 as players decode it (BT.709) is
+  within 3/255 per channel of the browser's own PNG (`tests/test_export_e2e.py`).
+- **Full Archimedes lesson.** 12 scenes, 274.5 s, 8,235 frames at 1920x1080 and 30 fps. Two independent
+  exports gave identical per-frame hashes for all 8,235 frames and a byte-identical 15.6 MB MP4:
+  - run A: 4 browsers, from the fixtures;
+  - run B: 6 browsers, re-rendered from the exported `.animation.json` bundle.
+
+  An earlier export was assembled from two sessions (six cached segments from an interrupted run) and
+  used the slower capture below. It produced the same MP4 bytes too.
+
+**Throughput.** Evaluating and painting a frame takes 10-15 ms. The cost is the PNG capture:
+- `page.screenshot` takes 130-290 ms at 1080p.
+- CDP `Page.captureScreenshot` with `optimizeForSpeed` gives identical pixels, and identical bytes run to
+  run, in 40% of the time. The exporter uses it.
+
+The full lesson renders at about 10 fps (about 2.8x real time, 14 minutes), and 6 browsers are no faster
+than 4 because the machine is CPU-bound. Next steps, when needed: 720p or a faster x264 preset for
+previews, then raw frame capture, then in-browser WebCodecs (spec Section 15).
+
+---
+
+## ADR-026 Pinned export environment (Docker). Status: written, not yet verified
+
+**Decision.** `docker/export.Dockerfile` is a two-stage image:
+- **Build stage.** Node 24.11.1 (by digest) and pnpm 10.34.5 build the web app and the engine worker from
+  the lockfile.
+- **Runtime stage.** Python 3.14.7 (by digest) with uv 0.12.19 (`uv.lock`), ffmpeg 7.1.5 and DejaVu 2.37
+  (exact Debian 13 versions), and the Chromium headless shell pinned by Playwright 1.63.0. It also holds the
+  built web app and worker, the same Node binary, the fixtures and the tests.
+- **Offline runtime.** Nothing is fetched after build. Make targets run it with `--network none` and 2 GB
+  of `/dev/shm`.
+- **Targets.** `make export-demo-docker`, `make test-docker` (the whole offline suite, including export
+  determinism and the Linux golden frames), `make goldens-docker`. A CI job builds the image and runs the
+  suite inside it.
+- **Linux golden frames.** They are only compared when `ANIMATOR_PINNED_ENV=1`, which the image sets. On
+  any other Linux machine the comparison is skipped with a reason.
+
+**Why.** Frame hashes depend on the exact Chromium, font rasterization and ffmpeg build. Pinning all of
+them in one image is what makes "same DSL, same frames" hold across machines, not just across runs.
+
+**Status.** The image has **not** been built successfully yet. On the development machine the build filled
+the system drive (Docker's disk image is on C:). At the user's request, Docker is skipped for now.
+- `make export-demo` renders on the host instead.
+- `test_pinned_image_uses_the_pinned_tools` is skipped with this TODO until `make test-docker` has run.
+- Determinism is proven on the host (ADR-025) but not yet across machines.
+- Before building again, move Docker Desktop's disk image off the full drive (Settings > Resources >
+  Advanced > Disk image location). The build needs about 6-8 GB.

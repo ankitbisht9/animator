@@ -9,7 +9,7 @@
  * output never depends on the previously painted frame (ADR-006).
  */
 import { SceneView } from "@animator/components";
-import { evaluate } from "@animator/engine";
+import { DSL_VERSION, ENGINE_VERSION, evaluate } from "@animator/engine";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { fixtureLesson } from "../lesson/fixtures";
 import { buildLesson, type Lesson, locate } from "../lesson/lesson";
@@ -35,6 +35,8 @@ declare global {
 function summary(lesson: Lesson) {
   return {
     title: lesson.title,
+    engineVersion: ENGINE_VERSION,
+    dslVersion: DSL_VERSION,
     duration: lesson.duration,
     scenes: lesson.scenes.map((s) => ({
       id: s.id,
@@ -42,6 +44,7 @@ function summary(lesson: Lesson) {
       start: s.start,
       duration: s.duration,
       ok: s.ok,
+      themeId: s.compiled?.themeId ?? null,
       beats: s.compiled?.beats ?? [],
       errors: s.issues.filter((i) => i.severity === "error"),
     })),

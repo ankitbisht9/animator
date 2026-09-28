@@ -6,12 +6,17 @@ Each captured frame is a fresh mount, so pixels never depend on paint history.
 
 from __future__ import annotations
 
+import asyncio
+import base64
+import contextlib
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from types import TracebackType
+from typing import Any, Self
 
-from playwright.async_api import Browser, Page, Playwright
+from playwright.async_api import Browser, CDPSession, Page, Playwright, async_playwright
 
 from animator import REPO_ROOT
 
@@ -55,6 +60,7 @@ class RenderSession:
         self.viewport = viewport or Viewport()
         self._browser: Browser | None = None
         self._page: Page | None = None
+        self._cdp: CDPSession | None = None
 
     async def start(self, pw: Playwright) -> RenderSession:
         self._browser = await pw.chromium.launch(args=CHROMIUM_ARGS)
@@ -63,6 +69,7 @@ class RenderSession:
         )
         await self._page.goto(f"{self.site_url}/render")
         await self._page.wait_for_function("window.__ready === true")
+        self._cdp = await self._page.context.new_cdp_session(self._page)
         return self
 
     @property
@@ -75,17 +82,107 @@ class RenderSession:
         await self.page.wait_for_function("window.__ready === true")
         return summary
 
+    async def capture(self) -> bytes:
+        """The painted viewport as PNG. Chromium's fast PNG encoder gives the same pixels as
+        `page.screenshot` (and identical bytes run to run) in about 40% of the time."""
+        assert self._cdp is not None, "session not started"
+        shot = await self._cdp.send("Page.captureScreenshot", {"format": "png", "optimizeForSpeed": True})
+        return base64.b64decode(shot["data"])
+
     async def frame_png(self, frame: int, fps: int) -> bytes:
         await self.page.evaluate("([f, fps]) => window.__renderFrame(f, fps)", [frame, fps])
-        return await self.page.screenshot(type="png")
+        return await self.capture()
 
     async def at_png(self, scene_index: int, local_t: float) -> bytes:
         await self.page.evaluate("([i, t]) => window.__renderAt(i, t)", [scene_index, local_t])
-        return await self.page.screenshot(type="png")
+        return await self.capture()
+
+    @property
+    def browser_version(self) -> str:
+        return self._browser.version if self._browser is not None else "unknown"
 
     async def close(self) -> None:
         if self._browser is not None:
-            await self._browser.close()
+            # A crashed browser is already gone; closing it again must not mask the real error.
+            with contextlib.suppress(Exception):
+                await self._browser.close()
+            self._browser = None
+
+
+class BrowserPool:
+    """N independent Chromium processes on /render, each holding the same loaded lesson.
+
+    Frames are pure functions of time, so any session can paint any frame (ADR-006);
+    separate browser processes give real parallelism.
+    """
+
+    def __init__(self, site_url: str, viewport: Viewport, size: int, build_id: str = "unknown") -> None:
+        self.site_url = site_url
+        self.viewport = viewport
+        self.size = size
+        self.build_id = build_id
+        self._pw: Playwright | None = None
+        self._sessions: list[RenderSession] = []
+        self._lesson: dict[str, Any] | None = None
+
+    @property
+    def renderers(self) -> list[RenderSession]:
+        return self._sessions
+
+    @property
+    def browser_version(self) -> str:
+        return self._sessions[0].browser_version if self._sessions else "unknown"
+
+    async def _open(self) -> None:
+        assert self._pw is not None
+        pw = self._pw
+        self._sessions = list(
+            await asyncio.gather(
+                *(RenderSession(self.site_url, self.viewport).start(pw) for _ in range(self.size))
+            )
+        )
+
+    async def _close_sessions(self) -> None:
+        await asyncio.gather(*(s.close() for s in self._sessions))
+        self._sessions = []
+
+    async def __aenter__(self) -> Self:
+        self._pw = await async_playwright().start()
+        try:
+            await self._open()
+        except BaseException:
+            await self._close_sessions()
+            await self._pw.stop()
+            raise
+        return self
+
+    async def __aexit__(
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: TracebackType | None
+    ) -> None:
+        await self._close_sessions()
+        if self._pw is not None:
+            await self._pw.stop()
+
+    async def load(self, lesson: dict[str, Any]) -> dict[str, Any]:
+        """Load the lesson into every session; they must all agree on the summary."""
+        self._lesson = lesson
+        summaries = await asyncio.gather(*(s.load(lesson) for s in self._sessions))
+        first = summaries[0]
+        if any(x != first for x in summaries[1:]):
+            raise RuntimeError("render sessions disagree on the loaded lesson")
+        return first
+
+    async def restart(self) -> None:
+        """Replace every browser (e.g. after a crash) and reload the current lesson."""
+        await self._close_sessions()
+        await self._open()
+        if self._lesson is not None:
+            await self.load(self._lesson)
+
+
+def build_id(dist: Path) -> str:
+    """Identity of a web build: index.html names every hashed asset bundle."""
+    return hashlib.sha256((dist / "index.html").read_bytes()).hexdigest()[:16]
 
 
 def keyframe_times(scene: dict[str, Any]) -> list[tuple[str, float]]:
