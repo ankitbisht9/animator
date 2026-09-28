@@ -270,3 +270,18 @@ a job queue and a Redis hub plug in without touching the pipeline (ADR-029).
   catalog, examples; cached after the first call at 10% of the price) and gets about 5-6k tokens back, over half
   of it reasoning. A first scene call costs about $0.15, later ones about $0.06-0.07, and corrections
   $0.03-0.12. The plan (about $0.01) and storyboards (about $0.04 each) are small.
+
+## Cost reduction (ADR-032)
+
+- Measured on the same 30-second lesson:
+  - gpt-6-sol / high: $0.28-0.58 and 6.6-8.4 minutes.
+  - gpt-6-luna / medium: **$0.019 and 3.7 minutes**, first scene playable after 84 s, 2 of 3 scenes right
+    first time.
+- Defaults are now Luna for every stage, Sol only as the final escalation, and cheap fallbacks
+  (gpt-5-mini, gpt-4.1-mini). Prices were verified on the OpenAI pricing page.
+- Quality guards for the cheaper model:
+  - new layout error `TITLE_COVERED` (stage content over the scene title);
+  - equations count in the occlusion check;
+  - prompt v3: one of at/after/with per action, nothing above the stage line, gauges pinned to pipe sections,
+    compact scenes.
+

@@ -570,3 +570,43 @@ A bake-off runs the set once per configuration with `--set ANIMATOR_MODEL_...=..
 **Status.** Not run yet: the development key's account is deactivated (the harness stops cleanly on a rejected
 key). The stage defaults stay as specified (Sol, with Astra for the final correction) until a bake-off justifies
 changes. Record the result here.
+
+---
+
+## ADR-032 Cost-first model defaults (Luna, with Sol as the last-resort escalation)
+
+**Measured.** The same 30-second Bernoulli lesson through the live pipeline, 2026-09-28. Prices are from the
+OpenAI pricing page.
+
+| Setup | Cost | Total time | First scene playable | Scenes right first time |
+|---|---|---|---|---|
+| gpt-6-sol, high effort | $0.28-0.58 | 6.6-8.4 min | ~3 min | 0-2 of 3 |
+| gpt-6-luna, high effort | $0.043 | 8.4 min | 2.3 min | 0 of 3 |
+| **gpt-6-luna, medium effort (planner low)** | **$0.019** | **3.7 min** | **1.4 min** | **2 of 3** |
+
+**Where the cost goes.** A scene call sends about 49k input tokens: the scene schema (about 30k), the DSL
+reference, the component catalog and exemplars. That input is cached after the first call. The model returns
+about 4-6k output tokens, of which roughly half are hidden reasoning and about 30% of the visible JSON is null
+filler required by strict mode. Output dominates: at Sol's $10/M it is about $0.05 per scene; at Luna's $0.50/M
+it is about $0.003. Lower effort cuts the reasoning tokens, which also makes calls faster. gpt-4o costs more than
+Sol for this workload ($1.25/M cached input, $10/M output) and is weaker at long structured output, so it is not
+a candidate.
+
+**Decision.**
+- Every stage uses gpt-6-luna: planner at low effort, storyboard, scenes and corrections at medium.
+- The final correction attempt escalates to gpt-6-sol (high). It is only used after three cheaper attempts
+  failed.
+- Fallbacks are cheap models (`gpt-5-mini`, `gpt-4.1-mini`).
+- Prices were verified and added for all candidates.
+- Best quality remains one setting away: set the stages to gpt-6-sol / high, for about 15x the cost.
+
+**Trade-off.** Luna's scenes are correct and engaging but have more rough layout edges than Sol's (for
+example a panel overlapping a diagram). The engine validators catch the serious ones (new rule `TITLE_COVERED`;
+equations now count in the occlusion check), and the optional critic (`ANIMATOR_ENABLE_LLM_CRITIC`, cheap with
+Luna) can polish further.
+
+**Next levers, not yet taken.**
+- Drop strict-mode null filler (about 30% of the visible output) by moving to non-strict JSON plus engine
+  validation.
+- Trim the input schema per scene.
+- Use the Batch/Flex tiers (50% off) for lessons that are not watched live.

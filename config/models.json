@@ -7,6 +7,12 @@
     "gpt-5": { "reasoning": true, "efforts": ["minimal", "low", "medium", "high"], "vision": true },
     "gpt-5-mini": { "reasoning": true, "efforts": ["minimal", "low", "medium", "high"], "vision": true },
     "gpt-4.1": { "reasoning": false, "vision": true, "max_output_tokens": 32768 },
-    "gpt-4o": { "reasoning": false, "vision": true, "max_output_tokens": 16384 }
+    "gpt-4o": { "reasoning": false, "vision": true, "max_output_tokens": 16384 },
+    "gpt-5-nano": { "reasoning": true, "efforts": ["minimal", "low", "medium", "high"], "vision": true },
+    "gpt-5.4-mini": { "reasoning": true, "efforts": ["none", "low", "medium", "high", "xhigh"], "vision": true },
+    "gpt-5.4-nano": { "reasoning": true, "efforts": ["none", "low", "medium", "high", "xhigh"], "vision": true },
+    "gpt-4.1-mini": { "reasoning": false, "vision": true, "max_output_tokens": 32768 },
+    "gpt-4.1-nano": { "reasoning": false, "vision": true, "max_output_tokens": 32768 },
+    "gpt-4o-mini": { "reasoning": false, "vision": true, "max_output_tokens": 16384 }
   }
 }

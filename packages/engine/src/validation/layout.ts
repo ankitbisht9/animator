@@ -174,6 +174,29 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
       }
     }
 
+    // Stage content covering the scene's title (titles are text on the overlay layer). Label
+    // overlaps are checked below; this catches everything else (gauges, cards, diagrams).
+    const titles = settled.filter((o) => o.layer === "overlay" && o.type === "text");
+    for (const title of titles) {
+      const rt = screen.get(title.id) as Rect;
+      for (const o of counted) {
+        if (o === title || o.layer === "overlay" || spec(o)?.labelLike) continue;
+        const ov = intersection(rt, screen.get(o.id) as Rect);
+        // A real cover reaches into the title's line of text; a box corner grazing the edge of
+        // the title's box does not (bounding boxes include empty space).
+        if (ov && ov.h >= 0.3 * rt.h && ov.w >= 24) {
+          report(
+            "TITLE_COVERED",
+            `${o.id}|${title.id}`,
+            `'${o.id}' covers the title '${title.id}' at ${roundTo(t, 2)}s.`,
+            t,
+            "error",
+            "Keep stage content below the title bar (inside the stage, y from 116 to 736).",
+          );
+        }
+      }
+    }
+
     // Overlaps between label-like objects.
     const labels = counted.filter((o) => spec(o)?.labelLike);
     for (let i = 0; i < labels.length; i++) {
@@ -198,11 +221,12 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
         }
       }
     }
-    // Labels covering other (non-connector) objects they are not attached to.
-    for (const a of labels) {
+    // Labels and panels (equations) covering other (non-connector) objects they are not attached to.
+    const covering = [...labels, ...counted.filter((o) => o.type === "equation")];
+    for (const a of covering) {
       const ra = screen.get(a.id) as Rect;
       for (const b of counted) {
-        if (b === a || spec(b)?.labelLike || spec(b)?.worldSpace) continue;
+        if (b === a || spec(b)?.labelLike || spec(b)?.worldSpace || b.type === "equation") continue;
         if (followTarget.get(a.id) === b.id || parentOf.get(a.id) === b.id || parentOf.get(b.id) === a.id) continue;
         const rb = screen.get(b.id) as Rect;
         const ov = intersection(ra, rb);

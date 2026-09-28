@@ -219,6 +219,24 @@ describe("layout validation", () => {
     expect(codes({ objects })).toContain("warning:CLUTTER");
   });
 
+  it("flags stage content covering the scene title, but not content near it", () => {
+    const title = {
+      id: "title",
+      type: "text",
+      params: { text: "Speed and pressure trade off", size: "heading", weight: "bold" },
+      place: { slot: "title_bar" },
+      layer: "overlay",
+    };
+    const gauge = (y: number) => ({
+      id: "g",
+      type: "pressure_gauge",
+      params: { label: "Throat" },
+      place: { x: 800, y },
+    });
+    expect(codes({ objects: [title, gauge(110)] })).toContain("error:TITLE_COVERED");
+    expect(codes({ objects: [title, gauge(330)] })).not.toContain("error:TITLE_COVERED");
+  });
+
   it("flags a connector running through a label, but not one that ends at its edge", () => {
     const tag = { id: "tag", type: "label", params: { text: "Weight of spilled water" }, place: { x: 800, y: 400 } };
     const through = { id: "ar", type: "arrow", params: { from: { x: 600, y: 300 }, to: { x: 1000, y: 500 } } };

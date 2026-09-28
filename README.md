@@ -117,8 +117,11 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   one in `ANIMATOR_MODEL_FALLBACKS` (default `gpt-5,gpt-4.1,gpt-4o`) is used automatically. Which models take a
   reasoning effort is in `config/models.json`; prices (for cost reports and the budget) are in
   `config/pricing.json`.
-- Cost control: `LLM_BUDGET_USD_PER_GENERATION` (hard stop per lesson), and the "Save cost" option on the form,
-  which only generates a little ahead of what you watch.
+- Cost: the defaults use `gpt-6-luna` for every stage (about $0.02 per 30 seconds of lesson, about $0.15-0.25
+  for 3 minutes), escalating to `gpt-6-sol` only for a scene's last fix-up attempt (ADR-032). For the best
+  quality, at about 15x the cost, set the `ANIMATOR_MODEL_*` stages to `gpt-6-sol` with effort `high`.
+  `LLM_BUDGET_USD_PER_GENERATION` is a hard stop per lesson, and the "Save cost" option on the form only
+  generates a little ahead of what you watch.
 - `ANIMATOR_LLM_PROVIDER`: `openai` (live), `record` (live, and also saves every call under
   `ANIMATOR_LLM_FIXTURES_DIR` for offline replay), `replay` (offline from those recordings).
 - Optional quality passes: `ANIMATOR_ENABLE_LLM_CRITIC`, `ANIMATOR_ENABLE_VISUAL_CRITIC` (reviews rendered
