@@ -247,3 +247,26 @@ a job queue and a Redis hub plug in without touching the pipeline (ADR-029).
   - `test_llm.py`: 19 tests against the real SDK over a mock transport;
   - `test_pipeline.py`: 17 with a scripted LLM and the real engine;
   - `test_generations_api.py` (HTTP and SSE) and `test_eval.py`.
+
+## First live runs (working key)
+
+- **Bug found live:** OpenAI rejected the scene schema ("`$ref` cannot have keywords"), so every scene failed
+  at once. The schema projection now emits bare references; all four stage schemas were verified as accepted.
+- **Timeouts:** scene calls take 1.5-2.5 minutes at high effort, so a 120 s timeout caused retries (one scene
+  spent 10 minutes). The timeout is now 600 s.
+- **Engine bug found live:** a solver in a later scene could not use a pipe carried over from an earlier one
+  (validation only), which forced a correction in every such scene. Fixed.
+- **Results for four 30-second Bernoulli lessons, as the fixes landed:**
+
+  | Run | Time to complete | First scene playable | Cost | Scenes passing first time |
+  |---|---|---|---|---|
+  | 1 | 8.4 min | 2.4 min | $0.58 | 0 of 3 |
+  | 2 (timeouts) | 23 min | 12.6 min | $0.45 | 0 of 2 |
+  | 3 | 7.1 min | 3.0 min | $0.51 | 1 of 3 |
+  | 4 | 6.6 min | 3.1 min | $0.28 | 2 of 3 |
+
+  In run 4 the instruction prefix was already in OpenAI's cache from the earlier runs.
+- **Where the cost goes:** each scene call sends about 49k tokens of instructions (DSL reference, component
+  catalog, examples; cached after the first call at 10% of the price) and gets about 5-6k tokens back, over half
+  of it reasoning. A first scene call costs about $0.15, later ones about $0.06-0.07, and corrections
+  $0.03-0.12. The plan (about $0.01) and storyboards (about $0.04 each) are small.
