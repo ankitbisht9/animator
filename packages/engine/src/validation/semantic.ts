@@ -181,7 +181,11 @@ export function validateSemantics(scene: SceneT, prev?: SceneState | null): Vali
     const def = scene.solvers.find((s) => s.id === sid);
     const impl = def ? getSolver(def.type) : undefined;
     if (!def || !impl) return [];
-    return [...impl.outputs.map((o) => o.name), ...(impl.dynamicOutputs?.(def, scene) ?? [])];
+    // Objects the solver reads may be declared here or carried over from the previous scene.
+    const objectParams = (oid: string) =>
+      scene.objects.find((o) => o.id === oid)?.params ??
+      (prev?.objects[oid]?.params as Record<string, unknown> | undefined);
+    return [...impl.outputs.map((o) => o.name), ...(impl.dynamicOutputs?.(def, objectParams) ?? [])];
   };
 
   const knownIdent = (name: string): boolean => {

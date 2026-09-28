@@ -6,7 +6,6 @@
  * speeds are exact constants available as `<id>.v_<section>`, `<id>.p_<section>`, ...
  */
 import { pipeLayout } from "../catalog/physics";
-import type { SceneT } from "../dsl/scene";
 import type { FluidFlowSolverT, SolverDefT } from "../dsl/solvers";
 import { roundTo } from "../math/num";
 import { issue, type ValidationIssue } from "../validation/issues";
@@ -17,9 +16,11 @@ const RAMP = 1.5;
 
 const PER_SECTION = ["v", "p", "p_kpa", "area", "diameter", "height"] as const;
 
-function sectionIdsFromScene(def: FluidFlowSolverT, scene: SceneT): string[] {
-  const pipe = scene.objects.find((o) => o.id === def.pipe);
-  const sections = pipe?.params.sections;
+function sectionIds(
+  def: FluidFlowSolverT,
+  objectParams: (id: string) => Record<string, unknown> | undefined,
+): string[] {
+  const sections = objectParams(def.pipe)?.sections;
   return Array.isArray(sections) ? (sections as { id: string }[]).map((s) => s.id) : [];
 }
 
@@ -101,8 +102,8 @@ registerSolver({
     { name: "pressureDrop", unit: "Pa", description: "Inlet pressure minus the lowest pressure" },
     { name: "ramp", unit: "", description: "Start-up ramp 0..1 while the solver runs" },
   ],
-  dynamicOutputs: (def, scene) =>
-    sectionIdsFromScene(def as FluidFlowSolverT, scene).flatMap((id) =>
+  dynamicOutputs: (def, objectParams) =>
+    sectionIds(def as FluidFlowSolverT, objectParams).flatMap((id) =>
       PER_SECTION.map((k) => (k === "p_kpa" ? `p_${id}_kpa` : `${k}_${id}`)),
     ),
   naturalDuration: () => RAMP,

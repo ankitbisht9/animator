@@ -45,6 +45,38 @@ describe("scene continuity", () => {
     expect(b?.result.compiled?.objects.some((o) => o.id === "yay")).toBe(false);
   });
 
+  it("a solver in a later scene can use a pipe carried over from an earlier one", () => {
+    const pipe = {
+      id: "pipe",
+      type: "pipe",
+      params: {
+        sections: [
+          { id: "wide", x: 0, width: 160 },
+          { id: "narrow", x: 420, width: 70 },
+        ],
+      },
+      place: { slot: "stage.center" },
+    };
+    const [, b] = chain([
+      { id: "s1", objects: [pipe] },
+      {
+        id: "s2",
+        solvers: [{ id: "flow", type: "fluid_flow", pipe: "pipe", flowRate: 0.02, inletPressure: 180000 }],
+        objects: [
+          {
+            id: "gauge",
+            type: "pressure_gauge",
+            params: { value: { bind: "flow.p_narrow_kpa" }, label: "neck" },
+            place: { slot: "stage.top_right" },
+          },
+        ],
+      },
+    ]);
+    const codes = b?.result.issues.map((i) => i.code) ?? [];
+    expect(codes).not.toContain("EXPR_UNKNOWN_IDENT");
+    expect(b?.result.ok).toBe(true);
+  });
+
   it("rejects a carried id reused for a different type (identity)", () => {
     const [, b] = chain([
       { id: "s1", objects: [{ id: "blk", type: "block", place: { slot: "stage.left" } }] },
