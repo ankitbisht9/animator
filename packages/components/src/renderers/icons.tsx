@@ -1,5 +1,8 @@
-/** A small curated icon set (24x24 line icons, round caps). Paths are static data, never input. */
+/** A curated icon set (24x24 line icons, round caps): the hand-drawn ones below, plus people, the body,
+ * nature, animals, science, technology and everyday things from Lucide (./icons-lucide.ts). Paths are
+ * static data, never input. */
 import type { ReactNode } from "react";
+import { LUCIDE_ICONS } from "./icons-lucide";
 
 const ICONS: Record<string, { d: string; fill?: boolean }> = {
   lightbulb: {
@@ -34,6 +37,9 @@ const ICONS: Record<string, { d: string; fill?: boolean }> = {
   },
 };
 
+/** Every icon name that has a drawing (the engine's icon names must all be here). */
+export const ICON_DRAWINGS: readonly string[] = [...Object.keys(ICONS), ...Object.keys(LUCIDE_ICONS)];
+
 /** Draw icon `name` centered at (0,0) with the given size and color. */
 export function IconGlyph({
   name,
@@ -46,7 +52,8 @@ export function IconGlyph({
   color: string;
   strokeWidth?: number;
 }): ReactNode {
-  const icon = ICONS[name] ?? ICONS.info;
+  const lucide = LUCIDE_ICONS[name];
+  const icon = ICONS[name] ?? (lucide ? { d: lucide } : ICONS.info);
   if (!icon) return null;
   const s = size / 24;
   return (

@@ -19,7 +19,8 @@ export interface ValidationIssue {
   /** Scene time (seconds) the issue was observed at, for layout issues. */
   time?: number;
   /** A sure fix, when the engine knows one: move the object by (dx, dy) world px, after scaling it
-   * by `scale` (OUT_OF_BOUNDS, TITLE_COVERED). Applied by the pipeline without another model call. */
+   * by `scale`, and set `params` (e.g. an arrow's `curve` that routes it clear). Applied by the
+   * pipeline without another model call. */
   fix?: IssueFix;
 }
 
@@ -27,6 +28,7 @@ export interface IssueFix {
   dx: number;
   dy: number;
   scale?: number;
+  params?: Record<string, number | string>;
 }
 
 export const toPointer = (path: readonly PropertyKey[]): string =>

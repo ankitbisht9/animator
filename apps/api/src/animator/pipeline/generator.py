@@ -211,6 +211,22 @@ def _keys(res: CompileResult) -> set[tuple[str, str]]:
     return {(i.code, i.path) for i in res.issues if i.severity == "error"}
 
 
+# Layout problems the polish pass works on (warnings: the scene plays, but looks untidy).
+UNTIDY = {
+    "LABEL_OCCLUDES",
+    "UNDER_CAPTION",
+    "CONNECTOR_CROSSES_LABEL",
+    "CONNECTOR_CROSSES_OBJECT",
+    "CONNECTORS_CROSS",
+    "UNSUPPORTED_GLYPH",
+    "NEAR_EDGE",
+}
+
+
+def _untidy(res: CompileResult) -> int:
+    return sum(1 for i in res.issues if i.severity == "warning" and i.code in UNTIDY)
+
+
 def _errors(d: Draft) -> int:
     return _count(d[2])
 
@@ -397,7 +413,35 @@ class Pipeline:
             ):
                 break
             dsl, res, autofixed = fixed, res_fixed, True
+        if res.ok and self.settings.animator_layout_polish:
+            dsl, res, polished = await self._polish(dsl, res, prev_state)
+            autofixed = autofixed or polished
         return dsl, res, autofixed
+
+    async def _polish(
+        self, dsl: dict[str, Any], res: CompileResult, prev_state: SceneState | None
+    ) -> tuple[dict[str, Any], CompileResult, bool]:
+        """Tidy a valid scene's layout with the engine's hints, without a model call: a label moved off
+        the object it straddles, content lifted from behind the caption, an arrow bent around what it
+        ran through, characters the font cannot draw removed. A change is kept only when the scene
+        stays valid and has fewer such problems. Two passes at most (a move can reveal the next)."""
+        polished = False
+        for _ in range(2):
+            hinted = [
+                i.model_dump()
+                for i in res.issues
+                if i.severity == "warning" and (i.fix is not None or i.code == "UNSUPPORTED_GLYPH")
+            ]
+            if not hinted:
+                break
+            fixed = autofix(dsl, hinted)
+            if fixed is None:
+                break
+            res_fixed = await self.engine.compile(fixed, prev_state)
+            if not res_fixed.ok or _untidy(res_fixed) >= _untidy(res):
+                break
+            dsl, res, polished = fixed, res_fixed, True
+        return dsl, res, polished
 
     async def _draft(
         self, call: Awaitable[LLMResult], rec: SceneRecord, prev_state: SceneState | None

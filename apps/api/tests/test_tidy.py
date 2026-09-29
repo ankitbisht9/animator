@@ -357,3 +357,89 @@ async def test_the_other_draft_can_beat_the_correction(pool: EngineWorkerPool) -
     done = await runner.get(gen_id)
     assert done is not None and done.status == "complete"
     assert done.metrics.llm_calls == len(script.calls)  # the correction that lost was counted too
+
+
+# ---------------------------------------------------------------------- layout polish
+
+
+def test_autofix_sets_the_parameters_the_engine_suggests() -> None:
+    arrow = {
+        "id": "go",
+        "type": "arrow",
+        "params": {"from": "a.right", "to": "c.left", "curve": 0},
+        "place": None,
+    }
+    hint = {
+        "code": "CONNECTOR_CROSSES_OBJECT",
+        "path": "/objects/go",
+        "fix": {"dx": 0, "dy": 0, "params": {"curve": 120}},
+    }
+    out = autofix({"objects": [arrow]}, [hint])
+    assert out is not None and out["objects"][0]["params"]["curve"] == 120
+
+
+def test_autofix_removes_characters_the_font_cannot_draw() -> None:
+    dsl = {"objects": [{"id": "t", "type": "text", "params": {"text": "Sunlight ☀️ warms  the leaf"}}]}
+    warn = {
+        "code": "UNSUPPORTED_GLYPH",
+        "path": "/objects/0/params/text",
+        "message": 'The font cannot draw: "☀".',
+    }
+    out = autofix(dsl, [warn])
+    assert out is not None and out["objects"][0]["params"]["text"] == "Sunlight warms the leaf"
+
+
+def untidy_scene() -> dict[str, Any]:
+    """Valid, but a label straddles the middle block and an arrow runs through it."""
+
+    def block(oid: str, x: int) -> dict[str, Any]:
+        return {
+            "id": oid,
+            "type": "block",
+            "params": {"width": 120, "height": 100},
+            "place": {"x": x, "y": 430},
+        }
+
+    return {
+        "dsl_version": "1.0",
+        "id": "s01",
+        "title": "Tidy",
+        "duration": 6,
+        "layout": "stage_with_caption",
+        "narration": {"beats": [{"id": "b1", "text": "Look at the blocks.", "at": 0}]},
+        "objects": [
+            block("a", 300),
+            block("b", 800),
+            block("c", 1300),
+            {"id": "tag", "type": "label", "params": {"text": "middle block"}, "place": {"x": 840, "y": 460}},
+            {"id": "go", "type": "arrow", "params": {"from": "a.right", "to": "c.left", "curve": 0}},
+        ],
+        "timeline": [],
+    }
+
+
+async def test_a_valid_scene_is_tidied_without_a_model_call(pool: EngineWorkerPool) -> None:
+    from animator.engine_client import EngineClient
+    from animator.pipeline.generator import UNTIDY
+
+    engine = EngineClient(pool)
+    before = await engine.compile(untidy_scene(), None)
+    codes = {i.code for i in before.issues}
+    assert before.ok and {"LABEL_OCCLUDES", "CONNECTOR_CROSSES_OBJECT"} <= codes
+
+    script = Script(lambda i, a, r: untidy_scene())
+    gen, _ = await run(pool, script, settings(animator_scene_drafts=1))
+    dsl = gen.scenes[0].dsl
+    assert dsl is not None and gen.scenes[0].status == "ready"
+    after = await engine.compile(dsl, None)
+    left = {i.code for i in after.issues if i.code in UNTIDY}
+    assert after.ok and "LABEL_OCCLUDES" not in left and "CONNECTOR_CROSSES_OBJECT" not in left
+    assert dsl["objects"][4]["params"]["curve"] != 0  # the arrow was bent around the block
+    assert len([r for r in script.calls if r.label == "scene 1 attempt 1"]) == 1  # no extra model call
+
+
+async def test_the_polish_can_be_turned_off(pool: EngineWorkerPool) -> None:
+    script = Script(lambda i, a, r: untidy_scene())
+    gen, _ = await run(pool, script, settings(animator_scene_drafts=1, animator_layout_polish=False))
+    dsl = gen.scenes[0].dsl
+    assert dsl is not None and dsl["objects"][4]["params"]["curve"] == 0

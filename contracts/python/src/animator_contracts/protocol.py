@@ -100,7 +100,7 @@ class LiftParams(BaseModel):
 
 class Fix(BaseModel):
     """
-    A sure fix: move the object by (dx, dy) after scaling it by `scale`
+    A sure fix: move the object by (dx, dy) after scaling it by `scale`, and set `params`
     """
 
     model_config = ConfigDict(
@@ -109,6 +109,7 @@ class Fix(BaseModel):
     dx: float
     dy: float
     scale: float | None = None
+    params: dict[str, float | str] | None = None
 
 
 class ValidationIssue(BaseModel):
@@ -124,7 +125,7 @@ class ValidationIssue(BaseModel):
     time: float | None = None
     fix: Fix | None = None
     """
-    A sure fix: move the object by (dx, dy) after scaling it by `scale`
+    A sure fix: move the object by (dx, dy) after scaling it by `scale`, and set `params`
     """
 
 

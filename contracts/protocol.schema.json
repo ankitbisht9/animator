@@ -451,7 +451,7 @@
           "type": "number"
         },
         "fix": {
-          "description": "A sure fix: move the object by (dx, dy) after scaling it by `scale`",
+          "description": "A sure fix: move the object by (dx, dy) after scaling it by `scale`, and set `params`",
           "type": "object",
           "properties": {
             "dx": {
@@ -462,6 +462,18 @@
             },
             "scale": {
               "type": "number"
+            },
+            "params": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": [
+                  "number",
+                  "string"
+                ]
+              }
             }
           },
           "required": [

@@ -11,6 +11,7 @@ the model evidently meant it, and the engine still validates the result.
 from __future__ import annotations
 
 import copy
+import json
 import math
 import re
 from typing import Any
@@ -133,6 +134,29 @@ def _set_number(dsl: dict[str, Any], pointer: str, value: float) -> bool:
     return True
 
 
+_QUOTED = re.compile(r'"((?:[^"\\]|\\.)*)"')
+# Emoji glue that is invisible on its own: variation selectors, zero-width joiner, skin tones.
+_EMOJI_GLUE = re.compile("[︎️‍\U0001f3fb-\U0001f3ff]")
+
+
+def _drop_glyphs(dsl: dict[str, Any], pointer: str, message: str) -> bool:
+    """Remove the characters the font cannot draw (the engine lists them; they would show as "?"),
+    e.g. emoji in a label. Words stay; the model can use an icon for the picture."""
+    found = _slot(dsl, pointer)
+    if found is None or not isinstance(found[0][found[1]], str):
+        return False
+    bad = {json.loads(f'"{m}"') for m in _QUOTED.findall(message)}
+    if not bad:
+        return False
+    text = str(found[0][found[1]])
+    kept = _EMOJI_GLUE.sub("", "".join(ch for ch in text if ch not in bad))
+    kept = re.sub(r"[ \t]{2,}", " ", kept).strip()
+    if kept == text or not kept:
+        return False
+    found[0][found[1]] = kept
+    return True
+
+
 def _complete_anchor(dsl: dict[str, Any], pointer: str, ids: set[Any]) -> bool:
     """A bare object id where an anchor reference belongs means the object's center."""
     found = _slot(dsl, pointer)
@@ -177,18 +201,34 @@ def _pinned_to(obj: dict[str, Any]) -> str | None:
 
 def _move(obj: dict[str, Any] | None, fix: dict[str, Any], moving: set[str]) -> bool:
     """Apply the engine's move hint (shrink, then move) to an object: its slot offset or position,
-    its pin offset (it keeps following what it is pinned to), or the raw points of an object drawn
-    between points (a line, an arrow). An object attached to one that moves too is left alone:
-    it moves with it."""
+    its pin offset (it keeps following what it is pinned to), the side of a relative place, or the
+    raw points of an object drawn between points (a line, an arrow). An object pinned to one that
+    moves too is left alone: it moves with it."""
     if obj is None:
         return False
     place = obj.get("place")
     dx, dy = float(fix.get("dx") or 0), float(fix.get("dy") or 0)
+    new_params = fix.get("params")
+    if isinstance(new_params, dict) and new_params and isinstance(obj.get("params"), dict):
+        obj["params"].update(new_params)  # e.g. an arrow's `curve` that routes it clear
+        if not dx and not dy and not fix.get("scale"):
+            return True
     if not isinstance(place, dict):
         params = obj.get("params")
         return isinstance(params, dict) and _shift_points(params, dx, dy)
-    if _pinned_to(obj) in moving or place.get("relativeTo"):
-        return False  # moves with the object it is attached to (relative places have no offset)
+    if _pinned_to(obj) in moving:
+        return False  # moves with the object it is attached to
+    if place.get("relativeTo"):
+        # A relative place has no offset: move it to another side of its object instead (the engine
+        # checks the result, and the change is kept only if it helps).
+        side = place.get("side")
+        if dy and side in ("below", "above"):
+            place["side"] = "right"
+        elif dx and side in ("left", "right"):
+            place["side"] = "below" if dy >= 0 else "above"
+        else:
+            return False
+        return True
     if place.get("slot") or place.get("at"):
         offset = place.get("offset") or {}
         place["offset"] = {"x": float(offset.get("x") or 0) + dx, "y": float(offset.get("y") or 0) + dy}
@@ -222,6 +262,8 @@ def autofix(dsl: dict[str, Any], errors: list[dict[str, Any]]) -> dict[str, Any]
             applied = _set_number(out, path, int(limit) if limit.is_integer() else limit) or applied
         elif code == "SCHEMA" and _ANCHOR_REF in message:
             applied = _complete_anchor(out, path, set(objects)) or applied
+        elif code == "UNSUPPORTED_GLYPH":
+            applied = _drop_glyphs(out, path, message) or applied
         elif isinstance(e.get("fix"), dict):
             # The engine says how to move the object (off the frame, over the title, onto another
             # label): one move per object and pass.

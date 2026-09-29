@@ -312,3 +312,18 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   - 1-minute lessons take 28-32 s.
   - All scenes play in the browser. See ADR-033.
 
+
+## Visual relevance (ADR-035)
+
+- 80 recognisable icons (Lucide, ISC): people, hands, hearts, nature, animals, lab and tech objects, everyday
+  things. The prompt (`animation.v4`) makes the model use them instead of building figures from shapes.
+- New engine checks: arrows running through objects, and arrows crossing each other. The engine suggests the
+  smallest new route: a bend, or both ends over or under.
+- A polish pass on every valid scene, with no model call: labels moved off objects, arrows rerouted, content
+  lifted from under the caption, undrawable emoji removed.
+- Results on 21 new scenes against 116 old ones:
+  - labels across objects in 14% of scenes (was 27%);
+  - nothing under the caption, and no "?" glyphs;
+  - 1.7 icons per scene (was 0.4);
+  - 10 of 12 drafts valid first time (was 7 of 12).
+- Speed and cost are unchanged.

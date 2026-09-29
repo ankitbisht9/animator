@@ -79,6 +79,9 @@ class Settings(BaseSettings):
 
     # --- Pipeline (used from Phase 8) ---
     animator_max_correction_attempts: int = 3  # patch rounds take seconds, so a third is affordable
+    # Tidy each valid scene's layout with the engine's hints (labels off objects, arrows bent around
+    # things, nothing under the caption); no model call, a fraction of a second per scene.
+    animator_layout_polish: bool = True
     # Corrections reply with only what changes (a few hundred tokens) instead of the whole scene.
     animator_patch_corrections: bool = True
     animator_enable_llm_critic: bool = False

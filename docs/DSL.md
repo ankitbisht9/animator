@@ -458,7 +458,7 @@ Type: `"none"` \| `"happy"` \| `"surprised"` \| `"worried"` \| `"calm"` \| `"win
 
 ### IconName
 
-Type: enum (17 values)
+Type: enum (97 values)
 
 ### Material
 

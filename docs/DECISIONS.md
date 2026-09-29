@@ -753,3 +753,70 @@ slower) and `ANIMATOR_SCENE_DRAFTS=1` (about a third off, more correction rounds
 **Fixed alongside.** The lesson page showed the cost at the moment the lesson became ready. That missed the losing
 drafts, which finish a few seconds later. The event stream now ends with a `final` event after the run, which
 carries the full cost.
+
+---
+
+## ADR-035 Visual relevance: real icons, clean connections, and a layout polish (2026-09-29)
+
+**Problem.** Lessons were understandable, but with rough edges that confuse weaker learners:
+- people drawn as a rectangle with a circle on top, and a hand as a polygon;
+- arrows cutting through boxes, labels and each other;
+- labels straddling objects, content hidden under the caption bar, and emoji that drew as "?".
+
+Measured on 116 recent scenes:
+- a label straddled an object in 27% of scenes;
+- content sat under the caption in 5%, and an emoji was undrawable in 7%;
+- arrows through objects were not checked at all;
+- a scene averaged 3 hand-built shapes and 0.4 icons.
+
+**Decision.** The same model, cost and speed; the fixes come from the engine, the icon set and the prompt.
+
+1. **80 new icons** from Lucide (ISC license; `scripts/vendor_icons.py` writes
+   `packages/components/src/renderers/icons-lucide.ts` with the license text). They cover:
+   - people and the body (person, people, person_standing, baby, hand, heart, brain, eye, ...);
+   - nature, animals, science and lab objects;
+   - technology (laptop, phone, server, database, robot, ...) and everyday things.
+
+   The engine's `ICON_NAMES` lists them, and a test checks that every name has a drawing.
+2. **New layout checks with sure fixes** (warnings; the scene still plays):
+   - `CONNECTOR_CROSSES_OBJECT`: an arrow runs into another object and out of it. An arrow that ends at an object is
+     not flagged.
+   - `CONNECTORS_CROSS`: two arrows cross away from their ends.
+   - For these and `CONNECTOR_CROSSES_LABEL`, the engine searches for the smallest new route. It tries the same ends
+     bent (`curve`), or both ends on top, at the bottom or on one side, so an arc between two items in a row goes over
+     or under its neighbours. The route must stay 10 px clear of everything it does not join.
+   - `LABEL_OCCLUDES` gets a move hint when the label straddles the object's edge. A label written inside its box is
+     left alone.
+   - `UNDER_CAPTION` gets a lift. `NEAR_EDGE` gets a nudge inward.
+   - `IssueFix` gains `params` (new values for `curve`, `from`, `to`).
+3. **The polish pass** (`Pipeline._polish`, `ANIMATOR_LAYOUT_POLISH=true`). After a scene is valid, the hinted
+   warnings are applied and the scene is compiled again:
+   - moves go to a slot offset, position or pin offset; a label placed relative to another object changes side;
+   - arrows get their new route;
+   - characters the font cannot draw are removed;
+   - the change is kept only when the scene stays valid and has fewer of these problems. At most two passes, no
+     model call, well under a second.
+4. **Prompt `animation.v4`**:
+   - things that should look like themselves are icons (large, without the badge, for figures), never shapes;
+   - arrows join facing sides, never pass through a third object or cross each other, and bend with `curve` when
+     needed;
+   - leave 32 px between objects; labels go beside what they name; no emoji.
+
+**Measured.**
+
+| | Before (v3, 116 scenes) | After (21 new scenes) |
+|---|---|---|
+| Scenes with a label straddling an object | 27% | 14% (the rest are labels written inside their box, which is intended) |
+| Scenes with content under the caption / an undrawable emoji | 5% / 7% | 0% / 0% |
+| Arrows through objects or across each other left | not checked | 1 in 21 scenes |
+| Icons / hand-built shapes per scene | 0.4 / 3.0 | 1.7 / 1.4 |
+| Draft validity on 12 real briefs | 7/12 | 10/12 |
+
+- Speed is unchanged: 30-second lessons take 24-27 s, 1-minute lessons 24-32 s.
+- Cost is unchanged: $0.023-0.034 per 30 s, $0.036-0.046 per minute.
+- Keyframes of the same topics (laws of motion, MCP server, transformer) were compared by eye. Figures are now icons
+  (hand, car, robot, person, heart), attention arcs go over the words instead of through them, and labels sit beside
+  their objects.
+
+**Rollback.** Git tag `backup/before-visual-relevance`, plus `.env.backup-before-visual-relevance`. Or partially:
+`ANIMATOR_LAYOUT_POLISH=false` switches the polish off, and deleting `animation.v4.md` brings back prompt v3.

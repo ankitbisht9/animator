@@ -16,9 +16,14 @@ export const IssueSchema = z
     source: z.enum(["schema", "semantic", "layout", "critic", "visual", "normalization"]),
     time: z.number().optional(),
     fix: z
-      .strictObject({ dx: z.number(), dy: z.number(), scale: z.number().optional() })
+      .strictObject({
+        dx: z.number(),
+        dy: z.number(),
+        scale: z.number().optional(),
+        params: z.record(z.string(), z.union([z.number(), z.string()])).optional(),
+      })
       .optional()
-      .describe("A sure fix: move the object by (dx, dy) after scaling it by `scale`"),
+      .describe("A sure fix: move the object by (dx, dy) after scaling it by `scale`, and set `params`"),
   })
   .meta({ id: "ValidationIssue", title: "ValidationIssue" });
 

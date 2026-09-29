@@ -229,6 +229,97 @@ describe("layout validation", () => {
     expect(codes(labels(fix.dx, fix.dy))).not.toContain("error:LABEL_OVERLAP");
   });
 
+  describe("tidy layout hints", () => {
+    const block = (id: string, x: number, y = 430) => ({
+      id,
+      type: "block",
+      params: { width: 120, height: 100 },
+      place: { x, y },
+    });
+    const arrow = (id: string, from: string, to: string, curve = 0) => ({
+      id,
+      type: "arrow",
+      params: { from, to, curve },
+    });
+    const issues = (objects: unknown[]) => compileScene(lifted({ objects })).issues;
+    const find = (objects: unknown[], code: string) => issues(objects).find((i) => i.code === code);
+
+    it("reroutes an arrow that runs through another object, and the new route clears it", () => {
+      const scene = [block("a", 300), block("b", 800), block("c", 1300), arrow("go", "a.right", "c.left")];
+      const through = find(scene, "CONNECTOR_CROSSES_OBJECT");
+      expect(through?.message).toContain("'go' runs through 'b'");
+      const fix = through?.fix?.params ?? {};
+      expect(fix.curve).toBeTypeOf("number"); // bent (and maybe joined at other anchors: over the block)
+      const bent = [
+        ...scene.slice(0, 3),
+        { ...arrow("go", "a.right", "c.left"), params: { from: "a.right", to: "c.left", ...fix } },
+      ];
+      expect(issues(bent).map((i) => i.code)).not.toContain("CONNECTOR_CROSSES_OBJECT");
+    });
+
+    it("reroutes an arc between words in a row over or under the words between them", () => {
+      const words = ["The", "bird", "sat", "by", "the", "bank"].map((text, i) => ({
+        id: `w${i}`,
+        type: "label",
+        params: { text, size: "heading" },
+        place: { x: 360 + i * 180, y: 420 },
+      }));
+      const scene = [...words, arrow("attn", "w5.left", "w1.right", 60)];
+      const across = find(scene, "CONNECTOR_CROSSES_LABEL");
+      const params = across?.fix?.params ?? {};
+      expect(params.from).toMatch(/^w5\.(top|bottom)$/);
+      expect(params.to).toMatch(/^w1\.(top|bottom)$/);
+      const rerouted = [
+        ...words,
+        { id: "attn", type: "arrow", params: { from: params.from, to: params.to, curve: params.curve } },
+      ];
+      expect(issues(rerouted).map((i) => i.code)).not.toContain("CONNECTOR_CROSSES_LABEL");
+    });
+
+    it("does not flag an arrow that ends at an object", () => {
+      expect(
+        find([block("a", 300), block("b", 800), arrow("go", "a.right", "b.left")], "CONNECTOR_CROSSES_OBJECT"),
+      ).toBe(undefined);
+    });
+
+    it("flags arrows that cross each other, but not arrows leaving the same point", () => {
+      const cross = [
+        block("a", 400, 250),
+        block("b", 1200, 650),
+        block("c", 400, 650),
+        block("d", 1200, 250),
+        arrow("ab", "a.right", "b.left"),
+        arrow("cd", "c.right", "d.left"),
+      ];
+      expect(find(cross, "CONNECTORS_CROSS")?.message).toContain("'ab' crosses 'cd'"); // an X cannot be bent apart: no hint
+      const fan = [block("a", 400), block("b", 1200, 250), block("c", 1200, 650)];
+      expect(find([...fan, arrow("x", "a.right", "b.left"), arrow("y", "a.right", "c.left")], "CONNECTORS_CROSS")).toBe(
+        undefined,
+      );
+    });
+
+    it("moves a label straddling an object's edge, not one written inside it", () => {
+      const label = (x: number, y: number) => ({
+        id: "l",
+        type: "label",
+        params: { text: "net force" },
+        place: { x, y },
+      });
+      const edge = find([block("b", 800, 450), label(840, 430)], "LABEL_OCCLUDES");
+      expect(edge?.fix).toBeDefined();
+      const inside = find(
+        [{ ...block("b", 800, 450), params: { width: 400, height: 200 } }, label(800, 450)],
+        "LABEL_OCCLUDES",
+      );
+      expect(inside?.fix).toBeUndefined();
+    });
+
+    it("lifts content hidden behind the caption bar", () => {
+      const low = find([{ ...block("b", 800, 800) }], "UNDER_CAPTION");
+      expect(low?.fix?.dy).toBeLessThan(0);
+    });
+  });
+
   it("flags text that is too small at 1080p", () => {
     expect(
       codes({

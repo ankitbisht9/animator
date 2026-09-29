@@ -342,7 +342,7 @@ Entrance: `write` · Supports: write, label-like
 
 ### `icon`
 
-A friendly line icon (lightbulb, check, cross, question, star, info, warning, magnifier, drop, balance, clock, arrow_up, arrow_down, sparkle, target, book), optionally on a soft round badge.
+A clean line icon, optionally on a soft round badge. Use it for anything that should look like itself: people (person, people, person_standing, baby), the body (hand, heart, brain, eye), nature (sun, cloud, leaf, tree, flame, earth...), animals, lab and tech objects (atom, dna, laptop, server, database, robot...) and everyday things (home, car, coins...). Never build these from rectangles and circles. For a figure in a scene use a large size (120-240) with badge: false.
 
 Entrance: `pop`
 
