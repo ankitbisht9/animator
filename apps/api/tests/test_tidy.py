@@ -443,3 +443,40 @@ async def test_the_polish_can_be_turned_off(pool: EngineWorkerPool) -> None:
     gen, _ = await run(pool, script, settings(animator_scene_drafts=1, animator_layout_polish=False))
     dsl = gen.scenes[0].dsl
     assert dsl is not None and dsl["objects"][4]["params"]["curve"] == 0
+
+
+def test_a_covering_drawing_moves_as_one_piece() -> None:
+    def part(oid: str, x: float) -> dict[str, Any]:
+        return {"id": oid, "type": "rectangle", "params": {}, "place": {"x": x, "y": 400.0}}
+
+    dsl = {
+        "objects": [
+            part("magnet1_north", 600),
+            part("magnet1_south", 680),
+            part("magnet2_north", 700),
+            part("magnet2_south", 780),
+        ]
+    }
+    covers = [
+        {"code": "OBJECT_OVERLAP", "path": "/objects/magnet2_north", "fix": {"dx": 40.0, "dy": 0.0}},
+        {"code": "OBJECT_OVERLAP", "path": "/objects/magnet2_south", "fix": {"dx": 60.0, "dy": 0.0}},
+    ]
+    out = autofix(dsl, covers)
+    assert out is not None
+    xs = {o["id"]: o["place"]["x"] for o in out["objects"]}
+    assert xs == {"magnet1_north": 600, "magnet1_south": 680, "magnet2_north": 760.0, "magnet2_south": 840.0}
+
+
+def test_a_path_drawn_in_frame_coordinates_goes_where_its_points_say() -> None:
+    frame = {
+        "id": "bike_frame",
+        "type": "path",
+        "params": {"d": "M610 550 L790 550 L700 390 L610 550 M790 550 L900 390 L1030 550", "closed": False},
+        "place": {"x": 1500.0, "y": 850.0, "anchor": "center"},  # placed again: drawn off-frame
+    }
+    oob = {"code": "OUT_OF_BOUNDS", "path": "/objects/bike_frame", "fix": {"dx": -700.0, "dy": -400.0}}
+    out = autofix({"objects": [frame]}, [oob])
+    assert out is not None and out["objects"][0]["place"] == {"x": 820.0, "y": 470.0, "anchor": "center"}
+    relative = {**frame, "params": {"d": "M0 0 l100 0", "closed": False}}  # relative commands: use the hint
+    moved = autofix({"objects": [relative]}, [oob])
+    assert moved is not None and moved["objects"][0]["place"]["x"] == 800.0

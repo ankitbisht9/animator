@@ -276,6 +276,34 @@ describe("layout validation", () => {
       expect(issues(rerouted).map((i) => i.code)).not.toContain("CONNECTOR_CROSSES_LABEL");
     });
 
+    it("flags separate objects hiding each other, and moving the covering one clears it", () => {
+      const scene = [block("magnet1_n", 700, 430), block("magnet2_n", 770, 430)];
+      const cover = find(scene, "OBJECT_OVERLAP");
+      expect(cover?.message).toContain("'magnet2_n' covers part of 'magnet1_n'");
+      const fix = cover?.fix;
+      expect(fix).toBeDefined();
+      if (!fix) return;
+      const moved = [scene[0], block("magnet2_n", 770 + fix.dx, 430 + fix.dy)];
+      expect(issues(moved).map((i) => i.code)).not.toContain("OBJECT_OVERLAP");
+    });
+
+    it("leaves parts of one drawing, light touches and content inside a shape alone", () => {
+      // Same first id word: one drawing.
+      expect(find([block("cart_body", 700), block("cart_load", 770)], "OBJECT_OVERLAP")).toBe(undefined);
+      // A touch: a wheel barely under a cart.
+      const wheel = { id: "wheel", type: "ball", params: { radius: 30 }, place: { x: 700, y: 500 } };
+      expect(find([wheel, block("cart", 700, 430)], "OBJECT_OVERLAP")).toBe(undefined);
+      // An icon drawn inside a circle.
+      const disc = { id: "disc", type: "circle", params: { radius: 90 }, place: { x: 800, y: 430 } };
+      const sun = {
+        id: "sun",
+        type: "icon",
+        params: { name: "sun", size: 60, badge: false },
+        place: { x: 800, y: 430 },
+      };
+      expect(find([disc, sun], "OBJECT_OVERLAP")).toBe(undefined);
+    });
+
     it("does not flag an arrow that ends at an object", () => {
       expect(
         find([block("a", 300), block("b", 800), arrow("go", "a.right", "b.left")], "CONNECTOR_CROSSES_OBJECT"),

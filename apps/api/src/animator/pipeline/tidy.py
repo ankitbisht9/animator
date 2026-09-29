@@ -199,6 +199,55 @@ def _pinned_to(obj: dict[str, Any]) -> str | None:
     return str(place["relativeTo"]) if place.get("relativeTo") else None
 
 
+_ABS_PATH = re.compile(r"^[MLHVCSQTZ0-9eE.,\s+-]+$")  # absolute commands only (no arcs: no bounds)
+_CANVAS = (0.0, 0.0, 1600.0, 900.0)
+
+
+def _path_bounds(d: str) -> tuple[float, float, float, float] | None:
+    """Bounds of path data written with absolute commands (control points included), else None."""
+    if not _ABS_PATH.match(d):
+        return None
+    xs: list[float] = []
+    ys: list[float] = []
+    cmd, k = "", 0
+    for tok in re.findall(r"[MLHVCSQTZ]|-?\d*\.?\d+(?:[eE][-+]?\d+)?", d):
+        if tok.isalpha():
+            cmd, k = tok, 0
+            continue
+        v = float(tok)
+        if cmd == "H":
+            xs.append(v)
+        elif cmd == "V":
+            ys.append(v)
+        else:
+            (xs if k % 2 == 0 else ys).append(v)  # x, y pairs
+        k += 1
+    if not xs or not ys:
+        return None
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _place_at_own_points(obj: dict[str, Any] | None) -> bool:
+    """Place a raw-positioned path where its own (frame) coordinates put it."""
+    if not obj or obj.get("type") != "path":
+        return False
+    place, d = obj.get("place"), (obj.get("params") or {}).get("d")
+    if not isinstance(place, dict) or place.get("x") is None or not isinstance(d, str):
+        return False
+    box = _path_bounds(d)
+    if box is None:
+        return False
+    x0, y0, x1, y1 = box
+    cx0, cy0, cx1, cy1 = _CANVAS
+    if not (cx0 <= x0 and x1 <= cx1 and cy0 <= y0 and y1 <= cy1) or (x1 - x0) * (y1 - y0) <= 0:
+        return False
+    center = ((x0 + x1) / 2, (y0 + y1) / 2)
+    if (place.get("x"), place.get("y")) == center:
+        return False
+    place.update(x=center[0], y=center[1], anchor="center")
+    return True
+
+
 def _move(obj: dict[str, Any] | None, fix: dict[str, Any], moving: set[str]) -> bool:
     """Apply the engine's move hint (shrink, then move) to an object: its slot offset or position,
     its pin offset (it keeps following what it is pinned to), the side of a relative place, or the
@@ -248,6 +297,7 @@ def autofix(dsl: dict[str, Any], errors: list[dict[str, Any]]) -> dict[str, Any]
     objects = {o.get("id"): o for o in out.get("objects") or [] if isinstance(o, dict)}
     moving = {str(e.get("path", "")).rsplit("/", 1)[-1] for e in errors if isinstance(e.get("fix"), dict)}
     moved: set[str] = set()
+    overlaps: list[dict[str, Any]] = []
     applied = False
     for e in errors:
         code, message, path = e.get("code"), str(e.get("message", "")), str(e.get("path", ""))
@@ -264,11 +314,36 @@ def autofix(dsl: dict[str, Any], errors: list[dict[str, Any]]) -> dict[str, Any]
             applied = _complete_anchor(out, path, set(objects)) or applied
         elif code == "UNSUPPORTED_GLYPH":
             applied = _drop_glyphs(out, path, message) or applied
+        elif code == "OUT_OF_BOUNDS" and _place_at_own_points(objects.get(path.rsplit("/", 1)[-1])):
+            # A path drawn in frame coordinates, placed somewhere else as well: the model meant its
+            # points as written (better than pushing the whole drawing into a corner).
+            moved.add(path.rsplit("/", 1)[-1])
+            applied = True
+        elif code == "OBJECT_OVERLAP" and isinstance(e.get("fix"), dict):
+            overlaps.append(e)
         elif isinstance(e.get("fix"), dict):
             # The engine says how to move the object (off the frame, over the title, onto another
             # label): one move per object and pass.
             oid = path.rsplit("/", 1)[-1]
             if oid not in moved and _move(objects.get(oid), e["fix"], moving - {oid}):
                 moved.add(oid)
+                applied = True
+    # An object covering another moves with the rest of its drawing (the parts sharing its id prefix,
+    # like a magnet's two halves), by the largest move any of its parts needs.
+    drawings: dict[str, dict[str, Any]] = {}
+    for e in overlaps:
+        prefix = str(e.get("path", "")).rsplit("/", 1)[-1].split("_")[0]
+        fix = e["fix"]
+        size = abs(float(fix.get("dx") or 0)) + abs(float(fix.get("dy") or 0))
+        best = drawings.get(prefix)
+        if best is None or size > abs(float(best.get("dx") or 0)) + abs(float(best.get("dy") or 0)):
+            drawings[prefix] = fix
+    everything = {str(o) for o in objects}
+    for prefix, fix in drawings.items():
+        for key, obj in objects.items():
+            part = str(key)
+            # A part pinned to another object moves with that object, not on its own.
+            if part.split("_")[0] == prefix and part not in moved and _move(obj, fix, everything - {part}):
+                moved.add(part)
                 applied = True
     return out if applied else None

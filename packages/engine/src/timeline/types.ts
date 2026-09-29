@@ -178,6 +178,8 @@ export interface CompiledObject {
   /** Static parent group (from the object definition). */
   parent?: string;
   links: GroupLink[];
+  /** The object this one is placed against (`relativeTo`, or the object of a pinned anchor). */
+  placedOn?: string;
   /** Placement that tracks another object every frame (place.follow: true). */
   followPlace?: FollowPlace;
   /** Terms (equation parts) that are revealed by write actions (start hidden). */

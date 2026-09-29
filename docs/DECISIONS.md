@@ -820,3 +820,49 @@ Measured on 116 recent scenes:
 
 **Rollback.** Git tag `backup/before-visual-relevance`, plus `.env.backup-before-visual-relevance`. Or partially:
 `ANIMATOR_LAYOUT_POLISH=false` switches the polish off, and deleting `animation.v4.md` brings back prompt v3.
+
+---
+
+## ADR-036 Objects must not hide each other (2026-09-29)
+
+**Problem.** In 58 of 139 recent scenes (42%), objects overlapped. Most of those overlaps were intended: wheels
+touching a cart, a head on a body, a plant in its pot. But some hid content:
+- two magnets drawn into each other, covering their N/S letters;
+- a cart's load drawn over another cart's wheels;
+- a wall drawn over a person.
+
+The engine checked labels, titles and arrows, but never one object covering another. The reasoning-effort settings
+are not the cause: no effort level makes the model check this, and higher efforts cost 2-4x the time.
+
+**Decision.**
+1. **Engine check `OBJECT_OVERLAP`** (a warning with a move hint).
+   - It measures what is hidden: the share of the lower object (in drawing order) covered by an unrelated object
+     drawn over it, flagged at 25% or more.
+   - It ignores content drawn inside a shape (the upper object sits 90% or more within the lower one, like an icon
+     in a circle), light touches (under 25% hidden), and small things on large regions (a shoe on the ground hides
+     almost none of it).
+   - It ignores parts of one drawing: grouped together, placed against or pinned to each other (compiled objects
+     now record `placedOn`), or sharing the first word of their ids (`cart_body`, `cart_wheel`).
+   - Effects, fluids, plots, containers, pipes, lines and open paths are not solid, so they are not checked.
+2. **The polish moves the whole covering drawing.** Every part sharing the covering object's id prefix moves by
+   the largest move any part needs, so a two-part magnet stays in one piece. Parts pinned to other objects follow
+   those objects.
+3. **Off-frame paths.** A path whose points are written in frame coordinates, but that is placed elsewhere too, is
+   placed where its points say, instead of being pushed into a corner.
+4. **Prompt `animation.v5`.**
+   - Separate things never overlap at any moment, and a `move` ends where the object still has room: attracting
+     magnets stop when they touch.
+   - Parts of one drawing share the first word of their ids; a second copy of a drawing gets its own first word.
+
+**Measured.**
+- Existing scenes: the check flags 4 of 139. Three are real (magnets, a load over wheels, a wall over a person); one
+  is an old-style composite (`cool_mug` / `mug_handle`) that the v5 naming rule prevents.
+- The polish fixes the load and the wall. The magnets were animated into each other, so moving their start cannot
+  help; v5 prevents it.
+- New live lessons (magnets, laws of motion, Newton's third law, bicycle): 0 overlaps in 16 scenes. In the new
+  magnets lesson, the magnets snap together edge to edge.
+- Speed and cost are unchanged. The first lesson after a prompt change pays once for the uncached prompt (about
+  $0.02).
+
+**Rollback.** Git tag `backup/before-overlap-and-tts`. Deleting `animation.v5.md` returns the prompt to v4.
+`ANIMATOR_LAYOUT_POLISH=false` disables all polish moves.

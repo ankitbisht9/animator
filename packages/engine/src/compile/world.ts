@@ -98,6 +98,9 @@ export function compileObjectDef(
   };
   if (def.parent) obj.parent = def.parent;
   if (def.metadata) obj.metadata = def.metadata;
+  const place = def.place;
+  if (place && "relativeTo" in place) obj.placedOn = place.relativeTo;
+  else if (place && "at" in place) obj.placedOn = place.at.split(".")[0];
   return obj;
 }
 

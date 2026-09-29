@@ -40,6 +40,27 @@ export function fitHint(box: Rect): IssueFix | undefined {
 
 const inRect = (p: Vec2, r: Rect) => p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
 
+/** Things drawn through or around others by nature: effects, fluids, plots, containers, pipes. */
+const NOT_SOLID = new Set([
+  "particles",
+  "flow_particles",
+  "burst",
+  "container",
+  "pipe",
+  "axes",
+  "grid",
+  "graph",
+  "group",
+  "line",
+  "marker",
+  "caption",
+]);
+
+/** Parts of one drawing share the first word of their ids (cart_body, cart_wheel_1). */
+export function sameDrawing(a: string, b: string): boolean {
+  return a.split("_")[0] === b.split("_")[0];
+}
+
 /** A box anchor of a world-space box (what "id.top" and friends resolve to). */
 function boxAnchor(r: Rect, side: "top" | "bottom" | "left" | "right"): Vec2 {
   if (side === "top") return { x: r.x + r.w / 2, y: r.y };
@@ -164,6 +185,14 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
   );
   // Declared params (anchor references such as "bank.left" before they are resolved to points).
   const declared = new Map(cs.objects.map((o) => [o.id, o.params]));
+  const placedOn = new Map(cs.objects.map((o) => [o.id, o.placedOn ?? followTarget.get(o.id)]));
+  // Attached on purpose: grouped together, or one placed against / pinned to the other.
+  const related = (a: string, b: string) =>
+    placedOn.get(a) === b ||
+    placedOn.get(b) === a ||
+    parentOf.get(a) === b ||
+    parentOf.get(b) === a ||
+    (parentOf.get(a) !== undefined && parentOf.get(a) === parentOf.get(b));
   let clutterMax = 0;
   let clutterT = 0;
 
@@ -358,6 +387,51 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
             inside < 0.9 ? clearHint(ra, rb, zoom) : undefined,
           );
         }
+      }
+    }
+    // Separate objects of similar size overlapping, so one hides part of the other (two magnets drawn
+    // into each other). Not flagged: parts of one drawing (grouped, pinned, or sharing an id prefix:
+    // cart_body / cart_wheel), a light touch (a wheel touching a cart), or a small thing on a large
+    // region (a shoe on the ground). The sure fix moves the smaller one clear.
+    const solids = counted.filter((o) => {
+      const sp = spec(o);
+      const r = screen.get(o.id) as Rect;
+      return (
+        !sp?.labelLike &&
+        !sp?.strokeLine &&
+        !sp?.worldSpace &&
+        !NOT_SOLID.has(o.type) &&
+        !(o.type === "path" && o.params.closed !== true) &&
+        o.type !== "equation" &&
+        area(r) < 0.25 * cs.stage.w * cs.stage.h
+      );
+    });
+    // `frame.objects` is in drawing order: a later object covers an earlier one.
+    const drawnAt = new Map(frame.objects.map((o, i) => [o.id, i]));
+    for (let i = 0; i < solids.length; i++) {
+      for (let j = i + 1; j < solids.length; j++) {
+        const a = solids[i] as FrameObject;
+        const b = solids[j] as FrameObject;
+        if (sameDrawing(a.id, b.id) || related(a.id, b.id)) continue;
+        const [lower, upper] = (drawnAt.get(a.id) ?? 0) < (drawnAt.get(b.id) ?? 0) ? [a, b] : [b, a];
+        const rl = screen.get(lower.id) as Rect;
+        const ru = screen.get(upper.id) as Rect;
+        const ov = intersection(rl, ru);
+        if (!ov) continue;
+        // Content drawn on a shape (an icon in a circle, a chloroplast in a cell) sits inside it: fine.
+        // Otherwise the covered share of the lower object decides: a wheel under a cart's edge (a
+        // touch) is fine, a box drawn over half a wheel, or a magnet drawn into another, is not.
+        if (area(ov) >= 0.9 * area(ru) || area(ov) < 0.25 * area(rl)) continue;
+        const zoom = upper.layer === "overlay" ? 1 : frame.camera.zoom;
+        report(
+          "OBJECT_OVERLAP",
+          `${upper.id}|${lower.id}`,
+          `'${upper.id}' covers part of '${lower.id}' at ${roundTo(t, 2)}s.`,
+          t,
+          "warning",
+          "Keep separate objects apart (32 px or more); parts of one drawing share an id prefix (cart_body, cart_wheel).",
+          clearHint(ru, rl, zoom),
+        );
       }
     }
     // Connectors (arrows, vectors, dimensions, brackets): running through a label's text area, through

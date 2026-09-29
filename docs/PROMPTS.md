@@ -12,7 +12,7 @@ recordings depend on: replay fixtures are keyed by the full prompt text.
 | 1+2. Outline (lessons up to 150 s) | `outline.v2.md` | `LessonOutline` (a short plan, the scenes, a recap), streamed | `ANIMATOR_MODEL_STORYBOARD` |
 | 1. Educational planner (longer lessons) | `planner.v2.md` | `EducationalPlan` (chapters of 45-90 s) | `ANIMATOR_MODEL_EDUCATIONAL_PLANNER` |
 | 2. Storyboard (per chapter) | `storyboard.v2.md` | `StoryboardChapter` (scenes, beats, identity, engagement) | `ANIMATOR_MODEL_STORYBOARD` |
-| 3. Animation planner | `animation.v4.md` + DSL reference + component catalog + exemplars | the engine's LLM-facing Scene schema | `ANIMATOR_MODEL_ANIMATION_PLANNER` |
+| 3. Animation planner | `animation.v5.md` + DSL reference + component catalog + exemplars | the engine's LLM-facing Scene schema | `ANIMATOR_MODEL_ANIMATION_PLANNER` |
 | Correction | same instructions as stage 3 | `ScenePatch` (only what changes; built from the Scene schema) | `ANIMATOR_MODEL_CORRECTION`, final attempt `..._CORRECTION_FINAL` |
 | Critic (optional) | `critic.v1.md` | `CriticReport` (pass/revise, issues with fixes) | `ANIMATOR_MODEL_CRITIC` / `..._VISUAL_CRITIC` |
 
