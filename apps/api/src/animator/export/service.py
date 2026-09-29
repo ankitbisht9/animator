@@ -11,7 +11,7 @@ from animator.export.exporter import AudioSource, Exporter, ExportResult
 from animator.export.ffmpeg import find_ffmpeg
 from animator.export.plan import ExportSettings
 from animator.export.render import BrowserPool, Viewport, build_id
-from animator.export.site import WEB_DIST, StaticSite
+from animator.export.site import WEB_DIST, StaticSite, ensure_web_build
 
 
 async def export_lesson(
@@ -28,6 +28,7 @@ async def export_lesson(
     s = settings or ExportSettings.from_settings(app)
     ffmpeg = find_ffmpeg(app.ffmpeg_path)
     out = out_dir or app.resolve(app.export_output_dir)
+    await ensure_web_build(dist, log)
     with StaticSite(dist) as site:
         viewport = Viewport(s.width, s.height)
         async with BrowserPool(site.url, viewport, s.workers, build_id(dist)) as pool:

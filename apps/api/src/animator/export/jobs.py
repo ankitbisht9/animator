@@ -16,7 +16,7 @@ from animator.export.ffmpeg import FfmpegError
 from animator.export.plan import ExportSettings
 from animator.export.render import BrowserPool, Viewport, build_id
 from animator.export.service import export_lesson
-from animator.export.site import WEB_DIST, StaticSite
+from animator.export.site import WEB_DIST, StaticSite, ensure_web_build
 
 
 @dataclass
@@ -96,6 +96,7 @@ class BrowserKeyframes:
     async def keyframes(self, scenes: list[dict[str, Any]], index: int, times: list[float]) -> list[bytes]:
         async with self._lock:
             if self._pool is None:
+                await ensure_web_build(self.dist)
                 site = StaticSite(self.dist)
                 self._site = site.__enter__()
                 pool = BrowserPool(site.url, self.viewport, 1, build_id(self.dist))

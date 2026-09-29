@@ -194,10 +194,19 @@ class GenerationRunner:
         async with self._save_locks.setdefault(gen.id, asyncio.Lock()):
             gen.updated_at = time.time()
             gen.version += 1
-            await self.store.save(gen)
+            # The lesson lives in memory while it runs; a file that stays locked (the store already
+            # retried) only delays persistence to the next save, it must not fail the lesson.
+            try:
+                await self.store.save(gen)
+            except OSError as e:
+                log.warning("saving %s failed (%s): it is saved again on the next change", gen.id, e)
             calls = self._pending_calls.pop(gen.id, [])
             if calls:
-                await self.store.append_calls(gen.id, calls)
+                try:
+                    await self.store.append_calls(gen.id, calls)
+                except OSError as e:
+                    log.warning("writing the call log of %s failed (%s): kept for the next save", gen.id, e)
+                    self._pending_calls.setdefault(gen.id, [])[:0] = calls
             self.hub.publish(gen.id, {"type": "update", "generation": gen.summary()})
 
     def _on_call(self, gen: Generation, record: CallRecord) -> None:

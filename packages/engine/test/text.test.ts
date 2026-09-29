@@ -51,16 +51,18 @@ describe("text layout", () => {
     expect(stripMarkup("V_{sub} in cm^{3}")).toBe("Vsub in cm3");
   });
 
-  it("draws Unicode subscripts and superscripts (CO₂, m²) as script runs, not missing glyphs", () => {
-    expect(parseRuns("CO₂ + H₂O, 10 m²").map((r) => [r.text, r.script])).toEqual([
+  it("draws Unicode subscripts and superscripts the fonts lack (CO₂, x⁴) as script runs", () => {
+    expect(parseRuns("CO₂ + H₂O, x⁴").map((r) => [r.text, r.script])).toEqual([
       ["CO", "base"],
       ["2", "sub"],
       [" + H", "base"],
       ["2", "sub"],
-      ["O, 10 m", "base"],
-      ["2", "sup"],
+      ["O, x", "base"],
+      ["4", "sup"],
     ]);
     expect(unsupportedChars("C₆H₁₂O₆ and x⁻¹")).toEqual([]);
+    // Characters the fonts have keep their glyphs (the approved Archimedes frames use "m³").
+    expect(parseRuns("10 kg/m³").map((r) => [r.text, r.script])).toEqual([["10 kg/m³", "base"]]);
   });
 
   it("supports Greek letters and arrows through the symbol fallback", () => {

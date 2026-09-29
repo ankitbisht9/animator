@@ -77,12 +77,13 @@ const SUPERSCRIPTS = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾";
 const PLAIN = "0123456789+-=()";
 const plain = (s: string, from: string) => [...s].map((c) => PLAIN[from.indexOf(c)]).join("");
 
-/** Unicode sub/superscript characters ("CO₂", "m²"; the fonts have no glyphs for most of them)
- * become `_{...}` / `^{...}` runs, drawn like the markup. */
+/** Unicode sub/superscript characters the fonts cannot draw ("CO₂", "x⁻¹") become `_{...}` /
+ * `^{...}` runs, drawn like the markup. Those the fonts have (², ³) keep their own glyphs. */
 function scriptMarkup(text: string): string {
+  const drawable = (m: string) => [...m].every(hasGlyph);
   return text
-    .replace(/[₀-₉₊₋₌₍₎]+/g, (m) => `_{${plain(m, SUBSCRIPTS)}}`)
-    .replace(/[⁰¹²³⁴-⁹⁺⁻⁼⁽⁾]+/g, (m) => `^{${plain(m, SUPERSCRIPTS)}}`);
+    .replace(/[₀-₉₊₋₌₍₎]+/g, (m) => (drawable(m) ? m : `_{${plain(m, SUBSCRIPTS)}}`))
+    .replace(/[⁰¹²³⁴-⁹⁺⁻⁼⁽⁾]+/g, (m) => (drawable(m) ? m : `^{${plain(m, SUPERSCRIPTS)}}`));
 }
 
 /**

@@ -10,12 +10,31 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
+from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 from typing import Any, Protocol
 
 from animator.pipeline.models import Generation
 
 ID_RE = re.compile(r"^g_[0-9a-f]{12}$")
+# Windows refuses to replace or read a file another process has open for that moment: a scan by
+# Windows Defender or the search indexer, or a concurrent reader. Such locks last milliseconds.
+_LOCK_RETRIES = 12
+_LOCK_WAIT_S = 0.05
+
+
+def _retry_locked[T](op: Callable[[], T]) -> T:
+    """Run a file operation, retrying for up to about 3 s while Windows reports the file locked."""
+    for attempt in range(_LOCK_RETRIES):
+        try:
+            return op()
+        except PermissionError:
+            if attempt == _LOCK_RETRIES - 1:
+                raise
+            time.sleep(min(_LOCK_WAIT_S * 2**attempt, 0.5))
+    raise AssertionError("unreachable")
 
 
 class GenerationStore(Protocol):
@@ -70,8 +89,8 @@ class FileStore:
             d = self._dir(gen.id)
             d.mkdir(parents=True, exist_ok=True)
             tmp = d / "generation.json.tmp"
-            tmp.write_text(data, encoding="utf-8")
-            tmp.replace(d / "generation.json")
+            _retry_locked(lambda: tmp.write_text(data, encoding="utf-8"))
+            _retry_locked(lambda: tmp.replace(d / "generation.json"))
 
         await asyncio.to_thread(write)
 
@@ -82,7 +101,7 @@ class FileStore:
             return None
         if not path.exists():
             return None
-        text = await asyncio.to_thread(path.read_text, encoding="utf-8")
+        text = await asyncio.to_thread(_retry_locked, lambda: path.read_text(encoding="utf-8"))
         return Generation.model_validate_json(text)
 
     async def recent(self, limit: int = 50) -> list[Generation]:
@@ -92,9 +111,10 @@ class FileStore:
                 f = d / "generation.json"
                 if ID_RE.match(d.name) and f.exists():
                     try:
-                        out.append(Generation.model_validate_json(f.read_text(encoding="utf-8")))
-                    except ValueError:
-                        continue  # a record from an incompatible version: skip, never crash the list
+                        text = _retry_locked(partial(f.read_text, encoding="utf-8"))
+                        out.append(Generation.model_validate_json(text))
+                    except (ValueError, OSError):
+                        continue  # incompatible version, or being rewritten: skip, never crash the list
             return sorted(out, key=lambda g: g.created_at, reverse=True)[:limit]
 
         return await asyncio.to_thread(scan)
@@ -110,7 +130,7 @@ class FileStore:
             with (d / "calls.jsonl").open("a", encoding="utf-8") as f:
                 f.write(lines)
 
-        await asyncio.to_thread(append)
+        await asyncio.to_thread(_retry_locked, append)
 
     async def calls(self, gen_id: str) -> list[dict[str, Any]]:
         try:
@@ -119,5 +139,5 @@ class FileStore:
             return []
         if not path.exists():
             return []
-        text = await asyncio.to_thread(path.read_text, encoding="utf-8")
+        text = await asyncio.to_thread(_retry_locked, lambda: path.read_text(encoding="utf-8"))
         return [json.loads(line) for line in text.splitlines() if line.strip()]
