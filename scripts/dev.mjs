@@ -1,6 +1,37 @@
 // `make dev`: run the Vite dev server and the FastAPI app side by side with
 // prefixed output. Ctrl+C stops both.
 import { spawn } from "node:child_process";
+import net from "node:net";
+
+/** Whether something already answers on 127.0.0.1:port. On Windows uvicorn can bind a port another
+ * program is using (SO_REUSEADDR) and then never see a request, so "it started" proves nothing. */
+const inUse = (port) =>
+  new Promise((resolve) => {
+    const socket = net.connect({ host: "127.0.0.1", port });
+    const done = (busy) => {
+      socket.destroy();
+      resolve(busy);
+    };
+    socket.setTimeout(500, () => done(false));
+    socket.once("connect", () => done(true));
+    socket.once("error", () => done(false));
+  });
+
+async function freeApiPort(wanted) {
+  for (let port = wanted; port < wanted + 20; port++) {
+    if (!(await inUse(port))) {
+      if (port !== wanted) {
+        console.log(`[dev] Port ${wanted} is already used by another program: the API runs on ${port} instead.`);
+      }
+      return port;
+    }
+  }
+  throw new Error(`No free port for the API between ${wanted} and ${wanted + 19}.`);
+}
+
+const apiPort = String(await freeApiPort(Number(process.env.API_PORT ?? 8000)));
+// The web dev server proxies /api to API_PORT (apps/web/vite.config.ts): both get the same port.
+const env = { ...process.env, API_PORT: apiPort };
 
 const procs = [
   ["web", "pnpm", ["--filter", "@animator/web", "dev"]],
@@ -22,13 +53,13 @@ const procs = [
       "--timeout-graceful-shutdown",
       "3",
       "--port",
-      process.env.API_PORT ?? "8000",
+      apiPort,
     ],
   ],
 ];
 
 const children = procs.map(([name, cmd, args]) => {
-  const child = spawn(cmd, args, { shell: process.platform === "win32", stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn(cmd, args, { shell: process.platform === "win32", stdio: ["ignore", "pipe", "pipe"], env });
   const tag = (chunk) =>
     chunk
       .toString()

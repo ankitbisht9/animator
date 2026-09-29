@@ -31,6 +31,17 @@ const STATUS_LABEL: Record<string, string> = {
   paused: "paused",
 };
 
+/** Why the lesson API cannot be used, in words that say what to do. */
+function apiProblem(e: unknown): string {
+  if (e instanceof ApiError && e.status === 404) {
+    return (
+      "Another program is answering on the API port instead of this app's API. Stop it, or restart " +
+      "with `make dev`, which moves the API to a free port."
+    );
+  }
+  return "The API server is not running. Start everything with `make dev`.";
+}
+
 export function Home() {
   const lessons = useMemo(
     () => FIXTURE_LESSONS.map((f) => ({ f, duration: buildLesson(f.meta.title, f.scenes).duration })),
@@ -44,11 +55,11 @@ export function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<ApiConfig | null>(null);
-  const [apiDown, setApiDown] = useState(false);
+  const [apiDown, setApiDown] = useState<string | null>(null);
   const [recent, setRecent] = useState<GenerationSummary[]>([]);
 
   useEffect(() => {
-    api.config().then(setConfig, () => setApiDown(true));
+    api.config().then(setConfig, (e) => setApiDown(apiProblem(e)));
     api.list().then(setRecent, () => undefined);
   }, []);
 
@@ -129,7 +140,7 @@ export function Home() {
               <input type="checkbox" checked={paced} onChange={(e) => setPaced(e.target.checked)} />
               Save cost: only generate a little ahead of what I watch
             </label>
-            <button type="submit" className="btn primary" disabled={busy || apiDown}>
+            <button type="submit" className="btn primary" disabled={busy || apiDown !== null}>
               {busy ? "Starting…" : "Create lesson"}
             </button>
           </div>
@@ -143,7 +154,7 @@ export function Home() {
           </div>
         </form>
         {error && <p className="note bad">{error}</p>}
-        {apiDown && <p className="note bad">The API server is not running. Start everything with `make dev`.</p>}
+        {apiDown && <p className="note bad">{apiDown}</p>}
         {config && !config.openai_key_configured && (
           <p className="note bad">
             OPENAI_API_KEY is not set in .env: lesson generation needs it. Restart the API after adding it.

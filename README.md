@@ -43,7 +43,10 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DECISIONS.md](docs/DECIS
 The frontend proxies `/api` to the backend, so the browser only talks to port 5173. The lesson player
 compiles scenes in the browser and does not need the backend; generation (Phase 7+) will.
 
-Ports already taken by something else? Pick others:
+If port 8000 is already used by another program, `make dev` moves the API to the next free port and points
+the frontend at it (it prints `[dev] Port 8000 is already used...`). The frontend likewise moves to the next free
+port if 5173 is taken: open the URL Vite prints. On Windows, a server can start on a port another program already
+holds and never receive a request, which is why `make dev` checks first. To choose the ports yourself:
 
 ```
 # PowerShell
