@@ -61,9 +61,10 @@ export interface PlayableScene {
   dsl: unknown;
 }
 
+/** `final`: the last event of the stream (the run is over and every cost is counted). */
 export type GenerationEvent =
-  | { type: "snapshot"; generation: GenerationSummary; scenes: PlayableScene[] }
-  | { type: "update"; generation: GenerationSummary }
+  | { type: "snapshot"; generation: GenerationSummary; scenes: PlayableScene[]; final?: boolean }
+  | { type: "update"; generation: GenerationSummary; final?: boolean }
   | ({ type: "scene" } & PlayableScene);
 
 export interface ApiConfig {
@@ -140,8 +141,9 @@ export function subscribe(id: string, onEvent: (e: GenerationEvent) => void, onE
       return; // ignore malformed frames
     }
     onEvent(event);
-    // The server ends the stream after a final state; do not let EventSource reconnect.
-    if (event.type !== "scene" && TERMINAL.includes(event.generation.status)) source.close();
+    // The server ends the stream after its final event (every cost counted, including drafts that
+    // finish after the lesson is ready); do not let EventSource reconnect.
+    if (event.type !== "scene" && event.final) source.close();
   };
   source.onerror = () => onError?.();
   return () => source.close();

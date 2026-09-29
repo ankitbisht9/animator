@@ -70,9 +70,15 @@ async def events(gen_id: str, request: Request) -> StreamingResponse:
     async def stream() -> AsyncIterator[str]:
         async with runner.hub.subscribe(gen_id) as queue:
             current = await runner.get(gen_id) or gen
-            snapshot = {"type": "snapshot", "generation": current.summary(), "scenes": _playable(current)}
+            final = current.status in TERMINAL and not runner.running(gen_id)
+            snapshot = {
+                "type": "snapshot",
+                "generation": current.summary(),
+                "scenes": _playable(current),
+                "final": final,
+            }
             yield f"data: {json.dumps(snapshot)}\n\n"
-            if current.status in TERMINAL and not runner.running(gen_id):
+            if final:
                 return  # nothing more will happen: the client has everything
             while True:
                 if await request.is_disconnected():
@@ -80,10 +86,18 @@ async def events(gen_id: str, request: Request) -> StreamingResponse:
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=15)
                 except TimeoutError:
+                    latest = await runner.get(gen_id)
+                    if latest is not None and latest.status in TERMINAL and not runner.running(gen_id):
+                        # The run ended between the snapshot and this subscription: close it now.
+                        done = {"type": "update", "generation": latest.summary(), "final": True}
+                        yield f"data: {json.dumps(done)}\n\n"
+                        return
                     yield ": keep-alive\n\n"
                     continue
                 yield f"data: {json.dumps(event)}\n\n"
-                if event.get("type") == "update" and event["generation"]["status"] in TERMINAL:
+                # A lesson is ready before drafts that lost the race finish; the stream stays open
+                # until the run is over, so the final cost reaches the page.
+                if event.get("final"):
                     return
 
     return StreamingResponse(

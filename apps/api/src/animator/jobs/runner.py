@@ -256,6 +256,9 @@ class GenerationRunner:
                 t.cancel()
             self._cancelled.discard(gen.id)
             self._wake.pop(gen.id, None)
+            # The run is over and every call is counted (drafts that lost the race included): the
+            # last event of a live stream, so viewers see the final cost.
+            self.hub.publish(gen.id, {"type": "update", "generation": gen.summary(), "final": True})
 
     def _reset_in_flight(self, gen: Generation) -> None:
         for s in gen.scenes:

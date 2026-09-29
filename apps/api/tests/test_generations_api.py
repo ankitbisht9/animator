@@ -3,6 +3,8 @@ progress (SSE) to the end, inspect it, and check the error paths."""
 
 from __future__ import annotations
 
+import asyncio
+import copy
 import json
 import time
 from pathlib import Path
@@ -14,7 +16,7 @@ from fastapi.testclient import TestClient
 from animator.api.app import create_app
 from animator.jobs.store import MemoryStore
 from animator.llm import FakeLLM, LLMAuthError, LLMRequest
-from tests.test_pipeline import Script, settings
+from tests.test_pipeline import SCENES, Script, settings
 
 
 def app_with(handler: Any, **kw: Any) -> TestClient:
@@ -33,6 +35,23 @@ def read_events(client: TestClient, gen_id: str) -> list[dict[str, Any]]:
     return events
 
 
+def test_the_last_event_counts_drafts_that_finish_after_the_lesson_is_ready(worker_script: Path) -> None:
+    seen: dict[int, int] = {}
+
+    async def scene(i: int, attempt: int, req: LLMRequest) -> Any:
+        seen[i] = seen.get(i, 0) + 1
+        if seen[i] == 2:
+            await asyncio.sleep(0.5)  # the losing draft: still running when the lesson is ready
+        return copy.deepcopy(SCENES[i])
+
+    with app_with(Script(scene), animator_scene_drafts=2) as client:
+        gen_id = client.post("/api/generations", json={"topic": "Archimedes' principle"}).json()["id"]
+        events = read_events(client, gen_id)
+        calls = client.get(f"/api/generations/{gen_id}/calls").json()
+        assert events[-1].get("final") is True and events[-1]["generation"]["status"] == "complete"
+        assert events[-1]["generation"]["metrics"]["llm_calls"] == len(calls) == 3 + 8
+
+
 def test_create_follow_and_inspect_a_lesson(worker_script: Path) -> None:
     with app_with(Script()) as client:
         cfg = client.get("/api/config").json()
@@ -46,8 +65,10 @@ def test_create_follow_and_inspect_a_lesson(worker_script: Path) -> None:
 
         events = read_events(client, gen_id)
         assert events[0]["type"] == "snapshot"
+        assert events[-1].get("final") is True  # the stream ends once the run is fully over
         final = events[-1]["generation"]
         assert final["status"] == "complete" and len(final["scenes"]) == 4
+        assert final["metrics"]["llm_calls"] == 7  # every call counted by the last event
         scenes = {s["index"]: s["dsl"] for s in events[0]["scenes"]}
         scenes.update({e["index"]: e["dsl"] for e in events if e["type"] == "scene"})
         assert sorted(scenes) == [0, 1, 2, 3] and all(

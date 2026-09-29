@@ -308,7 +308,7 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - **Results (final build, 14 live 30-second lessons, 7 topics):**
   - 21-33 s in total, median about 26 s; 13 of 14 were within 30 s.
   - The first scene is playable after 14-25 s.
-  - Each costs $0.015-0.030.
+  - Each costs $0.020-0.054, with a median of $0.030. That includes the losing drafts, which finish after the lesson is ready.
   - 1-minute lessons take 28-32 s.
   - All scenes play in the browser. See ADR-033.
 

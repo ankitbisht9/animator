@@ -125,7 +125,7 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   (`ANIMATOR_SCENE_MODE=parallel`). Short lessons are planned in one streamed call. Each scene is drafted twice at
   once and the first valid draft wins (`ANIMATOR_SCENE_DRAFTS`). Corrections send only what changes
   (`ANIMATOR_PATCH_CORRECTIONS`). OpenAI's priority tier is used (`OPENAI_SERVICE_TIER=priority`).
-- Cost: `gpt-6-luna` at low effort for every stage, about $0.02 per 30 seconds of lesson. For about half that,
+- Cost: `gpt-6-luna` at low effort for every stage, about $0.03 per 30 seconds of lesson (median). For about half that,
   and roughly 2x the generation time, set `OPENAI_SERVICE_TIER=` (empty) and `ANIMATOR_SCENE_DRAFTS=1`. For the
   best quality, at many times the cost and time, set the `ANIMATOR_MODEL_*` stages to `gpt-6-sol` with effort
   `high`.

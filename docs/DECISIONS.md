@@ -675,8 +675,12 @@ the first token, then about 150 tokens/s on the standard tier and 225-255 tokens
 | Parallel scenes, one outline call, low effort | 67 s | 40 s | $0.011 |
 | + streamed outline, patch corrections, sure fixes | 60-62 s | 28-30 s | $0.009 |
 | + priority tier, short outline plan | 44 s | 14 s | $0.026 |
-| + hedged drafts | 22-41 s (median about 27 s) | 12-24 s | $0.017-0.028 |
-| + engine fix hints, two patches per round (final build, 14 lessons) | 21-33 s (median about 26 s); 13 of 14 within 30 s | 14-25 s | $0.015-0.030 |
+| + hedged drafts | 22-41 s (median about 27 s) | 12-24 s | about $0.03* |
+| + engine fix hints, two patches per round (final build, 14 lessons) | 21-33 s (median about 26 s); 13 of 14 within 30 s | 14-25 s | $0.020-0.054, median $0.030* |
+
+\* Costs include the drafts that lose the race: they finish, and are billed, a few seconds after the lesson is
+ready. The first report of this table read costs at "ready" and missed them (about a third).
+1-minute lessons cost $0.035-0.051; a 3-minute lesson cost $0.070.
 
 1-minute lessons take 28-32 s (they were 5.2 minutes before). Every scene of the final-build lessons also played
 in the browser's scene chain, and keyframes were checked by eye.
@@ -690,7 +694,7 @@ Found by the frame check and fixed:
 **Trade-offs.**
 - Scenes no longer carry objects over: each scene fades in and redraws the stage. The storyboard keeps ids and
   looks consistent.
-- Cost per 30 s rises from about $0.009 to about $0.02: 2x for priority processing, and about 1.5x scene cost
+- Cost per 30 s rises from about $0.009 to about $0.03: 2x for priority processing, and about 1.5x scene cost
   for hedged drafts.
 - For the cheapest setup, set `OPENAI_SERVICE_TIER=` (empty) and `ANIMATOR_SCENE_DRAFTS=1`. Generation then
   takes about 2x the lesson length.
@@ -698,3 +702,54 @@ Found by the frame check and fixed:
   outage pauses the lesson (resumable) after the retries.
 - Low effort leaves some rough layout: a connector crossing a label, a pill overlapping a diagram. These are
   warnings, not errors. The optional critic (`ANIMATOR_ENABLE_LLM_CRITIC`) can polish them, at extra time.
+
+---
+
+## ADR-034 Cost review of the fast pipeline: no change (2026-09-29)
+
+**Question.** Can LLM cost go down further without losing speed (ADR-033) or quality?
+
+**Where the cost goes** (14 live 30-second lessons, including the drafts that lose the race; median $0.030):
+
+| Part | Share of cost | Notes |
+|---|---|---|
+| Scene drafts | 83% | 6.5 per lesson (2 per scene, plus rare repairs); about 2,800 output tokens each, 8% of them reasoning |
+| Patch corrections | 12% | about 2 per lesson; about 500 output tokens, 39% of them reasoning |
+| Outline | 5% | one call, about 1,500 output tokens |
+
+Input is almost all cached ($0.01/M), so output tokens are the bill. Two deliberate speed choices multiply it:
+priority processing (2x the token price) and two drafts per scene (about 1.5x the draft cost).
+
+**Options examined:**
+- *A cheaper model for scene drafts.* Twelve real scene briefs were drafted once each, through the pipeline's own
+  checks and sure fixes, on the priority tier:
+
+  | Model | Valid | Time (median) | Cost/draft |
+  |---|---|---|---|
+  | gpt-6-luna, low (current) | 7/12 | 17.5 s | $0.0045 |
+  | gpt-5-nano, minimal | 3/12 | 13.3 s | $0.0018 |
+  | gpt-5-nano, low | 5/12 | 18.9 s | $0.0014 |
+  | gpt-4.1-nano | 0/12 | 11.8 s | $0.0078 |
+
+  gpt-5-nano is cheaper per draft, but it fails twice as often. Each failure costs a correction round (time) and
+  risks a degraded scene, and its scenes are thinner (half the output). gpt-4.1-nano does not follow the scene
+  format. gpt-4o-mini ($0.15/$0.60) and gpt-4o ($2.50/$10) cost more than Luna ($0.10/$0.50). Earlier runs showed
+  gpt-5.4-nano/mini and gpt-4.1-mini making more errors. **Luna stays for every stage.**
+- *Dropping rarely-set fields from the model's schema* (strict-mode `null` filler is 26% of a scene's characters).
+  The candidate fields are in use: `rotation` 4.6% of objects (tilted leaves), `opacity` 7%, `decorative` 18%,
+  `z` 7%, `parent` 2%. The saving would be at most about 5%, for visible losses. Not done.
+- *Lower reasoning effort for patches.* The saving is about 4%. The risk is more failed patches (more rounds and
+  time). Not done.
+- *The second draft on the standard tier* (half price). This saves about 20%. But when the first draft fails
+  (about 40% of scenes), the rescue comes about 5 s later. That would push about a quarter of 30-second lessons
+  past 30 s. Not done by default, because the speed requirement comes first.
+- *Cancelling the losing draft.* It is already about 90% written when the winner arrives, so this saves about 3%.
+  Its cost would also have to be estimated. Not done.
+
+**Decision.** No change: every remaining lever either saves little or costs speed or quality. The two cost knobs
+remain in `.env` for anyone who wants cheaper and slower: `OPENAI_SERVICE_TIER=` (half the price, about 1.5x
+slower) and `ANIMATOR_SCENE_DRAFTS=1` (about a third off, more correction rounds).
+
+**Fixed alongside.** The lesson page showed the cost at the moment the lesson became ready. That missed the losing
+drafts, which finish a few seconds later. The event stream now ends with a `final` event after the run, which
+carries the full cost.
