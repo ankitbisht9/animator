@@ -316,7 +316,7 @@ def test_stage_model_chain_appends_fallbacks() -> None:
         animator_model_correction_final="gpt-6-astra",
         animator_model_fallbacks="gpt-5, gpt-4.1,gpt-6-astra",
     )
-    assert s.stage_model("correction_final") == (["gpt-6-astra", "gpt-5", "gpt-4.1"], "high")
+    assert s.stage_model("correction_final") == (["gpt-6-astra", "gpt-5", "gpt-4.1"], "low")
     with pytest.raises(ValueError, match="no model configured"):
         Settings(_env_file=None).stage_model("storyboard")
 

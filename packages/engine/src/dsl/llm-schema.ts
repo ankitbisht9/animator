@@ -6,6 +6,7 @@
  *   - oneOf -> anyOf, const -> single-value enum
  *   - range/length/pattern/format/default keywords removed (the engine validates them)
  *   - `x-llm` metadata replaces a node (e.g. ColorRef -> enum of theme roles)
+ *   - properties marked `x-llm-omit` (owned by the pipeline, e.g. `transition_in.fresh`) are left out
  * `lift()` maps the LLM form back to canonical (drops nulls, fills defaults).
  */
 import { z } from "zod";
@@ -71,7 +72,12 @@ function strictify(node: unknown): unknown {
     if (k === "oneOf") out.anyOf = strictify(v);
     else if (k === "const") out.enum = [v];
     else if (k === "properties" || k === "$defs") {
-      out[k] = Object.fromEntries(Object.entries(v as Json).map(([pk, pv]) => [pk, strictify(pv)]));
+      out[k] = Object.fromEntries(
+        Object.entries(v as Json)
+          // Fields the pipeline owns (`x-llm-omit`) are not the model's to write.
+          .filter(([, pv]) => !(k === "properties" && isObj(pv) && pv["x-llm-omit"] === true))
+          .map(([pk, pv]) => [pk, strictify(pv)]),
+      );
     } else out[k] = strictify(v);
   }
   if (out.type === "object" || out.properties) {

@@ -610,3 +610,91 @@ Luna) can polish further.
   validation.
 - Trim the input schema per scene.
 - Use the Batch/Flex tiers (50% off) for lessons that are not watched live.
+
+---
+
+## ADR-033 Generation keeps up with playback (parallel scenes, streaming, patches, hedged drafts)
+
+**Requirement.** A lesson must take at most as long to generate as it lasts: a 30-second lesson in 30 seconds
+or less.
+
+**Where the time went** (30-second lesson, gpt-6-luna at medium effort, ADR-032): 3.7 minutes. There were
+three LLM stages in sequence (plan, storyboard, scenes). The scenes were generated one after another because
+each scene continued from the previous scene's end state. Each scene took 40-60 s, and a correction rewrote the
+whole scene (another 20-50 s). Measured on the live API, a call's time is almost all output: about 3-4 s before
+the first token, then about 150 tokens/s on the standard tier and 225-255 tokens/s on the priority tier.
+
+**Decision.** `ANIMATOR_SCENE_MODE=parallel` is the default.
+
+1. *Scenes stand on their own.* Every scene starts on a clean stage: a fade, the default camera, and it
+   creates everything it shows. The storyboard asks for consistent ids and looks across scenes. All scenes are
+   generated at once (`ANIMATOR_SCENE_CONCURRENCY`). Long lessons storyboard all their chapters at once.
+   `sequential` keeps the old carry-over behaviour.
+   - The pipeline marks such scenes `transition_in.fresh`, a new DSL field that is left out of the model's schema
+     (`x-llm-omit`). The engine then compiles a fresh scene without the previous scene's state, and its end
+     state starts a new identity registry.
+   - The player and the exporter therefore draw exactly what the pipeline validated. Without this, a lesson
+     that reused an id for a different kind of object (`plant`: a group, then a path) failed in the browser's
+     scene chain with `IDENTITY_TYPE_CHANGE`.
+2. *One streamed outline call.* Lessons up to `ANIMATOR_OUTLINE_MAX_DURATION_S` (150 s) are planned and
+   storyboarded in one call with a short plan (`outline.v2`). The reply streams in. A JSON scanner
+   (`pipeline/streaming.py`) hands over each scene brief the moment it is complete, so scene 1 starts about 4 s
+   in. Briefs that have already started are kept across retries.
+3. *Low effort everywhere.* Reasoning tokens are pure latency here: every stage runs at low effort.
+4. *Patch corrections.* A correction replies with only what changes: objects and actions by id, deletions,
+   and the scene-level fields that change (`ScenePatch`, built from the engine's own scene schema, so it is
+   just as strict). That is 150-1,000 tokens instead of 2,000-4,000, and 5-10 s instead of about 20 s.
+   Actions timed after a deleted action inherit its start, so no reference dangles.
+5. *Sure fixes without the model* (`pipeline/tidy.py`), each checked by the engine:
+   - a start with both `at` and `after`/`with` keeps the relative one;
+   - time references are written the engine's way (`b2` becomes `beat:b2`);
+   - TeX aliases (`\longrightarrow` becomes `\rightarrow`);
+   - an action ending a moment after the scene extends the scene;
+   - an out-of-range number is clamped;
+   - a bare object id where an anchor belongs becomes `<id>.center`;
+   - an object is moved (and shrunk) as the engine's new `fix` hint says: `OUT_OF_BOUNDS`, `TITLE_COVERED`
+     and `LABEL_OVERLAP` issues carry one. The move goes to the slot offset, the position, the pin offset, or a
+     line's raw points. An object attached to one that also moves is left alone.
+
+   The fixed scene is kept when it has fewer errors, or as many but none of the old ones: the engine checks
+   layout only after timing and references are right. The model only sees what is left.
+6. *Hedged drafts* (`ANIMATOR_SCENE_DRAFTS=2`, `ANIMATOR_CORRECTION_DRAFTS=2`). Each scene is drafted twice at
+   once, and the first valid draft wins. When a draft comes back invalid, its correction starts at once, and the
+   other draft keeps racing it. Corrections are also written twice at once. Losing calls finish in the
+   background and their cost is counted (`Pipeline.settle`).
+7. *Priority processing* (`OPENAI_SERVICE_TIER=priority`, "Fast mode"): about 1.6x the output speed for 2x the
+   token price. `config/pricing.json` has per-tier multipliers, applied to the tier each response reports.
+8. Three patch rounds (`ANIMATOR_MAX_CORRECTION_ATTEMPTS=3`), because each takes seconds. The Sol escalation
+   is gone, since it took minutes.
+
+**Measured** (live, 30-second lessons, 2026-09-29):
+
+| Step | Total | First scene playable | Cost |
+|---|---|---|---|
+| Before (ADR-032) | 221 s | 84 s | $0.019 |
+| Parallel scenes, one outline call, low effort | 67 s | 40 s | $0.011 |
+| + streamed outline, patch corrections, sure fixes | 60-62 s | 28-30 s | $0.009 |
+| + priority tier, short outline plan | 44 s | 14 s | $0.026 |
+| + hedged drafts | 22-41 s (median about 27 s) | 12-24 s | $0.017-0.028 |
+| + engine fix hints, two patches per round (final build, 14 lessons) | 21-33 s (median about 26 s); 13 of 14 within 30 s | 14-25 s | $0.015-0.030 |
+
+1-minute lessons take 28-32 s (they were 5.2 minutes before). Every scene of the final-build lessons also played
+in the browser's scene chain, and keyframes were checked by eye.
+
+Found by the frame check and fixed:
+- Unicode sub- and superscripts ("CO₂", "m²") have no glyph in the fonts and drew as "?". The text engine now
+  draws them as `_{}`/`^{}` script runs.
+- Text, labels and equations must be fully inside the frame (1% tolerance, was 10%). An equation card that
+  clipped "oxygen" had passed.
+
+**Trade-offs.**
+- Scenes no longer carry objects over: each scene fades in and redraws the stage. The storyboard keeps ids and
+  looks consistent.
+- Cost per 30 s rises from about $0.009 to about $0.02: 2x for priority processing, and about 1.5x scene cost
+  for hedged drafts.
+- For the cheapest setup, set `OPENAI_SERVICE_TIER=` (empty) and `ANIMATOR_SCENE_DRAFTS=1`. Generation then
+  takes about 2x the lesson length.
+- Worst cases remain: a scene whose drafts both fail, and whose patches also miss, can take 35-45 s. A network
+  outage pauses the lesson (resumable) after the retries.
+- Low effort leaves some rough layout: a connector crossing a label, a pill overlapping a diagram. These are
+  warnings, not errors. The optional critic (`ANIMATOR_ENABLE_LLM_CRITIC`) can polish them, at extra time.

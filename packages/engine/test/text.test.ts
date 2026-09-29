@@ -51,6 +51,18 @@ describe("text layout", () => {
     expect(stripMarkup("V_{sub} in cm^{3}")).toBe("Vsub in cm3");
   });
 
+  it("draws Unicode subscripts and superscripts (CO₂, m²) as script runs, not missing glyphs", () => {
+    expect(parseRuns("CO₂ + H₂O, 10 m²").map((r) => [r.text, r.script])).toEqual([
+      ["CO", "base"],
+      ["2", "sub"],
+      [" + H", "base"],
+      ["2", "sub"],
+      ["O, 10 m", "base"],
+      ["2", "sup"],
+    ]);
+    expect(unsupportedChars("C₆H₁₂O₆ and x⁻¹")).toEqual([]);
+  });
+
   it("supports Greek letters and arrows through the symbol fallback", () => {
     expect(unsupportedChars("ρ = 1000 kg/m³ → Δh ≈ 2 cm")).toEqual([]);
     expect(unsupportedChars("日本")).toEqual(["日", "本"]);

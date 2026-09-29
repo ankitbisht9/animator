@@ -49,6 +49,10 @@ class _ModelUnavailable(Exception):
     pass
 
 
+class _StreamBroken(Exception):
+    """A streamed response ended without a final response (retried like a dropped connection)."""
+
+
 def _message_of(e: openai.APIStatusError) -> str:
     body = e.body if isinstance(e.body, dict) else {}
     err = body.get("error", body) if isinstance(body, dict) else {}
@@ -225,6 +229,8 @@ class OpenAILLM:
             params["reasoning"] = {"effort": effort}
         if request.cache_key:
             params["prompt_cache_key"] = request.cache_key
+        if self.settings.openai_service_tier:
+            params["service_tier"] = self.settings.openai_service_tier
         if request.generation_id:
             params["metadata"] = {"generation_id": request.generation_id, "stage": request.stage}
         return params
@@ -238,7 +244,11 @@ class OpenAILLM:
         while True:
             try:
                 async with self._sem:
-                    resp = await self._client.responses.create(**self._params(model, request, with_reasoning))
+                    params = self._params(model, request, with_reasoning)
+                    if ctx.stream is None:
+                        resp = await self._client.responses.create(**params)
+                    else:
+                        resp = await self._stream(params, ctx)
                 break
             except openai.AuthenticationError as e:
                 err = LLMAuthError(f"OpenAI rejected the API key: {_message_of(e)}")
@@ -284,6 +294,7 @@ class OpenAILLM:
                 openai.APIConnectionError,
                 openai.APITimeoutError,
                 openai.APIStatusError,
+                _StreamBroken,
             ) as e:
                 status = getattr(e, "status_code", None)
                 if isinstance(e, openai.RateLimitError) and _code_of(e) == "insufficient_quota":
@@ -323,6 +334,25 @@ class OpenAILLM:
                 await self._sleep(delay)
         return self._finish(model, request, ctx, resp, tried, started, retries)
 
+    async def _stream(self, params: dict[str, Any], ctx: CallContext) -> Any:
+        """Stream the response, feeding its output text to `ctx.stream`; returns the final response."""
+        assert self._client is not None and ctx.stream is not None
+        ctx.stream.reset()
+        final: Any = None
+        stream = await self._client.responses.create(**params, stream=True)
+        async for event in stream:
+            kind = getattr(event, "type", "")
+            if kind == "response.output_text.delta":
+                ctx.stream.feed(event.delta)
+            elif kind in ("response.completed", "response.incomplete"):
+                final = event.response
+            elif kind in ("response.failed", "error"):
+                failed = getattr(getattr(event, "response", None), "error", None)
+                raise _StreamBroken(f"streamed response failed: {failed or getattr(event, 'message', '')}")
+        if final is None:
+            raise _StreamBroken("stream ended without a final response")
+        return final
+
     def _finish(
         self,
         model: str,
@@ -335,7 +365,7 @@ class OpenAILLM:
     ) -> LLMResult:
         usage = _usage(resp)
         served = str(getattr(resp, "model", None) or model)
-        cost = self.prices.cost(served, usage)
+        cost = self.prices.cost(served, usage, getattr(resp, "service_tier", None))
         latency = time.perf_counter() - started
         rid = getattr(resp, "id", None)
 

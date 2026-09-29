@@ -17,6 +17,10 @@ const procs = [
       // The engine worker is a subprocess; keep a loop that can spawn one (see animator/api/loop.py).
       "--loop",
       "animator.api.loop:loop_factory",
+      // Open event streams (a lesson page left open) would otherwise block a reload forever and
+      // leave the old code serving; running generations are paused and resume on restart.
+      "--timeout-graceful-shutdown",
+      "3",
       "--port",
       process.env.API_PORT ?? "8000",
     ],

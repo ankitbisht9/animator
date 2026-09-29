@@ -14,6 +14,7 @@ Auth, outage and budget errors propagate: the generation stops and can be resume
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
@@ -21,7 +22,7 @@ from typing import Any, Protocol
 from animator.config import Settings
 from animator.engine_client import EngineClient
 from animator.engine_client.errors import EngineError
-from animator.llm import CallContext, LLMBadOutput, LLMClient, LLMIncomplete, LLMRefusal
+from animator.llm import CallContext, LLMBadOutput, LLMClient, LLMIncomplete, LLMRefusal, LLMResult
 from animator.pipeline.models import (
     Attempt,
     BeatPlan,
@@ -33,6 +34,7 @@ from animator.pipeline.models import (
 )
 from animator.pipeline.prompts import PromptPack, slug
 from animator.pipeline.stages import Stages, format_issues
+from animator.pipeline.tidy import autofix, tidy
 from animator_contracts.protocol import CompileResult, SceneState
 
 Changed = Callable[[], Awaitable[None]]
@@ -46,21 +48,20 @@ class KeyframeSource(Protocol):
     ) -> list[bytes]: ...
 
 
+def scene_record(gen: Generation, chapter_id: str, brief: StoryboardScene, offset: int = 0) -> SceneRecord:
+    """The record of the scene that follows the lesson's current scenes (plus `offset`)."""
+    index = len(gen.scenes) + offset
+    return SceneRecord(
+        index=index,
+        id=f"s{index + 1:02d}_{slug(brief.title)}",
+        title=brief.title[:120],
+        chapter_id=chapter_id,
+        brief=brief,
+    )
+
+
 def scene_records(gen: Generation, board: StoryboardChapter) -> list[SceneRecord]:
-    start = len(gen.scenes)
-    out = []
-    for i, brief in enumerate(board.scenes):
-        index = start + i
-        out.append(
-            SceneRecord(
-                index=index,
-                id=f"s{index + 1:02d}_{slug(brief.title)}",
-                title=brief.title[:120],
-                chapter_id=board.chapter_id,
-                brief=brief,
-            )
-        )
-    return out
+    return [scene_record(gen, board.chapter_id, brief, i) for i, brief in enumerate(board.scenes)]
 
 
 def chapter_outline(chapter: Chapter) -> StoryboardChapter:
@@ -103,6 +104,7 @@ def fallback_scene(rec: SceneRecord) -> dict[str, Any]:
         "duration": duration,
         "layout": "stage_with_caption",
         "transition_in": {"type": "fade", "duration": 0.6},
+        "camera": dict(DEFAULT_CAMERA),
         "narration": {"beats": beats},
         "objects": [
             {
@@ -139,16 +141,33 @@ def fallback_scene(rec: SceneRecord) -> dict[str, Any]:
     }
 
 
-def normalize(dsl: dict[str, Any], rec: SceneRecord) -> dict[str, Any]:
-    """Pin the fields the pipeline owns (id, version); the rest is the model's."""
+DEFAULT_CAMERA = {"center": {"x": 800, "y": 450}, "zoom": 1}
+
+
+def normalize(dsl: dict[str, Any], rec: SceneRecord, independent: bool = False) -> dict[str, Any]:
+    """Pin the fields the pipeline owns (id, version); the rest is the model's.
+
+    An independent scene (parallel mode) must not depend on the scene before it: it starts from a
+    clean stage (a fade) and its own camera, so the browser, which plays scenes in a chain, draws
+    exactly what the engine validated on its own."""
     dsl = dict(dsl)
     dsl["dsl_version"] = "1.0"
     dsl["id"] = rec.id
     if not dsl.get("title"):
         dsl["title"] = rec.title
-    if rec.brief.transition != "continue" and not dsl.get("transition_in"):
+    if independent:
+        transition = dict(dsl.get("transition_in") or {"type": "continue"})
+        if rec.index > 0 and transition.get("type") not in ("fade", "cut", "wipe"):
+            transition = {"type": "fade", "duration": 0.5}
+        # `fresh`: compiled without the previous scene's state everywhere (engine, player, export),
+        # so ids an earlier scene used for something else do not clash.
+        transition.update(fresh=True, keep=None)
+        dsl["transition_in"] = transition
+        if not dsl.get("camera"):
+            dsl["camera"] = dict(DEFAULT_CAMERA)
+    elif rec.brief.transition != "continue" and not dsl.get("transition_in"):
         dsl["transition_in"] = {"type": rec.brief.transition}
-    return dsl
+    return tidy(dsl)
 
 
 def summarize_for_critic(dsl: dict[str, Any], res: CompileResult) -> str:
@@ -180,6 +199,27 @@ def summarize_for_critic(dsl: dict[str, Any], res: CompileResult) -> str:
     )
 
 
+Draft = tuple[LLMResult, dict[str, Any], CompileResult, bool]
+"""A scene call's result, its shaped (and maybe auto-fixed) DSL, the engine's verdict, auto-fixed?"""
+
+
+def _count(res: CompileResult) -> int:
+    return sum(1 for i in res.issues if i.severity == "error")
+
+
+def _keys(res: CompileResult) -> set[tuple[str, str]]:
+    return {(i.code, i.path) for i in res.issues if i.severity == "error"}
+
+
+def _errors(d: Draft) -> int:
+    return _count(d[2])
+
+
+def _consume(task: asyncio.Task[Any]) -> None:
+    if not task.cancelled():
+        task.exception()
+
+
 class Pipeline:
     def __init__(
         self,
@@ -193,6 +233,8 @@ class Pipeline:
         self.settings = settings
         self.keyframes = keyframes
         self._stages: Stages | None = None
+        # Losing scene drafts still running, per generation (see `_drafts`).
+        self._background: dict[str, set[asyncio.Task[Any]]] = {}
 
     async def stages(self) -> Stages:
         if self._stages is None:
@@ -212,12 +254,32 @@ class Pipeline:
         changed: Changed,
         previous_scenes: list[dict[str, Any]],
     ) -> None:
-        stages = await self.stages()
         prev_state = SceneState.model_validate(prev.end_state) if prev and prev.end_state else None
         prev_summary = prev.state_summary if prev else None
         max_attempts = 1 + max(0, self.settings.animator_max_correction_attempts)
         rec.attempts = []
         rec.started_at = rec.started_at or time.time()
+        rivals: set[asyncio.Task[Draft]] = set()  # drafts still running, racing the corrections
+        try:
+            await self._attempts(
+                gen, rec, prev_summary, prev_state, ctx, changed, previous_scenes, max_attempts, rivals
+            )
+        finally:
+            self._park(gen.id, rivals)
+
+    async def _attempts(
+        self,
+        gen: Generation,
+        rec: SceneRecord,
+        prev_summary: str | None,
+        prev_state: SceneState | None,
+        ctx: CallContext,
+        changed: Changed,
+        previous_scenes: list[dict[str, Any]],
+        max_attempts: int,
+        rivals: set[asyncio.Task[Draft]],
+    ) -> None:
+        stages = await self.stages()
         dsl: dict[str, Any] | None = None
         issues: list[dict[str, Any]] = []
         llm_error: str | None = None
@@ -232,19 +294,32 @@ class Pipeline:
             await changed()
             t0 = time.perf_counter()
             attempt = Attempt(n=n, kind=kind, stage=stage)
-            try:
-                result = await stages.scene(
-                    gen,
-                    rec,
-                    prev_summary,
-                    ctx,
-                    attempt=n,
-                    final=final,
-                    previous=dsl,
-                    issues=issues,
-                    llm_error=llm_error,
-                    critic_notes=critic_notes,
+            count = (
+                self.settings.animator_scene_drafts if n == 1 else self.settings.animator_correction_drafts
+            )
+            mine = {
+                asyncio.create_task(
+                    self._draft(
+                        stages.scene(
+                            gen,
+                            rec,
+                            prev_summary,
+                            ctx,
+                            attempt=n,
+                            final=final,
+                            previous=dsl,
+                            issues=issues,
+                            llm_error=llm_error,
+                            critic_notes=critic_notes,
+                        ),
+                        rec,
+                        prev_state,
+                    )
                 )
+                for _ in range(count)
+            }
+            try:
+                result, dsl, res, attempt.autofixed = await self._race(mine, rivals)
             except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
                 llm_error = str(e)
                 attempt.llm_error = llm_error
@@ -252,14 +327,6 @@ class Pipeline:
                 rec.attempts.append(attempt)
                 gen.metrics.corrections += 1 if n > 1 else 0
                 continue
-            attempt.model = result.model
-            llm_error = None
-            critic_notes = None
-            dsl = normalize(result.data, rec)
-            rec.status = "validating"
-            await changed()
-            try:
-                res = await self.engine.compile(dsl, prev_state)
             except EngineError as e:
                 # The pool already restarted the worker and retried: this scene keeps breaking it.
                 # Mark it degraded (spec Section 17); a working engine then compiles the fallback.
@@ -269,6 +336,9 @@ class Pipeline:
                 llm_error = attempt.llm_error
                 issues = []
                 break
+            attempt.model = result.model
+            llm_error = None
+            critic_notes = None
             errors = [i.model_dump() for i in res.issues if i.severity == "error"]
             warnings = [i.model_dump() for i in res.issues if i.severity == "warning"]
             attempt.ok = res.ok
@@ -301,6 +371,88 @@ class Pipeline:
         await self._degrade(rec, prev_state, reason)
         gen.metrics.degraded += 1
         await changed()
+
+    def _shape(self, data: dict[str, Any], rec: SceneRecord) -> dict[str, Any]:
+        return normalize(data, rec, independent=self.settings.animator_scene_mode == "parallel")
+
+    async def _check(
+        self, dsl: dict[str, Any], prev_state: SceneState | None
+    ) -> tuple[dict[str, Any], CompileResult, bool]:
+        """Compile, then apply the sure fixes for its errors (pipeline/tidy.py) and compile again.
+        The fixed scene is kept when it has fewer errors, or as many but none of the old ones: the
+        engine checks layout only once the timing and references are right, so new layout errors
+        are progress. Three passes at most (a fix can uncover the next one)."""
+        res = await self.engine.compile(dsl, prev_state)
+        autofixed = False
+        for _ in range(3):
+            if res.ok:
+                break
+            fixed = autofix(dsl, [i.model_dump() for i in res.issues if i.severity == "error"])
+            if fixed is None:
+                break
+            res_fixed = await self.engine.compile(fixed, prev_state)
+            before, after = _keys(res), _keys(res_fixed)
+            if not res_fixed.ok and (
+                len(after) > len(before) or (len(after) == len(before) and after & before)
+            ):
+                break
+            dsl, res, autofixed = fixed, res_fixed, True
+        return dsl, res, autofixed
+
+    async def _draft(
+        self, call: Awaitable[LLMResult], rec: SceneRecord, prev_state: SceneState | None
+    ) -> Draft:
+        result = await call
+        return (result, *await self._check(self._shape(result.data, rec), prev_state))
+
+    async def _race(self, mine: set[asyncio.Task[Draft]], rivals: set[asyncio.Task[Draft]]) -> Draft:
+        """This attempt's calls (`mine`: several drafts for a first attempt, `animator_scene_drafts`)
+        race the drafts of earlier attempts still running (`rivals`). The first valid scene wins.
+        When one of mine finishes invalid it is returned at once to be corrected, while the others
+        keep racing as rivals of the correction: an unlucky draft rarely costs a round (ADR-033).
+        Calls still running at the end finish in the background and their cost is counted (`settle`)."""
+        pending: set[asyncio.Task[Draft]] = mine | rivals
+        best: Draft | None = None
+        unusable: BaseException | None = None
+        try:
+            while True:
+                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                fatal = None
+                for task in done:
+                    exc = task.exception()
+                    if isinstance(exc, (LLMRefusal, LLMIncomplete, LLMBadOutput)):
+                        unusable = unusable or (exc if task in mine else None)
+                    elif exc is not None:
+                        fatal = fatal or exc
+                    elif task.result()[2].ok:
+                        return task.result()
+                    elif task in mine and (best is None or _errors(task.result()) < _errors(best)):
+                        best = task.result()
+                if fatal is not None:
+                    raise fatal  # auth, budget, outage, engine: the generation handles these
+                if best is not None:
+                    return best
+                if not pending & mine:
+                    assert unusable is not None
+                    raise unusable
+        finally:
+            rivals.clear()
+            rivals.update(pending)
+
+    def _park(self, gen_id: str, tasks: set[asyncio.Task[Draft]]) -> None:
+        for task in tasks:
+            task.add_done_callback(_consume)  # a losing draft's failure matters to nobody
+        self._background.setdefault(gen_id, set()).update(tasks)
+
+    async def settle(self, gen_id: str) -> None:
+        """Wait for a generation's drafts still running in the background (their cost is counted)."""
+        tasks = self._background.pop(gen_id, set())
+        if tasks:
+            await asyncio.wait(tasks)
+
+    def abandon(self, gen_id: str) -> None:
+        for task in self._background.pop(gen_id, set()):
+            task.cancel()
 
     def _critics_on(self) -> bool:
         return self.settings.animator_enable_llm_critic or (

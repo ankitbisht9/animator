@@ -63,10 +63,12 @@ export function compileScene(input: SceneT, opts: CompileOptions = {}): CompileR
   const issues: ValidationIssue[] = [];
   const { scene, issues: norm } = normalizeScene(input);
   issues.push(...norm);
-  issues.push(...validateSemantics(scene, opts.prev));
-  issues.push(...validateContinuity(opts.prev ?? null, scene));
+  // A scene that stands on its own starts from nothing, wherever it sits in the lesson.
+  const prev = scene.transition_in.fresh ? null : (opts.prev ?? null);
+  issues.push(...validateSemantics(scene, prev));
+  issues.push(...validateContinuity(prev, scene));
   if (hasErrors(issues)) return { ok: false, issues };
-  const compiler = new Compiler(scene, opts.prev ?? null, issues);
+  const compiler = new Compiler(scene, prev, issues);
   let compiled: CompiledScene;
   try {
     compiled = compiler.run();
@@ -124,7 +126,11 @@ class Compiler {
       beats: [],
       actions: {},
       transitions: [],
-      transitionIn: { type: scene.transition_in.type, duration: scene.transition_in.duration ?? 0.8 },
+      transitionIn: {
+        type: scene.transition_in.type,
+        duration: scene.transition_in.duration ?? 0.8,
+        ...(scene.transition_in.fresh ? { fresh: true } : {}),
+      },
       interactions: [],
       stage: this.layout.regions.stage ??
         this.layout.regions.hero ??

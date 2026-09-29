@@ -117,9 +117,15 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   one in `ANIMATOR_MODEL_FALLBACKS` (default `gpt-5,gpt-4.1,gpt-4o`) is used automatically. Which models take a
   reasoning effort is in `config/models.json`; prices (for cost reports and the budget) are in
   `config/pricing.json`.
-- Cost: the defaults use `gpt-6-luna` for every stage (about $0.02 per 30 seconds of lesson, about $0.15-0.25
-  for 3 minutes), escalating to `gpt-6-sol` only for a scene's last fix-up attempt (ADR-032). For the best
-  quality, at about 15x the cost, set the `ANIMATOR_MODEL_*` stages to `gpt-6-sol` with effort `high`.
+- Speed: generation keeps up with playback. A 30-second lesson is ready in about 21-33 s (median about 26 s),
+  and a 1-minute lesson in about 30 s. The first scene plays after about 15-25 s (ADR-033). Scenes are drawn in parallel, each on a clean stage
+  (`ANIMATOR_SCENE_MODE=parallel`). Short lessons are planned in one streamed call. Each scene is drafted twice at
+  once and the first valid draft wins (`ANIMATOR_SCENE_DRAFTS`). Corrections send only what changes
+  (`ANIMATOR_PATCH_CORRECTIONS`). OpenAI's priority tier is used (`OPENAI_SERVICE_TIER=priority`).
+- Cost: `gpt-6-luna` at low effort for every stage, about $0.02 per 30 seconds of lesson. For about half that,
+  and roughly 2x the generation time, set `OPENAI_SERVICE_TIER=` (empty) and `ANIMATOR_SCENE_DRAFTS=1`. For the
+  best quality, at many times the cost and time, set the `ANIMATOR_MODEL_*` stages to `gpt-6-sol` with effort
+  `high`.
   `LLM_BUDGET_USD_PER_GENERATION` is a hard stop per lesson, and the "Save cost" option on the form only
   generates a little ahead of what you watch.
 - `ANIMATOR_LLM_PROVIDER`: `openai` (live), `record` (live, and also saves every call under

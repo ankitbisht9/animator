@@ -27,8 +27,10 @@ class Price:
 
 
 class PriceTable:
-    def __init__(self, prices: dict[str, Price]) -> None:
+    def __init__(self, prices: dict[str, Price], tiers: dict[str, float] | None = None) -> None:
         self.prices = prices
+        # Multiplier per processing tier (the tier a response says it was served on).
+        self.tiers = tiers or {}
 
     @classmethod
     def load(cls, path: Path) -> PriceTable:
@@ -39,19 +41,21 @@ class PriceTable:
             {
                 m: Price(float(p["input"]), float(p["cached_input"]), float(p["output"]))
                 for m, p in data["models"].items()
-            }
+            },
+            {t: float(x) for t, x in data.get("tiers", {}).items()},
         )
 
-    def cost(self, model: str, usage: Usage) -> float | None:
+    def cost(self, model: str, usage: Usage, tier: str | None = None) -> float | None:
         """USD for one call; None when the model has no configured price. Reasoning tokens are
-        part of output tokens."""
+        part of output tokens. `tier` is the processing tier the response was served on."""
         p = _lookup(self.prices, model)
         if p is None:
             return None
         uncached = max(0, usage.input_tokens - usage.cached_input_tokens)
-        return (
+        standard = (
             uncached * p.input + usage.cached_input_tokens * p.cached_input + usage.output_tokens * p.output
         ) / 1e6
+        return standard * self.tiers.get(tier, 1.0) if tier else standard
 
 
 @dataclass(frozen=True)

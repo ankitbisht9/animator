@@ -603,6 +603,7 @@ Named size from the theme type scale, or pixels on the 1600x900 canvas
 | `type` | `"continue"` \| `"cut"` \| `"fade"` \| `"wipe"` |  | `"continue"` |  |
 | `duration` | number |  |  |  |
 | `keep` | string[] |  |  | With cut/fade/wipe: objects that stay on stage |
+| `fresh` | boolean |  |  | The scene stands on its own: it is compiled without the previous scene's state, so earlier objects and ids do not apply (scenes generated independently; set by the pipeline) |
 
 ### Vec
 

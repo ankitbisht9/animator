@@ -156,10 +156,25 @@ class Budget:
         self.spent_usd += cost_usd or 0.0
 
 
+class TextSink(Protocol):
+    """Receives a response's output text while it streams in (so work can start before it ends)."""
+
+    def reset(self) -> None:
+        """A new attempt starts: the text fed so far is void."""
+
+    def feed(self, text: str) -> None: ...
+
+
 @dataclass
 class CallContext:
     budget: Budget | None = None
     on_record: Callable[[CallRecord], None] | None = None
+    stream: TextSink | None = None
+
+    def streaming(self, sink: TextSink) -> CallContext:
+        """The same context (budget, records) for one call whose output text goes to `sink` as it
+        streams in."""
+        return CallContext(self.budget, self.on_record, sink)
 
     def emit(self, record: CallRecord) -> None:
         if self.budget is not None:

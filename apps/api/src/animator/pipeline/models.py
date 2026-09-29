@@ -97,6 +97,17 @@ class StoryboardScene(_Strict):
     checkpoint: Checkpoint | None
 
 
+def _check_scenes(v: list[StoryboardScene]) -> list[StoryboardScene]:
+    if not v:
+        raise ValueError("at least one scene is needed")
+    for s in v:
+        if not s.beats:
+            raise ValueError(f"scene '{s.title}' has no narration beats")
+        if s.checkpoint is not None and not 0 <= s.checkpoint.answer < len(s.checkpoint.choices):
+            raise ValueError(f"scene '{s.title}': checkpoint answer is not one of its choices")
+    return v
+
+
 class StoryboardChapter(_Strict):
     chapter_id: str
     scenes: list[StoryboardScene]
@@ -104,14 +115,58 @@ class StoryboardChapter(_Strict):
     @field_validator("scenes")
     @classmethod
     def _has_scenes(cls, v: list[StoryboardScene]) -> list[StoryboardScene]:
-        if not v:
-            raise ValueError("a chapter needs at least one scene")
-        for s in v:
-            if not s.beats:
-                raise ValueError(f"scene '{s.title}' has no narration beats")
-            if s.checkpoint is not None and not 0 <= s.checkpoint.answer < len(s.checkpoint.choices):
-                raise ValueError(f"scene '{s.title}': checkpoint answer is not one of its choices")
-        return v
+        return _check_scenes(v)
+
+
+class OutlinePlan(_Strict):
+    """The few plan fields a short lesson needs (written first, so the scenes can start sooner)."""
+
+    title: str
+    subtitle: str
+    subject: str = Field(
+        description="physics, chemistry, biology, mathematics, computer_science, economics, ..."
+    )
+    hook: str = Field(description="The opening question or surprise that makes the learner curious")
+    learning_objectives: list[str]
+    visual_approach: str = Field(description="The central picture or metaphor that carries the lesson")
+
+    def to_plan(self, audience: str, duration_s: float, summary: list[str]) -> EducationalPlan:
+        """The full plan of a one-chapter lesson."""
+        chapter = Chapter(
+            id="c1",
+            title=self.title,
+            goal=self.learning_objectives[0] if self.learning_objectives else self.hook,
+            key_ideas=self.learning_objectives,
+            target_duration_s=duration_s,
+            visual_approach=self.visual_approach,
+        )
+        return EducationalPlan(
+            title=self.title,
+            subtitle=self.subtitle,
+            subject=self.subject,
+            audience=audience,
+            target_duration_s=duration_s,
+            hook=self.hook,
+            learning_objectives=self.learning_objectives,
+            prerequisites=[],
+            key_terms=[],
+            misconceptions=[],
+            chapters=[chapter],
+            summary=summary,
+        )
+
+
+class LessonOutline(_Strict):
+    """Plan and storyboard in one answer, for short lessons (one round-trip instead of two)."""
+
+    plan: OutlinePlan
+    scenes: list[StoryboardScene]
+    summary: list[str]
+
+    @field_validator("scenes")
+    @classmethod
+    def _has_scenes(cls, v: list[StoryboardScene]) -> list[StoryboardScene]:
+        return _check_scenes(v)
 
 
 # ---------------------------------------------------------------------- generation records
@@ -140,6 +195,8 @@ class Attempt(BaseModel):
     warnings: int = 0
     llm_error: str | None = None
     critic: dict[str, Any] | None = None
+    # The engine's errors had sure fixes, applied without another model call (pipeline/tidy.py).
+    autofixed: bool = False
     seconds: float = 0.0
 
 

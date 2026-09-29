@@ -15,6 +15,10 @@ export const IssueSchema = z
     severity: z.enum(["error", "warning", "info"]),
     source: z.enum(["schema", "semantic", "layout", "critic", "visual", "normalization"]),
     time: z.number().optional(),
+    fix: z
+      .strictObject({ dx: z.number(), dy: z.number(), scale: z.number().optional() })
+      .optional()
+      .describe("A sure fix: move the object by (dx, dy) after scaling it by `scale`"),
   })
   .meta({ id: "ValidationIssue", title: "ValidationIssue" });
 

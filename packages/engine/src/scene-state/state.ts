@@ -14,7 +14,9 @@ import type { Lifecycle, ObjectState, RegistryEntry, SceneState } from "./types"
 
 const r = (v: number) => roundTo(v, 4);
 
-export function sceneEndState(cs: CompiledScene, prev: SceneState | null, index = 0, at?: number): SceneState {
+export function sceneEndState(cs: CompiledScene, prevIn: SceneState | null, index = 0, at?: number): SceneState {
+  // A scene compiled on its own starts a new identity registry too.
+  const prev = cs.transitionIn.fresh ? null : prevIn;
   const T = Math.max(0, Math.min(cs.duration, at ?? cs.duration));
   const ctx = evaluateObjects(cs, T);
   const objects: Record<string, ObjectState> = {};

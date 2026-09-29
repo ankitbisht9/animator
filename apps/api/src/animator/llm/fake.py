@@ -43,8 +43,18 @@ class FakeLLM:
             status = getattr(out, "kind", "error")
             ctx.emit(_record(request, self.model, status, self.usage, self.cost, str(out)))
             raise out
+        text = json.dumps(out)
+        feed(ctx, text)
         ctx.emit(_record(request, self.model, "ok", self.usage, self.cost, None))
-        return LLMResult(json.loads(json.dumps(out)), self.model, self.usage, self.cost, 0.0, 0, [self.model])
+        return LLMResult(json.loads(text), self.model, self.usage, self.cost, 0.0, 0, [self.model])
+
+
+def feed(ctx: CallContext, text: str, chunk: int = 40) -> None:
+    """Stream the output to the context's sink in small pieces, as a live response would."""
+    if ctx.stream is not None:
+        ctx.stream.reset()
+        for i in range(0, len(text), chunk):
+            ctx.stream.feed(text[i : i + chunk])
 
 
 def _record(
@@ -121,6 +131,7 @@ class ReplayLLM:
             raise err
         usage = Usage(**rec["usage"])
         started = time.perf_counter()
+        feed(ctx, json.dumps(rec["data"], ensure_ascii=False))
         ctx.emit(_record(request, rec["model"], "ok", usage, float(rec.get("cost_usd") or 0.0), None))
         return LLMResult(
             rec["data"],

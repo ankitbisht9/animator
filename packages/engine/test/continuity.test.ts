@@ -85,6 +85,23 @@ describe("scene continuity", () => {
     expect(b?.result.issues.map((i) => i.code)).toContain("IDENTITY_TYPE_CHANGE");
   });
 
+  it("a fresh scene stands on its own: earlier ids and objects do not apply", () => {
+    const [, b, c] = chain([
+      { id: "s1", objects: [{ id: "blk", type: "block", place: { slot: "stage.left" } }] },
+      {
+        id: "s2",
+        transition_in: { type: "fade", fresh: true },
+        objects: [{ id: "blk", type: "ball", place: { slot: "stage.left" } }],
+      },
+      { id: "s3", transition_in: { type: "fade", fresh: true }, timeline: [{ action: "highlight", target: "blk" }] },
+    ]);
+    expect(b?.result.ok).toBe(true);
+    expect(b?.result.compiled?.transitionIn.fresh).toBe(true);
+    expect(b?.state?.registry.blk).toMatchObject({ type: "ball", createdIn: "s2" }); // a new registry
+    // Nothing carries into a fresh scene either: s3 cannot refer to s2's ball.
+    expect(c?.result.issues.map((i) => i.code)).toContain("UNKNOWN_OBJECT");
+  });
+
   it("warns about identity drift: same id, new look, no transform", () => {
     const [, b] = chain([
       {

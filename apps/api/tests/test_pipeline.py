@@ -39,6 +39,10 @@ def settings(**kw: Any) -> Settings:
         "animator_model_correction_final": "m-final",
         "animator_model_critic": "m-critic",
         "animator_max_correction_attempts": 3,
+        # The Archimedes fixtures continue from each other; parallel mode has its own tests below.
+        "animator_scene_mode": "sequential",
+        "animator_scene_drafts": 1,  # call counts below assume one draft; hedging has its own tests
+        "animator_correction_drafts": 1,
     }
     base.update(kw)
     return Settings(_env_file=None, **base)
@@ -68,6 +72,17 @@ def plan(chapters: int = 2) -> dict[str, Any]:
             for i in range(chapters)
         ],
         "summary": ["It floats when the push up matches its weight"],
+    }
+
+
+def outline_plan() -> dict[str, Any]:
+    return {
+        "title": "Why things float",
+        "subtitle": "Archimedes' principle",
+        "subject": "physics",
+        "hook": "Why does a steel ship float?",
+        "learning_objectives": ["Explain buoyancy"],
+        "visual_approach": "a tank of water",
     }
 
 
@@ -101,6 +116,12 @@ class Script:
         self.calls.append(req)
         if req.stage == "educational_planner":
             return plan(self.chapters)
+        if req.label == "outline":
+            return {
+                "plan": outline_plan(),
+                "scenes": [brief("Scene 1", "fade"), brief("Scene 2", "fade")],
+                "summary": ["It floats when the push up matches its weight"],
+            }
         if req.stage == "storyboard":
             chapter = "c1" if "chapter now: c1" in req.messages[0].parts[0].text else "c2"  # type: ignore[union-attr]
             k = 0 if chapter == "c1" else 2
@@ -483,3 +504,188 @@ async def test_a_30_second_lesson_needs_one_storyboard_call(pool: EngineWorkerPo
     gen, _ = await run(pool, script, duration_min=0.5)
     assert gen.status == "complete" and gen.chapters_done == ["c1"]
     assert sum(1 for r in script.calls if r.stage == "storyboard") == 1
+
+
+# ---------------------------------------------------------------------- parallel mode (fast)
+
+
+def parallel(**kw: Any) -> Settings:
+    return settings(animator_scene_mode="parallel", **kw)
+
+
+def standalone(i: int, attempt: int, req: LLMRequest) -> Any:
+    """Parallel scenes start on an empty stage: the opening Archimedes scene stands on its own."""
+    return copy.deepcopy(SCENES[0])
+
+
+def text_of(req: LLMRequest) -> str:
+    return "\n".join(p.text for m in req.messages for p in m.parts if hasattr(p, "text"))
+
+
+async def test_parallel_mode_plans_a_short_lesson_in_one_call_and_draws_its_scenes_at_once(
+    pool: EngineWorkerPool,
+) -> None:
+    both = asyncio.Event()
+    started: list[int] = []
+
+    async def scene(i: int, attempt: int, req: LLMRequest) -> Any:
+        started.append(i)
+        if len(started) == 2:
+            both.set()
+        await asyncio.wait_for(both.wait(), timeout=10)  # hangs (and fails) if scenes ran one by one
+        return standalone(i, attempt, req)
+
+    script = Script(scene)
+    gen, _ = await run(pool, script, parallel(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    assert [r.label for r in script.calls][:1] == ["outline"]  # no separate plan or storyboard call
+    assert not any(r.stage == "educational_planner" for r in script.calls)
+    assert sorted(started) == [0, 1] and [s.status for s in gen.scenes] == ["ready", "ready"]
+    assert (
+        gen.plan is not None and len(gen.plan.chapters) == 1 and gen.plan.chapters[0].target_duration_s == 30
+    )
+    assert gen.metrics.first_play_s is not None
+    for r in script.calls[1:]:
+        assert "The stage starts empty" in text_of(r)
+    second = gen.scenes[1].dsl
+    assert second is not None and second["transition_in"]["type"] in ("fade", "cut", "wipe")
+    assert second["camera"]["zoom"] == 1
+
+
+async def test_parallel_mode_storyboards_every_chapter_of_a_long_lesson_at_once(
+    pool: EngineWorkerPool,
+) -> None:
+    both = asyncio.Event()
+    boards: list[str] = []
+
+    class Boards(Script):
+        async def board(self, req: LLMRequest) -> Any:
+            boards.append(req.label)
+            if len(boards) == 2:
+                both.set()
+            await asyncio.wait_for(both.wait(), timeout=10)
+            return Script.__call__(self, req)
+
+        def __call__(self, req: LLMRequest) -> Any:
+            if req.stage == "storyboard" and req.label != "outline" and req.label not in boards:
+                return self.board(req)
+            return super().__call__(req)
+
+    script = Boards(standalone)
+    gen, _ = await run(pool, script, parallel(), duration_min=15)
+    assert gen.status == "complete", gen.error
+    assert sorted(boards) == ["storyboard c1", "storyboard c2"]
+    assert [(s.index, s.chapter_id) for s in gen.scenes] == [(0, "c1"), (1, "c1"), (2, "c2"), (3, "c2")]
+    assert [s.id[:3] for s in gen.scenes] == ["s01", "s02", "s03", "s04"]
+    assert all(s.status == "ready" for s in gen.scenes)
+
+
+async def test_parallel_mode_falls_back_to_plan_and_storyboard_when_the_outline_fails(
+    pool: EngineWorkerPool,
+) -> None:
+    class NoOutline(Script):
+        def __call__(self, req: LLMRequest) -> Any:
+            if req.label == "outline":
+                self.calls.append(req)
+                return LLMRefusal("model refused: no")
+            return super().__call__(req)
+
+    script = NoOutline(standalone)
+    gen, _ = await run(pool, script, parallel(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    stages = [r.stage for r in script.calls if not r.label.startswith("scene")]
+    assert stages == ["storyboard"] * 3 + ["educational_planner", "storyboard"]
+
+
+async def test_parallel_mode_a_fatal_error_stops_the_other_scenes(pool: EngineWorkerPool) -> None:
+    never = asyncio.Event()
+
+    async def scene(i: int, attempt: int, req: LLMRequest) -> Any:
+        if i == 1:
+            return LLMAuthError("OpenAI rejected the API key")
+        await never.wait()
+        return standalone(i, attempt, req)
+
+    gen, runner = await run(pool, Script(scene), parallel(), duration_min=0.5)
+    assert gen.status == "failed" and "API key" in (gen.error or "")
+    assert [s.status for s in gen.scenes] == ["planned", "planned"]
+    assert not runner.running(gen.id)
+
+
+async def test_parallel_mode_an_outage_pauses_and_resume_finishes_the_rest(pool: EngineWorkerPool) -> None:
+    outage = {"on": True}
+    first_ready = asyncio.Event()
+
+    async def scene(i: int, attempt: int, req: LLMRequest) -> Any:
+        if i == 1 and outage["on"]:
+            await asyncio.wait_for(first_ready.wait(), timeout=10)
+            return LLMUnavailable("OpenAI call failed after 4 retries: 503")
+        return standalone(i, attempt, req)
+
+    script = Script(scene)
+    s = parallel()
+    store = MemoryStore()
+    runner = GenerationRunner(store, Pipeline(EngineClient(pool), FakeLLM(script), s), s)
+    gen = await runner.start(GenerationRequest(topic="Archimedes' principle", duration_min=0.5))
+    for _ in range(400):
+        g = await runner.get(gen.id)
+        if g and g.scenes and g.scenes[0].status == "ready":
+            first_ready.set()
+            break
+        await asyncio.sleep(0.02)
+    await asyncio.wait_for(runner._tasks[gen.id], timeout=60)
+    paused = await runner.get(gen.id)
+    assert paused is not None and paused.status == "paused"
+    assert [x.status for x in paused.scenes] == ["ready", "planned"]
+    outage["on"] = False
+    await runner.resume(gen.id)
+    await asyncio.wait_for(runner._tasks[gen.id], timeout=60)
+    done = await runner.get(gen.id)
+    assert done is not None and done.status == "complete"
+    assert len(stages_for(script, 0)) == 1  # scene 1 was not regenerated
+    assert sum(1 for r in script.calls if r.label == "outline") == 1  # nor was the outline
+
+
+def test_parallel_scenes_start_on_a_clean_stage() -> None:
+    from animator.pipeline.generator import normalize
+
+    gen = Generation(request=GenerationRequest(topic="Archimedes"))
+    board = StoryboardChapter(
+        chapter_id="c1", scenes=[StoryboardScene(**brief("A")), StoryboardScene(**brief("B"))]
+    )
+    first, second = scene_records(gen, board)
+    dsl = {"objects": [], "transition_in": {"type": "continue"}}
+    opening = normalize(dsl, first, independent=True)
+    assert "camera" in opening and opening["transition_in"]["fresh"] is True
+    out = normalize(dsl, second, independent=True)
+    assert out["transition_in"] == {"type": "fade", "duration": 0.5, "fresh": True, "keep": None}
+    assert out["camera"]["zoom"] == 1
+    kept = normalize({"transition_in": {"type": "wipe"}, "camera": {"zoom": 2}}, second, independent=True)
+    assert kept["transition_in"] == {"type": "wipe", "fresh": True, "keep": None} and kept["camera"] == {
+        "zoom": 2
+    }
+
+
+async def test_parallel_scenes_may_reuse_an_id_for_a_different_object(pool: EngineWorkerPool) -> None:
+    """Scenes drawn on their own do not share identities, in the pipeline or in a lesson chain."""
+    from animator.pipeline.generator import normalize
+
+    gen = Generation(request=GenerationRequest(topic="Archimedes"))
+    board = StoryboardChapter(
+        chapter_id="c1", scenes=[StoryboardScene(**brief("A")), StoryboardScene(**brief("B"))]
+    )
+    first, second = scene_records(gen, board)
+    a = normalize(copy.deepcopy(SCENES[0]), first, independent=True)
+    b = copy.deepcopy(SCENES[0])
+    reused = next(o for o in b["objects"] if o.get("type") not in ("text", "ball"))
+    old_id = reused["id"]
+    b["objects"] = [o for o in b["objects"] if o["id"] != old_id] + [
+        {"id": old_id, "type": "ball", "params": {}, "place": {"x": 800, "y": 450}}
+    ]
+    b["timeline"] = [x for x in b.get("timeline") or [] if old_id not in json.dumps(x)]
+    b = normalize(b, second, independent=True)
+    engine = EngineClient(pool)
+    first_res = await engine.compile(a, None)
+    assert first_res.ok and first_res.endState is not None
+    chained = await engine.compile(b, first_res.endState)  # as the browser plays them
+    assert not any(i.code == "IDENTITY_TYPE_CHANGE" for i in chained.issues)

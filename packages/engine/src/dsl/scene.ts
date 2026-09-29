@@ -87,6 +87,15 @@ export const TransitionIn = z
     type: z.enum(["continue", "cut", "fade", "wipe"]).default("continue"),
     duration: z.number().min(0).max(5).optional(),
     keep: z.array(Id).max(30).optional().describe("With cut/fade/wipe: objects that stay on stage"),
+    fresh: z
+      .boolean()
+      .optional()
+      .meta({
+        description:
+          "The scene stands on its own: it is compiled without the previous scene's state, so earlier " +
+          "objects and ids do not apply (scenes generated independently; set by the pipeline)",
+        "x-llm-omit": true,
+      }),
   })
   .meta({ id: "TransitionIn" });
 

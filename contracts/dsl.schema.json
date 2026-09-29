@@ -313,6 +313,11 @@
             "type": "string",
             "pattern": "^[a-z][a-z0-9_]{0,47}$"
           }
+        },
+        "fresh": {
+          "description": "The scene stands on its own: it is compiled without the previous scene's state, so earlier objects and ids do not apply (scenes generated independently; set by the pipeline)",
+          "x-llm-omit": true,
+          "type": "boolean"
         }
       },
       "additionalProperties": false

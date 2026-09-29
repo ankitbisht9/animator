@@ -98,6 +98,19 @@ class LiftParams(BaseModel):
     """
 
 
+class Fix(BaseModel):
+    """
+    A sure fix: move the object by (dx, dy) after scaling it by `scale`
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    dx: float
+    dy: float
+    scale: float | None = None
+
+
 class ValidationIssue(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -109,6 +122,10 @@ class ValidationIssue(BaseModel):
     severity: Literal["error", "warning", "info"]
     source: Literal["schema", "semantic", "layout", "critic", "visual", "normalization"]
     time: float | None = None
+    fix: Fix | None = None
+    """
+    A sure fix: move the object by (dx, dy) after scaling it by `scale`
+    """
 
 
 class Camera(BaseModel):

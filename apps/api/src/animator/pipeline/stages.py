@@ -5,6 +5,9 @@ LLMClient and validates the result. Scene DSL is only shaped here; the engine wo
 
 from __future__ import annotations
 
+import dataclasses
+import logging
+from collections.abc import Callable
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -21,11 +24,22 @@ from animator.llm import (
     LLMResult,
     Message,
 )
-from animator.pipeline.models import Chapter, EducationalPlan, Generation, SceneRecord, StoryboardChapter
+from animator.pipeline.models import (
+    Chapter,
+    EducationalPlan,
+    Generation,
+    LessonOutline,
+    OutlinePlan,
+    SceneRecord,
+    StoryboardChapter,
+    StoryboardScene,
+)
 from animator.pipeline.prompts import PromptPack, compact
-from animator.pipeline.schemas import strict_schema
+from animator.pipeline.schemas import apply_patch, patch_schema, strict_schema
+from animator.pipeline.streaming import JsonScanner
 
 RETRYABLE = (LLMBadOutput, LLMRefusal, LLMIncomplete)
+log = logging.getLogger("animator.stages")
 
 
 class CriticIssue(BaseModel):
@@ -43,6 +57,7 @@ class CriticReport(BaseModel):
 
 PLAN_SCHEMA = strict_schema(EducationalPlan)
 STORYBOARD_SCHEMA = strict_schema(StoryboardChapter)
+OUTLINE_SCHEMA = strict_schema(LessonOutline)
 CRITIC_SCHEMA = strict_schema(CriticReport)
 
 
@@ -74,6 +89,7 @@ class Stages:
         self.settings = settings
         self.pack = pack
         self.dsl_schema = dsl_schema
+        self.patch_schema = patch_schema(dsl_schema)
 
     def _request(
         self,
@@ -174,16 +190,28 @@ class Stages:
             }
             for s in gen.scenes
         ]
+        position = next(i for i, c in enumerate(plan.chapters) if c.id == chapter_id)
+        if self.settings.animator_scene_mode == "parallel":
+            # All chapters are storyboarded at the same time: no earlier scenes to refer to.
+            context = [
+                f"This is chapter {position + 1} of {len(plan.chapters)}; the other chapters are "
+                "storyboarded at the same time"
+                + (", so open with a quick reminder of where the lesson is." if position else ".")
+            ]
+        else:
+            context = [
+                f"Its scenes will be numbered from {len(gen.scenes) + 1}.",
+                "Scenes already planned in earlier chapters:\n"
+                + (compact(earlier) if earlier else "none: this chapter opens the lesson"),
+                f"Objects on stage after those scenes: {', '.join(stage_objects(gen)) or 'none'}",
+            ]
         msg = Message.user(
             "\n\n".join(
                 [
                     f"Lesson plan:\n{compact(plan.model_dump())}",
                     f"Storyboard this chapter now: {chapter.id} ({chapter.title}), "
                     f"about {round(chapter.target_duration_s)} seconds.",
-                    f"Its scenes will be numbered from {len(gen.scenes) + 1}.",
-                    "Scenes already planned in earlier chapters:\n"
-                    + (compact(earlier) if earlier else "none: this chapter opens the lesson"),
-                    f"Objects on stage after those scenes: {', '.join(stage_objects(gen)) or 'none'}",
+                    *context,
                     f"Audience: {gen.request.audience}. Language: {gen.request.language}.",
                 ]
             )
@@ -191,7 +219,7 @@ class Stages:
         req = self._request(
             "storyboard",
             self.pack.storyboard.version,
-            self.pack.storyboard_instructions(),
+            self.pack.storyboard_instructions(self.settings.animator_scene_mode),
             msg,
             "StoryboardChapter",
             STORYBOARD_SCHEMA,
@@ -203,24 +231,96 @@ class Stages:
         board.chapter_id = chapter.id
         return board
 
+    # ------------------------------------------------------------------ stages 1 + 2 in one call
+
+    async def outline(
+        self,
+        gen: Generation,
+        ctx: CallContext,
+        on_plan: Callable[[EducationalPlan], None] | None = None,
+        on_scene: Callable[[StoryboardScene], None] | None = None,
+    ) -> tuple[EducationalPlan, StoryboardChapter]:
+        """Plan and storyboard a short lesson in one call (one round-trip instead of two).
+
+        With `on_scene`, the reply is streamed: the plan and each scene brief are handed over as
+        soon as they are complete, so scenes start while later briefs are still being written. Briefs
+        handed over stay (a retry only adds the ones still missing)."""
+        r = gen.request
+        duration = round(r.duration_min * 60)
+
+        def shape(plan: OutlinePlan, summary: list[str] | None = None) -> EducationalPlan:
+            return plan.to_plan(r.audience, float(duration), summary or [])
+
+        sink = None
+        if on_scene is not None:
+            sink = OutlineSink(shape, on_plan or (lambda plan: None), on_scene)
+            ctx = ctx.streaming(sink)
+        msg = Message.user(
+            "\n".join(
+                [
+                    f"Topic: {r.topic}",
+                    f"Audience: {r.audience}",
+                    f"Duration: {duration} seconds",
+                    f"Language: {r.language}",
+                    f"Style notes: {r.style}" if r.style else "Style notes: none",
+                ]
+            )
+        )
+        req = self._request(
+            "storyboard",
+            self.pack.outline.version,
+            self.pack.outline_instructions(self.settings.animator_scene_mode),
+            msg,
+            "LessonOutline",
+            OUTLINE_SCHEMA,
+            16_000,
+            gen,
+            "outline",
+        )
+        try:
+            out = await self._retrying(req, LessonOutline, ctx)
+        except RETRYABLE as e:
+            if sink is None or sink.plan is None or not sink.scenes:
+                raise
+            # Scenes are already being drawn: the lesson goes on with the briefs that arrived.
+            log.warning(
+                "outline for %s failed after %d scenes (%s): keeping them", gen.id, len(sink.scenes), e
+            )
+            kept = StoryboardChapter(chapter_id=sink.plan.chapters[0].id, scenes=list(sink.scenes))
+            return sink.plan, kept
+        if sink is not None and sink.plan is not None and sink.scenes:
+            plan = sink.plan.model_copy(update={"summary": out.summary})
+            scenes = list(sink.scenes) + out.scenes[len(sink.scenes) :]
+        else:
+            plan, scenes = shape(out.plan, out.summary), out.scenes
+        return plan, StoryboardChapter(chapter_id=plan.chapters[0].id, scenes=scenes)
+
     # ------------------------------------------------------------------ stage 3 + corrections
+
+    def _stage_start(self, prev_summary: str | None) -> str:
+        if self.settings.animator_scene_mode == "parallel":
+            return (
+                "The stage starts empty: this scene is drawn on its own, at the same time as the other "
+                "scenes. Create everything it shows (do not refer to objects of other scenes)."
+            )
+        return "Previous scene:\n" + (prev_summary or "none: this is the first scene, the stage is empty.")
 
     def scene_context(self, gen: Generation, rec: SceneRecord, prev_summary: str | None) -> str:
         assert gen.plan is not None
         n = rec.index + 1
-        total = max(len(gen.scenes), n)
+        # While the outline is still streaming, later scenes are not known yet.
+        total = f" of about {max(len(gen.scenes), n)}" if rec.chapter_id in gen.chapters_done else ""
         used = sorted(
             {oid.split(":")[0].strip() for s in gen.scenes[: rec.index] for oid in s.brief.objects_new}
         )
         return "\n\n".join(
             [
-                f'Scene {n} of about {total}: id "{rec.id}", title "{rec.title}". '
-                f'Title object id: "title_s{n:02d}".',
+                f'Scene {n}{total}: id "{rec.id}", title "{rec.title}". Title object id: "title_s{n:02d}".',
                 f"Lesson: {gen.plan.title}. Audience: {gen.request.audience}. "
                 f"Language: {gen.request.language}.",
                 f"Storyboard brief:\n{compact(rec.brief.model_dump())}",
                 f"Target duration: about {round(rec.brief.duration_s)} seconds.",
-                "Previous scene:\n" + (prev_summary or "none: this is the first scene, the stage is empty."),
+                self._stage_start(prev_summary),
                 "Object ids used earlier in the lesson (keep their meaning): " + (", ".join(used) or "none"),
             ]
         )
@@ -240,8 +340,24 @@ class Stages:
         critic_notes: str | None = None,
     ) -> LLMResult:
         """Attempt 1 drafts the scene; later attempts correct it (issues from the engine or the
-        critic) or repair it (the previous reply was unusable)."""
+        critic) or repair it (the previous reply was unusable). A correction replies with only
+        what changes (a patch, merged here), unless `animator_patch_corrections` is off."""
         parts = [self.scene_context(gen, rec, prev_summary)]
+        patch = (
+            attempt > 1
+            and previous is not None
+            and not llm_error
+            and self.settings.animator_patch_corrections
+        )
+        reply = (
+            "reply with only what changes: the objects and actions to add or replace (each complete, "
+            "matched by id), the ids to delete, and duration, narration, camera, solvers or values only "
+            "if they change (null otherwise). Everything else stays as it is, so only refer to objects "
+            "and actions that exist or that you add, and when you delete one, also fix or delete "
+            "whatever refers to it"
+            if patch
+            else "return the complete scene"
+        )
         if attempt == 1:
             stage = "animation_planner"
             parts.append("Write this scene.")
@@ -251,14 +367,11 @@ class Stages:
                 parts.append(f"Your previous version of this scene:\n{compact(previous)}")
             if issues:
                 parts.append(
-                    "The engine rejected it with these issues. Fix every error, keep what works, "
-                    "and return the complete scene:\n" + format_issues(issues)
+                    f"The engine rejected it with these issues. Fix every error, keep what works, and "
+                    f"{reply}:\n" + format_issues(issues)
                 )
             if critic_notes:
-                parts.append(
-                    "A reviewer asked for these changes. Apply them and return the complete scene:\n"
-                    + critic_notes
-                )
+                parts.append(f"A reviewer asked for these changes. Apply them and {reply}:\n" + critic_notes)
             if llm_error:
                 parts.append(
                     f"Your previous reply could not be used ({llm_error}). "
@@ -270,13 +383,17 @@ class Stages:
             self.pack.animation.version,
             self.pack.animation_instructions(),
             Message.user(*parts),
-            "Scene",
-            self.dsl_schema,
+            "ScenePatch" if patch else "Scene",
+            self.patch_schema if patch else self.dsl_schema,
             self.settings.animator_scene_max_output_tokens,
             gen,
             f"scene {rec.index + 1} attempt {attempt}",
         )
-        return await self.llm.generate(req, ctx)
+        result = await self.llm.generate(req, ctx)
+        if patch:
+            assert previous is not None
+            return dataclasses.replace(result, data=apply_patch(previous, result.data))
+        return result
 
     # ------------------------------------------------------------------ critics
 
@@ -303,6 +420,50 @@ class Stages:
             f"critic scene {rec.index + 1}",
         )
         return await self._retrying(req, CriticReport, ctx, tries=2)
+
+
+class OutlineSink:
+    """Receives a streaming outline reply: the plan, then each scene brief, as soon as each is
+    complete and valid. A brief that is not valid on its own waits for the complete reply (it and
+    the briefs after it are then taken from there)."""
+
+    def __init__(
+        self,
+        shape: Callable[[OutlinePlan], EducationalPlan],
+        on_plan: Callable[[EducationalPlan], None],
+        on_scene: Callable[[StoryboardScene], None],
+    ) -> None:
+        self.shape = shape
+        self.on_plan = on_plan
+        self.on_scene = on_scene
+        self.plan: EducationalPlan | None = None
+        self.scenes: list[StoryboardScene] = []
+        self.scanner = JsonScanner(self._value, self._item)
+
+    def reset(self) -> None:
+        self.scanner.reset()
+
+    def feed(self, text: str) -> None:
+        self.scanner.feed(text)
+
+    def _value(self, key: str, value: Any) -> None:
+        if key != "plan" or self.plan is not None:
+            return
+        try:
+            self.plan = self.shape(OutlinePlan.model_validate(value))
+        except ValidationError:
+            return
+        self.on_plan(self.plan)
+
+    def _item(self, key: str, index: int, value: Any) -> None:
+        if key != "scenes" or self.plan is None or index != len(self.scenes):
+            return
+        try:
+            brief = StoryboardScene.model_validate(value)
+        except ValidationError:
+            return
+        self.scenes.append(brief)
+        self.on_scene(brief)
 
 
 def one_chapter_if_short(plan: EducationalPlan, duration_s: float) -> EducationalPlan:

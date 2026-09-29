@@ -79,8 +79,11 @@ class PromptPack:
         self.exemplars = exemplars
         self.planner = load_prompt("planner")
         self.storyboard = load_prompt("storyboard")
+        self.outline = load_prompt("outline")
         self.animation = load_prompt("animation")
         self.critic = load_prompt("critic")
+        # How scenes relate (parallel: each on a clean stage; sequential: each continues the last).
+        self.continuity = {mode: load_prompt(f"continuity-{mode}") for mode in ("parallel", "sequential")}
         self._animation_text: str | None = None
 
     @classmethod
@@ -128,8 +131,15 @@ class PromptPack:
     def planner_instructions(self) -> str:
         return self.planner.text.replace("{capabilities}", self.capabilities())
 
-    def storyboard_instructions(self) -> str:
-        return self.storyboard.text.replace("{capabilities}", self.capabilities())
+    def storyboard_instructions(self, mode: str = "parallel") -> str:
+        return self.storyboard.text.replace("{capabilities}", self.capabilities()).replace(
+            "{continuity}", self.continuity[mode].text.strip()
+        )
+
+    def outline_instructions(self, mode: str = "parallel") -> str:
+        return self.outline.text.replace("{capabilities}", self.capabilities()).replace(
+            "{continuity}", self.continuity[mode].text.strip()
+        )
 
     def animation_instructions(self) -> str:
         if self._animation_text is None:

@@ -92,6 +92,13 @@ describe("LLM-facing schema", () => {
     });
   });
 
+  it("leaves out the fields the pipeline owns", () => {
+    const defs = schema.$defs as Record<string, Json>;
+    const transition = defs.TransitionIn as Json;
+    expect(Object.keys(transition.properties as Json)).toEqual(["type", "duration", "keep"]);
+    expect(JSON.stringify(schema)).not.toContain("x-llm-omit");
+  });
+
   it("never puts a keyword next to $ref (OpenAI rejects the whole schema)", () => {
     walk(schema, (n) => {
       if (typeof n.$ref === "string") expect(Object.keys(n)).toEqual(["$ref"]);

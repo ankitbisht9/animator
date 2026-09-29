@@ -449,6 +449,26 @@
         },
         "time": {
           "type": "number"
+        },
+        "fix": {
+          "description": "A sure fix: move the object by (dx, dy) after scaling it by `scale`",
+          "type": "object",
+          "properties": {
+            "dx": {
+              "type": "number"
+            },
+            "dy": {
+              "type": "number"
+            },
+            "scale": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "dx",
+            "dy"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [

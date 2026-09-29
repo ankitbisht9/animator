@@ -41,23 +41,28 @@ class Settings(BaseSettings):
     openai_project_id: str | None = None
     openai_base_url: str | None = None
     openai_store: bool = False
-    openai_timeout_s: float = 600.0  # scene calls take 1-2 min at high effort
+    # Processing tier: empty = the project's default; "priority" (Fast mode) is about 1.5x faster for 2x
+    # the price; "flex" is half price but slower. Prices per tier: config/pricing.json.
+    openai_service_tier: str | None = None
+    # A scene takes about 20 s at low effort (1-2 min at high): raise this with the effort.
+    openai_timeout_s: float = 120.0
     openai_max_retries: int = 4
-    llm_max_concurrency: int = 4
+    llm_max_concurrency: int = 16
     llm_budget_usd_per_generation: float = 5.0
     llm_budget_tokens_per_generation: int = 2_000_000
 
     # Per-stage model assignment. Empty means "not configured" and fails loudly when used.
+    # Efforts default to low: generation must keep up with playback (ADR-033).
     animator_model_educational_planner: str = ""
-    animator_effort_educational_planner: ReasoningEffort = "high"
+    animator_effort_educational_planner: ReasoningEffort = "low"
     animator_model_storyboard: str = ""
-    animator_effort_storyboard: ReasoningEffort = "high"
+    animator_effort_storyboard: ReasoningEffort = "low"
     animator_model_animation_planner: str = ""
-    animator_effort_animation_planner: ReasoningEffort = "high"
+    animator_effort_animation_planner: ReasoningEffort = "low"
     animator_model_correction: str = ""
-    animator_effort_correction: ReasoningEffort = "high"
+    animator_effort_correction: ReasoningEffort = "low"
     animator_model_correction_final: str = ""
-    animator_effort_correction_final: ReasoningEffort = "high"
+    animator_effort_correction_final: ReasoningEffort = "low"
     animator_model_critic: str = ""
     animator_effort_critic: ReasoningEffort = "medium"
     animator_model_visual_critic: str = ""
@@ -73,7 +78,9 @@ class Settings(BaseSettings):
     animator_llm_fixtures_dir: Path = Path("fixtures/llm/latest")
 
     # --- Pipeline (used from Phase 8) ---
-    animator_max_correction_attempts: int = 3
+    animator_max_correction_attempts: int = 3  # patch rounds take seconds, so a third is affordable
+    # Corrections reply with only what changes (a few hundred tokens) instead of the whole scene.
+    animator_patch_corrections: bool = True
     animator_enable_llm_critic: bool = False
     animator_enable_visual_critic: bool = False
     animator_chunk_target_duration_s: float = 75.0
@@ -82,6 +89,17 @@ class Settings(BaseSettings):
     animator_min_ready_scenes: int = 2
     animator_duration_tolerance: float = 0.15
     animator_generation_concurrency: int = Field(default=2, ge=1, le=16)
+    # parallel: every scene is drawn on its own (clean stage) and all scenes are generated at once (fast);
+    # sequential: each scene continues from the previous scene's end state (objects carry over; slow).
+    animator_scene_mode: Literal["parallel", "sequential"] = "parallel"
+    animator_scene_concurrency: int = Field(default=8, ge=1, le=32)
+    # Drafts written at once for each scene; the first valid one wins (fewer correction rounds, so
+    # faster and steadier, for about 1.5x the scene cost). 1 = a single draft.
+    animator_scene_drafts: int = Field(default=2, ge=1, le=4)
+    # The same for each correction round (patches are small: about $0.002 each).
+    animator_correction_drafts: int = Field(default=2, ge=1, le=4)
+    # Lessons up to this long are planned and storyboarded in one call (saves a round-trip).
+    animator_outline_max_duration_s: float = 150.0
     animator_scene_max_output_tokens: int = 48_000
     animator_visual_critic_keyframes: int = Field(default=3, ge=1, le=8)
 
@@ -92,7 +110,7 @@ class Settings(BaseSettings):
     # --- Engine worker ---
     engine_worker_node: str = "node"
     engine_worker_script: Path = Path("packages/engine-worker/dist/worker.cjs")
-    engine_worker_pool_size: int = Field(default=2, ge=1, le=32)
+    engine_worker_pool_size: int = Field(default=4, ge=1, le=32)
     engine_worker_call_timeout_s: float = 30.0
     engine_worker_max_restarts: int = 5
 

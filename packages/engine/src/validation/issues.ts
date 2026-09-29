@@ -18,6 +18,15 @@ export interface ValidationIssue {
   source: IssueSource;
   /** Scene time (seconds) the issue was observed at, for layout issues. */
   time?: number;
+  /** A sure fix, when the engine knows one: move the object by (dx, dy) world px, after scaling it
+   * by `scale` (OUT_OF_BOUNDS, TITLE_COVERED). Applied by the pipeline without another model call. */
+  fix?: IssueFix;
+}
+
+export interface IssueFix {
+  dx: number;
+  dy: number;
+  scale?: number;
 }
 
 export const toPointer = (path: readonly PropertyKey[]): string =>
@@ -27,7 +36,7 @@ export function issue(
   code: string,
   path: string,
   message: string,
-  opts: { suggestion?: string; severity?: IssueSeverity; source?: IssueSource; time?: number } = {},
+  opts: { suggestion?: string; severity?: IssueSeverity; source?: IssueSource; time?: number; fix?: IssueFix } = {},
 ): ValidationIssue {
   const out: ValidationIssue = {
     code,
@@ -38,6 +47,7 @@ export function issue(
   };
   if (opts.suggestion) out.suggestion = opts.suggestion;
   if (opts.time !== undefined) out.time = opts.time;
+  if (opts.fix) out.fix = opts.fix;
   return out;
 }
 

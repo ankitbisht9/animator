@@ -242,7 +242,8 @@ export interface CompiledScene {
   beats: ResolvedBeat[];
   actions: Record<string, { start: number; end: number; action: string; target?: string }>;
   transitions: CompiledTransition[];
-  transitionIn: { type: string; duration: number };
+  /** `fresh`: the scene was compiled on its own, without the previous scene's state. */
+  transitionIn: { type: string; duration: number; fresh?: boolean };
   interactions: { id: string; at: number; question: string; choices: string[]; answer: number; explain: string }[];
   /** Stage region, for camera bounds and validators. */
   stage: Rect;

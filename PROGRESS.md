@@ -285,3 +285,30 @@ a job queue and a Redis hub plug in without touching the pipeline (ADR-029).
   - prompt v3: one of at/after/with per action, nothing above the stage line, gauges pinned to pipe sections,
     compact scenes.
 
+## Speed: generation keeps up with playback (ADR-033)
+
+Target: a lesson generates in no more time than it plays. A 30-second lesson used to take 3.7 minutes.
+- **Parallel scenes** (default `ANIMATOR_SCENE_MODE=parallel`): every scene starts on a clean stage, so all
+  scenes are drawn at once. Long lessons storyboard all their chapters at once.
+- **One streamed outline call** for lessons up to 150 s (plan and storyboard, `outline.v2`). Scene 1 starts
+  about 4 s in, while the later briefs are still being written.
+- **Low reasoning effort** everywhere, and the **priority tier** (`OPENAI_SERVICE_TIER=priority`, about 1.6x
+  faster output).
+- **Patch corrections**: a correction returns only what changes, in 5-10 s instead of about 20 s.
+- **Sure fixes without the model** (`pipeline/tidy.py`): ambiguous starts, time references, TeX aliases, late
+  actions, out-of-range numbers, and bare anchor ids. Also objects off the frame, over the title or on another
+  label, moved as the engine's new `fix` hint says.
+- **Hedged drafts**: two drafts per scene, and two patches per correction round. The first valid result wins,
+  and a failed draft's correction races the other draft.
+- **Fresh scenes** (`transition_in.fresh`, set by the pipeline): the player and exporter compile each parallel
+  scene on its own, so an id reused for a different object no longer breaks playback.
+- **Frame check fixes:**
+  - "CO₂"-style subscripts drew as "?"; they now render as real subscripts.
+  - Text clipped by the frame edge is now an error; it used to pass when under 10%.
+- **Results (final build, 14 live 30-second lessons, 7 topics):**
+  - 21-33 s in total, median about 26 s; 13 of 14 were within 30 s.
+  - The first scene is playable after 14-25 s.
+  - Each costs $0.015-0.030.
+  - 1-minute lessons take 28-32 s.
+  - All scenes play in the browser. See ADR-033.
+

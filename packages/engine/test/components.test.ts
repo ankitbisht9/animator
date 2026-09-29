@@ -174,6 +174,36 @@ describe("layout validation", () => {
     );
   });
 
+  it("says how to bring an off-frame object back, and following that clears the error", () => {
+    const out = compileScene(lifted({ objects: [{ id: "b", type: "block", place: { x: 1580, y: 450 } }] }));
+    const fix = out.issues.find((i) => i.code === "OUT_OF_BOUNDS")?.fix;
+    expect(fix).toBeDefined();
+    if (!fix) return;
+    expect(fix.dx).toBeLessThan(0);
+    expect(fix.dy).toBe(0);
+    expect(fix.scale).toBeUndefined();
+    const moved = { objects: [{ id: "b", type: "block", place: { x: 1580 + fix.dx, y: 450 } }] };
+    expect(codes(moved)).not.toContain("error:OUT_OF_BOUNDS");
+  });
+
+  it("does not let text run even a little off the frame", () => {
+    const text = (x: number) => ({
+      objects: [{ id: "eq", type: "text", params: { text: "carbon dioxide + water -> sugar" }, place: { x, y: 450 } }],
+    });
+    // A diagram may overhang a little (under 10%); a line of text may not.
+    const overhang = compileScene(lifted(text(1400))).issues.find((i) => i.code === "OUT_OF_BOUNDS");
+    expect(overhang?.message).toMatch(/is [1-9]% outside/); // a few percent: once only a warning
+    expect(codes(text(1000))).not.toContain("error:OUT_OF_BOUNDS");
+  });
+
+  it("asks to shrink an object larger than the frame", () => {
+    const wide = {
+      objects: [{ id: "b", type: "block", params: { width: 800, height: 100 }, scale: 3, place: { x: 800, y: 450 } }],
+    };
+    const fix = compileScene(lifted(wide)).issues.find((i) => i.code === "OUT_OF_BOUNDS")?.fix;
+    expect(fix?.scale).toBeLessThan(1);
+  });
+
   it("flags overlapping labels", () => {
     expect(
       codes({
@@ -183,6 +213,20 @@ describe("layout validation", () => {
         ],
       }),
     ).toContain("error:LABEL_OVERLAP");
+  });
+
+  it("says how to move an overlapping label clear, and following that clears the overlap", () => {
+    const labels = (dx: number, dy: number) => ({
+      objects: [
+        { id: "a", type: "text", params: { text: "Buoyant force" }, place: { x: 800 + dx, y: 400 + dy } },
+        { id: "b", type: "text", params: { text: "Weight of water" }, place: { x: 820, y: 410 } },
+      ],
+    });
+    const fix = compileScene(lifted(labels(0, 0))).issues.find((i) => i.code === "LABEL_OVERLAP")?.fix;
+    expect(fix).toBeDefined();
+    if (!fix) return;
+    expect(Math.abs(fix.dx) + Math.abs(fix.dy)).toBeGreaterThan(0);
+    expect(codes(labels(fix.dx, fix.dy))).not.toContain("error:LABEL_OVERLAP");
   });
 
   it("flags text that is too small at 1080p", () => {
@@ -235,6 +279,13 @@ describe("layout validation", () => {
     });
     expect(codes({ objects: [title, gauge(110)] })).toContain("error:TITLE_COVERED");
     expect(codes({ objects: [title, gauge(330)] })).not.toContain("error:TITLE_COVERED");
+    // The issue says how far down clears the title, and moving by that much does.
+    const fix = compileScene(lifted({ objects: [title, gauge(110)] })).issues.find(
+      (i) => i.code === "TITLE_COVERED",
+    )?.fix;
+    expect(fix?.dx).toBe(0);
+    expect(fix?.dy).toBeGreaterThan(0);
+    expect(codes({ objects: [title, gauge(110 + (fix?.dy ?? 0))] })).not.toContain("error:TITLE_COVERED");
   });
 
   it("flags a connector running through a label, but not one that ends at its edge", () => {

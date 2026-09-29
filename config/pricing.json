@@ -3,7 +3,16 @@
   "unit": "per_1m_tokens",
   "source": "https://developers.openai.com/api/docs/pricing",
   "checked": "2026-09-28",
-  "notes": "Standard tier, verified on the OpenAI pricing page on 2026-09-28. Reasoning tokens are billed as output tokens. Batch/Flex are 50% and Fast mode 2x of these rates; add separate entries if those tiers are used.",
+  "notes": "Standard tier, verified on the OpenAI pricing page on 2026-09-28. Reasoning tokens are billed as output tokens. `tiers` scales these rates by the processing tier a response reports (service_tier): Batch/Flex 50%, Fast mode (formerly Priority) 2x.",
+  "tiers": {
+    "default": 1.0,
+    "standard": 1.0,
+    "auto": 1.0,
+    "flex": 0.5,
+    "batch": 0.5,
+    "priority": 2.0,
+    "fast": 2.0
+  },
   "models": {
     "gpt-6-astra": {
       "input": 10.0,

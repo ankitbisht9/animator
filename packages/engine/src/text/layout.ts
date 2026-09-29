@@ -72,11 +72,26 @@ export interface Run {
   script: Script;
 }
 
+const SUBSCRIPTS = "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎";
+const SUPERSCRIPTS = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾";
+const PLAIN = "0123456789+-=()";
+const plain = (s: string, from: string) => [...s].map((c) => PLAIN[from.indexOf(c)]).join("");
+
+/** Unicode sub/superscript characters ("CO₂", "m²"; the fonts have no glyphs for most of them)
+ * become `_{...}` / `^{...}` runs, drawn like the markup. */
+function scriptMarkup(text: string): string {
+  return text
+    .replace(/[₀-₉₊₋₌₍₎]+/g, (m) => `_{${plain(m, SUBSCRIPTS)}}`)
+    .replace(/[⁰¹²³⁴-⁹⁺⁻⁼⁽⁾]+/g, (m) => `^{${plain(m, SUPERSCRIPTS)}}`);
+}
+
 /**
  * Split markup into runs: `**emphasis**`, `_{subscript}` and `^{superscript}`
- * (e.g. "F_{b}", "V_{sub}", "x^{2}"). Unbalanced markers are kept literally.
+ * (e.g. "F_{b}", "V_{sub}", "x^{2}"; Unicode "CO₂" and "m²" too). Unbalanced markers are kept
+ * literally.
  */
-export function parseRuns(text: string): Run[] {
+export function parseRuns(raw: string): Run[] {
+  const text = scriptMarkup(raw);
   const emphOk = (text.split("**").length - 1) % 2 === 0;
   const runs: Run[] = [];
   let emph = false;

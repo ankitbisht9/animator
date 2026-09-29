@@ -16,7 +16,7 @@ import asyncio
 import contextlib
 import logging
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 from animator.config import STAGES, Settings
@@ -33,10 +33,30 @@ from animator.llm import (
     LLMIncomplete,
     LLMRefusal,
 )
-from animator.pipeline.generator import Pipeline, chapter_outline, scene_records
-from animator.pipeline.models import TERMINAL, Generation, GenerationRequest, StoryboardChapter
+from animator.pipeline.generator import Pipeline, chapter_outline, scene_record, scene_records
+from animator.pipeline.models import (
+    TERMINAL,
+    Chapter,
+    EducationalPlan,
+    Generation,
+    GenerationRequest,
+    SceneRecord,
+    StoryboardChapter,
+    StoryboardScene,
+)
+from animator.pipeline.stages import Stages
 
 log = logging.getLogger("animator.runner")
+
+
+def _first_error(eg: BaseExceptionGroup[BaseException]) -> BaseException:
+    """The failure that ended a task group (not the cancellations it caused)."""
+    for e in eg.exceptions:
+        if isinstance(e, BaseExceptionGroup):
+            return _first_error(e)
+        if not isinstance(e, asyncio.CancelledError):
+            return e
+    return eg.exceptions[0]
 
 
 class Hub:
@@ -85,6 +105,7 @@ class GenerationRunner:
         self._wake: dict[str, asyncio.Event] = {}
         self._sem = asyncio.Semaphore(settings.animator_generation_concurrency)
         self._cancelled: set[str] = set()
+        self._save_locks: dict[str, asyncio.Lock] = {}
         self._closing = False
 
     # ------------------------------------------------------------------ control
@@ -169,13 +190,15 @@ class GenerationRunner:
         self._tasks[gen.id] = asyncio.create_task(self._run(gen), name=f"generation-{gen.id}")
 
     async def _save(self, gen: Generation) -> None:
-        gen.updated_at = time.time()
-        gen.version += 1
-        await self.store.save(gen)
-        calls = self._pending_calls.pop(gen.id, [])
-        if calls:
-            await self.store.append_calls(gen.id, calls)
-        self.hub.publish(gen.id, {"type": "update", "generation": gen.summary()})
+        # Scenes generated in parallel finish at the same time; saves of one generation take turns.
+        async with self._save_locks.setdefault(gen.id, asyncio.Lock()):
+            gen.updated_at = time.time()
+            gen.version += 1
+            await self.store.save(gen)
+            calls = self._pending_calls.pop(gen.id, [])
+            if calls:
+                await self.store.append_calls(gen.id, calls)
+            self.hub.publish(gen.id, {"type": "update", "generation": gen.summary()})
 
     def _on_call(self, gen: Generation, record: CallRecord) -> None:
         m = gen.metrics
@@ -219,6 +242,7 @@ class GenerationRunner:
             self._reset_in_flight(gen)
             await self._save(gen)
         finally:
+            self.pipeline.abandon(gen.id)
             for t in prefetch.values():
                 t.cancel()
             self._cancelled.discard(gen.id)
@@ -241,64 +265,155 @@ class GenerationRunner:
         ctx = self._ctx(gen)
         stages = await self.pipeline.stages()
         self._reset_in_flight(gen)
+        if self.settings.animator_scene_mode == "parallel":
+            await self._generate_parallel(gen, stages, ctx, prefetch)
+        else:
+            if gen.plan is None:
+                gen.status = "planning"
+                await self._save(gen)
+                gen.plan = await stages.plan(gen, ctx)
+            await self._generating(gen)
+            await self._generate_sequential(gen, stages, ctx, prefetch)
+        gen.status = "complete"
+        gen.metrics.generation_s = round(time.time() - gen.created_at, 1)
+        await self._save(gen)
+        # Scene drafts that lost the race are still finishing: count their cost, then save again.
+        await self.pipeline.settle(gen.id)
+        await self._save(gen)
 
-        async def changed() -> None:
-            await self._save(gen)
-
-        if gen.plan is None:
-            gen.status = "planning"
-            await self._save(gen)
-            gen.plan = await stages.plan(gen, ctx)
+    async def _generating(self, gen: Generation) -> None:
         gen.status = "generating"
         gen.error = None
         await self._save(gen)
 
+    async def _board(
+        self, gen: Generation, chapter: Chapter, stages: Stages, ctx: CallContext
+    ) -> StoryboardChapter:
+        try:
+            return await stages.storyboard(gen, chapter.id, ctx)
+        except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
+            # A chapter whose storyboard keeps failing still gets a scene, planned straight from the
+            # lesson plan; later chapters continue (spec Section 17).
+            log.warning("storyboard for %s/%s failed (%s): using the plan outline", gen.id, chapter.id, e)
+            gen.metrics.storyboard_fallbacks += 1
+            return chapter_outline(chapter)
+
+    async def _add_chapter(self, gen: Generation, board: StoryboardChapter) -> None:
+        gen.scenes.extend(scene_records(gen, board))
+        gen.chapters_done.append(board.chapter_id)
+        await self._save(gen)
+
+    async def _scene(self, gen: Generation, rec: SceneRecord, ctx: CallContext, independent: bool) -> None:
+        prev = gen.scenes[rec.index - 1] if rec.index > 0 and not independent else None
+        previous = [] if independent else [s.dsl for s in gen.scenes[: rec.index] if s.dsl is not None]
+        started = time.perf_counter()
+        await self.pipeline.run_scene(gen, rec, prev, ctx, lambda: self._save(gen), previous)
+        took = time.perf_counter() - started
+        if rec.index == 0 and rec.playable and gen.metrics.first_play_s is None:
+            gen.metrics.first_play_s = round(time.time() - gen.created_at, 1)
+        if rec.duration and took > rec.duration:
+            gen.metrics.slow_scenes.append(f"{rec.id}: {took:.0f}s to generate {rec.duration:.0f}s")
+        self.hub.publish(gen.id, scene_event(gen, rec.index))
+        await self._save(gen)
+
+    async def _generate_parallel(
+        self,
+        gen: Generation,
+        stages: Stages,
+        ctx: CallContext,
+        prefetch: dict[str, asyncio.Task[StoryboardChapter]],
+    ) -> None:
+        """Every scene starts on a clean stage, so scenes are generated at once, each as soon as its
+        brief exists: a short lesson's outline streams in and each scene starts the moment its brief
+        is complete; a long lesson storyboards all its chapters at once."""
+        sem = asyncio.Semaphore(self.settings.animator_scene_concurrency)
+        launched: set[int] = set()
+
+        async def one(rec: SceneRecord) -> None:
+            async with sem:
+                await self._scene(gen, rec, ctx, independent=True)
+
+        try:
+            async with asyncio.TaskGroup() as tg:
+
+                def launch(rec: SceneRecord) -> None:
+                    if rec.index not in launched and not rec.done:
+                        launched.add(rec.index)
+                        tg.create_task(one(rec))
+
+                if gen.plan is not None and not gen.chapters_done and gen.scenes:
+                    # Stopped while the outline was still streaming: start the lesson over.
+                    gen.plan, gen.scenes = None, []
+                if gen.plan is None:
+                    gen.status = "planning"
+                    await self._save(gen)
+                    gen.plan = await self._plan_parallel(gen, stages, ctx, launch)
+                await self._generating(gen)
+                for c in gen.plan.chapters:
+                    if c.id not in gen.chapters_done and c.id not in prefetch:
+                        prefetch[c.id] = asyncio.create_task(self._board(gen, c, stages, ctx))
+                for c in gen.plan.chapters:
+                    if c.id not in gen.chapters_done:
+                        await self._add_chapter(gen, await prefetch.pop(c.id))
+                    for rec in [s for s in gen.scenes if s.chapter_id == c.id]:
+                        await self._pace(gen)
+                        launch(rec)
+        except BaseExceptionGroup as eg:
+            # One failure (auth, budget, outage) cancels the other scenes; report it by its own type.
+            raise _first_error(eg) from None
+
+    async def _plan_parallel(
+        self, gen: Generation, stages: Stages, ctx: CallContext, launch: Callable[[SceneRecord], None]
+    ) -> EducationalPlan:
+        """Short lessons: plan and storyboard in one streamed call, each scene launched as soon as its
+        brief arrives. Longer ones (or when the outline fails): the plan only."""
+        if gen.request.duration_min * 60 > self.settings.animator_outline_max_duration_s:
+            return await stages.plan(gen, ctx)
+
+        def on_plan(plan: EducationalPlan) -> None:
+            gen.plan = plan  # scenes read the lesson title from it
+            gen.status = "generating"
+
+        def on_scene(brief: StoryboardScene) -> None:
+            assert gen.plan is not None
+            rec = scene_record(gen, gen.plan.chapters[0].id, brief)
+            gen.scenes.append(rec)
+            launch(rec)
+
+        try:
+            plan, board = await stages.outline(gen, ctx, on_plan=on_plan, on_scene=on_scene)
+        except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
+            log.warning("outline for %s failed (%s): planning in two steps", gen.id, e)
+            gen.plan, gen.scenes = None, []
+            return await stages.plan(gen, ctx)
+        gen.plan = plan
+        for brief in board.scenes[len(gen.scenes) :]:
+            gen.scenes.append(scene_record(gen, board.chapter_id, brief))
+        gen.chapters_done.append(board.chapter_id)
+        return plan
+
+    async def _generate_sequential(
+        self,
+        gen: Generation,
+        stages: Stages,
+        ctx: CallContext,
+        prefetch: dict[str, asyncio.Task[StoryboardChapter]],
+    ) -> None:
+        """Each scene continues from the previous scene's engine-computed end state."""
+        assert gen.plan is not None
         chapters = gen.plan.chapters
         for ci, chapter in enumerate(chapters):
             if chapter.id not in gen.chapters_done:
                 task = prefetch.pop(chapter.id, None)
-                try:
-                    board = await task if task is not None else await stages.storyboard(gen, chapter.id, ctx)
-                except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
-                    # A chapter whose storyboard keeps failing still gets a scene, planned straight
-                    # from the lesson plan; later chapters continue (spec Section 17).
-                    log.warning(
-                        "storyboard for %s/%s failed (%s): using the plan outline", gen.id, chapter.id, e
-                    )
-                    board = chapter_outline(chapter)
-                    gen.metrics.storyboard_fallbacks += 1
-                gen.scenes.extend(scene_records(gen, board))
-                gen.chapters_done.append(chapter.id)
-                await self._save(gen)
+                await self._add_chapter(gen, await (task or self._board(gen, chapter, stages, ctx)))
             nxt = chapters[ci + 1] if ci + 1 < len(chapters) else None
             if nxt is not None and nxt.id not in gen.chapters_done and nxt.id not in prefetch:
                 # Stage 2 for the next chapter runs while Stage 3 works on this one (spec Section 13).
-                prefetch[nxt.id] = asyncio.create_task(self._storyboard_ahead(gen, nxt.id, ctx))
+                prefetch[nxt.id] = asyncio.create_task(self._board(gen, nxt, stages, ctx))
             for rec in [s for s in gen.scenes if s.chapter_id == chapter.id]:
-                if rec.done:
-                    continue
-                await self._pace(gen)
-                prev = gen.scenes[rec.index - 1] if rec.index > 0 else None
-                previous = [s.dsl for s in gen.scenes[: rec.index] if s.dsl is not None]
-                started = time.perf_counter()
-                await self.pipeline.run_scene(gen, rec, prev, ctx, changed, previous)
-                took = time.perf_counter() - started
-                if rec.playable and gen.metrics.first_play_s is None:
-                    gen.metrics.first_play_s = round(time.time() - gen.created_at, 1)
-                if rec.duration and took > rec.duration:
-                    gen.metrics.slow_scenes.append(f"{rec.id}: {took:.0f}s to generate {rec.duration:.0f}s")
-                self.hub.publish(gen.id, scene_event(gen, rec.index))
-                await self._save(gen)
-
-        gen.status = "complete"
-        gen.metrics.generation_s = round(time.time() - gen.created_at, 1)
-        await self._save(gen)
-
-    async def _storyboard_ahead(
-        self, gen: Generation, chapter_id: str, ctx: CallContext
-    ) -> StoryboardChapter:
-        stages = await self.pipeline.stages()
-        return await stages.storyboard(gen, chapter_id, ctx)
+                if not rec.done:
+                    await self._pace(gen)
+                    await self._scene(gen, rec, ctx, independent=False)
 
     async def _pace(self, gen: Generation) -> None:
         """With pacing on and a viewer present, wait while enough is buffered ahead of them."""
