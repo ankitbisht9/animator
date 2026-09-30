@@ -33,11 +33,12 @@ from animator.pipeline.models import (
     StoryboardChapter,
     StoryboardScene,
 )
-from animator.pipeline.narration import narration_record, needs, retime, speak_beats
+from animator.pipeline.narration import floors, narration_record, needs, retime, speak_beats, speak_texts
 from animator.pipeline.prompts import PromptPack, slug
 from animator.pipeline.stages import Stages, format_issues
 from animator.pipeline.tidy import autofix, tidy
 from animator.tts import SpeechCache
+from animator.tts.script import Script, SpeechScripter, wants_script
 from animator_contracts.protocol import CompileResult, SceneState
 
 Changed = Callable[[], Awaitable[None]]
@@ -288,6 +289,12 @@ class Pipeline:
         self.keyframes = keyframes
         # Narration audio; None when ANIMATOR_TTS_ENABLED is off (then nothing here speaks).
         self.speech = speech
+        # The speech script (what the voice reads: Hindi in Devanagari, spoken punctuation, tone).
+        self.scripter = (
+            SpeechScripter(llm, settings, settings.resolve(settings.animator_tts_cache_dir) / "scripts")
+            if speech is not None and settings.animator_tts_script != "off"
+            else None
+        )
         self._stages: Stages | None = None
         # Losing scene drafts still running, per generation (see `_drafts`).
         self._background: dict[str, set[asyncio.Task[Any]]] = {}
@@ -317,14 +324,10 @@ class Pipeline:
         rec.started_at = rec.started_at or time.time()
         rivals: set[asyncio.Task[Draft]] = set()  # drafts still running, racing the corrections
         if self.speech is not None:
-            # The storyboard's sentences are what the scene will say: synthesize them while the scene
-            # is being written, so the voice adds no waiting.
-            language = gen.request.language
-            self.speech.prefetch(
-                (b.narration for b in rec.brief.beats),
-                self.speech.voice_for(language),
-                self.speech.provider_for(language),
-            )
+            # The storyboard's sentences are what the scene will say: script and synthesize them while
+            # the scene is being written, so the voice adds no waiting.
+            task = asyncio.ensure_future(self._voice(gen, [b.narration for b in rec.brief.beats], ctx))
+            task.add_done_callback(_consume)
         try:
             await self._attempts(
                 gen, rec, prev_summary, prev_state, ctx, changed, previous_scenes, max_attempts, rivals
@@ -332,9 +335,26 @@ class Pipeline:
         finally:
             self._park(gen.id, rivals)
         if self.speech is not None and rec.playable:
-            await self._narrate(gen, rec, prev_state)
+            await self._narrate(gen, rec, prev_state, ctx)
 
-    async def _narrate(self, gen: Generation, rec: SceneRecord, prev_state: SceneState | None) -> None:
+    async def _scripts(self, gen: Generation, texts: list[str], ctx: CallContext | None) -> dict[str, Script]:
+        """The speech script of a scene's sentences, when this lesson's language gets one (ADR-041)."""
+        if self.scripter is None or not wants_script(self.settings.animator_tts_script, gen.request.language):
+            return {}
+        return await self.scripter.scripts(texts, gen.request.language, ctx, gen.id)
+
+    async def _voice(self, gen: Generation, texts: list[str], ctx: CallContext | None) -> list[Any]:
+        """A scene's sentences spoken in this lesson's voice (scripted, each knowing its neighbours)."""
+        assert self.speech is not None
+        language = gen.request.language
+        scripts = await self._scripts(gen, texts, ctx)
+        return await speak_texts(
+            self.speech, texts, self.speech.voice_for(language), self.speech.provider_for(language), scripts
+        )
+
+    async def _narrate(
+        self, gen: Generation, rec: SceneRecord, prev_state: SceneState | None, ctx: CallContext | None = None
+    ) -> None:
         """Give a finished scene its voice (pipeline/narration.py). Any failure leaves the scene as it
         was, with captions only: speech never fails or delays a lesson beyond its own synthesis."""
         assert self.speech is not None and rec.dsl is not None
@@ -345,18 +365,40 @@ class Pipeline:
                 return
             voice = self.speech.voice_for(gen.request.language)
             provider = self.speech.provider_for(gen.request.language)
-            spoken = await speak_beats(self.speech, beats, voice, provider)
+            scripts = await self._scripts(gen, [b.text for b in beats], ctx)
+            spoken = await speak_beats(self.speech, beats, voice, provider, scripts)
             if not spoken:
                 return
-            retimed = retime(rec.dsl, beats, needs(spoken, beats, self.settings.animator_tts_pause_s))
-            if retimed is not None:
-                again = await self.engine.compile(retimed, prev_state)
-                if again.ok and again.endState is not None and again.beats:
+            # Fit each sentence's time to its speech (ADR-041): first also shortening long silences,
+            # then only halfway, then, if the engine rejects both, only lengthening beats the speech
+            # outgrows. A timing is kept only when the scene stays valid and shows no more visual
+            # glitches than before.
+            need = needs(spoken, beats, self.settings.animator_tts_pause_s)
+            tries = [retime(rec.dsl, beats, need)]
+            if self.settings.animator_tts_fit_beats:
+                floor = floors(rec.dsl, beats)
+                tries[:0] = [
+                    retime(rec.dsl, beats, need, floor=floor),
+                    retime(rec.dsl, beats, need, floor=floor, keep=0.5),
+                ]
+            before = len(glitches_of(res))
+            for retimed in tries:
+                if retimed is None:
+                    continue
+                fixed, again, _ = await self._check(retimed, prev_state)
+                if (
+                    again.ok
+                    and again.endState is not None
+                    and again.beats
+                    and len(glitches_of(again)) <= before
+                ):
                     warnings = [i.model_dump() for i in again.issues if i.severity == "warning"]
-                    self._accept(rec, retimed, again, warnings, rec.status)
+                    self._accept(rec, fixed, again, warnings, rec.status)
                     beats = list(again.beats)
-                else:
-                    log.warning("scene %s: the retimed scene failed validation; timing kept", rec.id)
+                    break
+            else:
+                if any(t is not None for t in tries):
+                    log.warning("scene %s: no retiming kept the scene valid; timing kept", rec.id)
             rec.narration = narration_record(beats, spoken, provider.name, voice)
             gen.metrics.tts_chars += sum(len(b.text) for b in beats if b.id in spoken)
             gen.metrics.tts_audio_s = round(

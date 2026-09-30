@@ -24,14 +24,14 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from typing import Any
+from typing import Any, ClassVar
 from xml.sax.saxutils import escape
 
 import edge_tts
 import httpx2
 
 from animator.tts.audio import mp3_duration, silent_wav
-from animator.tts.types import Speech, TTSError, WordMark
+from animator.tts.types import Speech, SpeechContext, TTSError, WordMark
 
 
 def _percent(speed: float) -> str:
@@ -99,7 +99,9 @@ class EdgeTTS:
     def cache_key(self, voice: str) -> str:
         return f"edge|{voice}|{self.rate}"
 
-    async def synthesize(self, text: str, voice: str | None = None) -> Speech:
+    async def synthesize(
+        self, text: str, voice: str | None = None, context: SpeechContext | None = None
+    ) -> Speech:
         audio = bytearray()
         marks: list[WordMark] = []
         try:
@@ -154,7 +156,9 @@ class AzureTTS(_Http):
     def cache_key(self, voice: str) -> str:
         return f"azure|{voice}|{self.rate}"
 
-    async def synthesize(self, text: str, voice: str | None = None) -> Speech:
+    async def synthesize(
+        self, text: str, voice: str | None = None, context: SpeechContext | None = None
+    ) -> Speech:
         v = voice or self.voice
         ssml = (
             f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
@@ -200,7 +204,9 @@ class GoogleTTS(_Http):
     def cache_key(self, voice: str) -> str:
         return f"google|{voice}|{self.speed}"
 
-    async def synthesize(self, text: str, voice: str | None = None) -> Speech:
+    async def synthesize(
+        self, text: str, voice: str | None = None, context: SpeechContext | None = None
+    ) -> Speech:
         v = voice or self.voice
         words = text.split()
         # A mark before every word: the reply says when each one starts.
@@ -238,6 +244,15 @@ class ElevenLabsTTS(_Http):
     name = "elevenlabs"
     DEFAULT_VOICE = "JBFqnCBsd6RMkjVDRZzb"  # "George", a premade voice every account has
     DEFAULT_MODEL = "eleven_multilingual_v2"
+    # A sentence's tone as an Eleven v3 audio tag (other models take no tags).
+    TONE_TAGS: ClassVar[dict[str, str]] = {
+        "curious": "[curious]",
+        "warm": "[warmly]",
+        "encouraging": "[encouraging]",
+        "excited": "[excited]",
+        "thoughtful": "[thoughtful]",
+        "serious": "[serious]",
+    }
 
     def __init__(
         self,
@@ -247,6 +262,8 @@ class ElevenLabsTTS(_Http):
         speed: float = 1.0,
         timeout_s: float = 30.0,
         transport: httpx2.AsyncBaseTransport | None = None,
+        stability: float = 0.4,
+        style: float = 0.3,
     ) -> None:
         if not api_key:
             raise TTSError("elevenlabs: set ELEVENLABS_API_KEY")
@@ -256,26 +273,47 @@ class ElevenLabsTTS(_Http):
         self.hinglish_voice = self.voice  # multilingual models speak Hindi in the same voice
         self.model = model or self.DEFAULT_MODEL
         self.speed = min(1.2, max(0.7, speed))  # the range the API accepts
+        # Lower stability and some style: a livelier, more human delivery (ElevenLabs' defaults are
+        # flatter). Eleven v3 takes only 0.0 (creative), 0.5 (natural) or 1.0 (robust).
+        self.stability = min(1.0, max(0.0, stability))
+        self.style = min(1.0, max(0.0, style))
+
+    @property
+    def v3(self) -> bool:
+        return self.model.startswith("eleven_v3")
 
     def cache_key(self, voice: str) -> str:
-        return f"elevenlabs|{self.model}|{voice}|{self.speed}"
+        return f"elevenlabs|{self.model}|{voice}|{self.speed}|{self.stability}|{self.style}"
 
-    async def synthesize(self, text: str, voice: str | None = None) -> Speech:
+    def _settings(self) -> dict[str, Any]:
+        if self.v3:
+            return {"stability": min((0.0, 0.5, 1.0), key=lambda v: abs(v - self.stability))}
+        return {
+            "stability": self.stability,
+            "similarity_boost": 0.75,
+            "style": self.style,
+            "use_speaker_boost": True,
+            "speed": self.speed,
+        }
+
+    async def synthesize(
+        self, text: str, voice: str | None = None, context: SpeechContext | None = None
+    ) -> Speech:
+        body: dict[str, Any] = {"text": text, "model_id": self.model, "voice_settings": self._settings()}
+        if context is not None:
+            if self.v3 and context.tone in self.TONE_TAGS:
+                body["text"] = f"{self.TONE_TAGS[context.tone]} {text}"
+            # The sentences around this one: the voice carries on from the last and leads into the
+            # next, instead of starting each sentence fresh (ElevenLabs request stitching).
+            if context.previous and not self.v3:
+                body["previous_text"] = context.previous
+            if context.following and not self.v3:
+                body["next_text"] = context.following
         r = await self._post(
             f"https://api.elevenlabs.io/v1/text-to-speech/{voice or self.voice}/with-timestamps",
             params={"output_format": "mp3_44100_128"},
             headers={"xi-api-key": self._api_key},
-            json={
-                "text": text,
-                "model_id": self.model,
-                "voice_settings": {
-                    "stability": 0.45,
-                    "similarity_boost": 0.75,
-                    "style": 0.2,
-                    "use_speaker_boost": True,
-                    "speed": self.speed,
-                },
-            },
+            json=body,
         )
         data = r.json()
         audio = base64.b64decode(data.get("audio_base64", ""))
@@ -299,6 +337,8 @@ class ElevenLabsTTS(_Http):
             we = float(e)
         if word:
             marks.append(WordMark(word, ws, we))
+        # Audio tags are not spoken words.
+        marks = [m for m in marks if not (m.text.startswith("[") and m.text.endswith("]"))]
         return Speech(audio, "mp3", mp3_duration(audio), tuple(marks) if marks else None)
 
 
@@ -333,7 +373,9 @@ class KokoroTTS(_Http):
     def cache_key(self, voice: str) -> str:
         return f"kokoro|{voice}|{self.speed}"
 
-    async def synthesize(self, text: str, voice: str | None = None) -> Speech:
+    async def synthesize(
+        self, text: str, voice: str | None = None, context: SpeechContext | None = None
+    ) -> Speech:
         r = await self._post(
             f"{self.base_url}/dev/captioned_speech",
             json={
@@ -395,7 +437,9 @@ class OpenAICompatibleTTS(_Http):
     def cache_key(self, voice: str) -> str:
         return f"openai|{self.base_url}|{self.model}|{voice}|{self.speed}|{self.instructions}"
 
-    async def synthesize(self, text: str, voice: str | None = None) -> Speech:
+    async def synthesize(
+        self, text: str, voice: str | None = None, context: SpeechContext | None = None
+    ) -> Speech:
         body: dict[str, Any] = {
             "model": self.model,
             "voice": voice or self.voice,
@@ -426,13 +470,17 @@ class FakeTTS:
         self.delay_s = delay_s
         self.calls: list[str] = []
         self.voices: list[str] = []
+        self.contexts: list[SpeechContext | None] = []
 
     def cache_key(self, voice: str) -> str:
         return f"fake|{voice}|{self.seconds_per_word}"
 
-    async def synthesize(self, text: str, voice: str | None = None) -> Speech:
+    async def synthesize(
+        self, text: str, voice: str | None = None, context: SpeechContext | None = None
+    ) -> Speech:
         self.calls.append(text)
         self.voices.append(voice or self.voice)
+        self.contexts.append(context)
         if self.delay_s:
             await asyncio.sleep(self.delay_s)
         if self.fail:

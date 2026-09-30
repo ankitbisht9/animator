@@ -17,8 +17,9 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
-from animator.tts.text import speech_text
-from animator.tts.types import TTSError, TTSProvider, WordMark
+from animator.tts.script import Script
+from animator.tts.text import caption_words, speech_text, word_times
+from animator.tts.types import Speech, SpeechContext, TTSError, TTSProvider, WordMark
 
 log = logging.getLogger("animator.tts")
 
@@ -100,21 +101,41 @@ class SpeechCache:
             else None,
         )
 
-    async def speak(self, text: str, voice: str | None = None, provider: TTSProvider | None = None) -> Spoken:
+    async def speak(
+        self,
+        text: str,
+        voice: str | None = None,
+        provider: TTSProvider | None = None,
+        script: Script | None = None,
+        context: SpeechContext | None = None,
+    ) -> Spoken:
         """The narration beat `text` (caption markup allowed) as cached speech, in `voice` of
-        `provider` (defaults: the main provider and its voice)."""
-        plain = speech_text(text)
+        `provider` (defaults: the main provider and its voice). With a `script` (ADR-041) the voice
+        reads the script (Hindi in Devanagari, spoken punctuation, a tone) and the word times are
+        mapped back onto the caption's words. `context` (the sentences around it) helps voices that
+        can use it and is not part of the cache key."""
+        plain = script.text if script is not None else speech_text(text)
         if not plain:
             raise TTSError("nothing to say")
         prov = provider or self.provider
         v = voice or prov.voice
-        sid = self._id(plain, v, prov)
+        tone = script.tone if script is not None and script.tone != "neutral" else None
+        ctx = SpeechContext(
+            previous=context.previous if context else None,
+            following=context.following if context else None,
+            tone=tone,
+        )
+        keyed = plain if script is None else f"{plain}\n#caption:{text}\n#tone:{tone or ''}"
+        sid = self._id(keyed, v, prov)
         hit = self._load(sid)
         if hit is not None:
             return hit
         task = self._inflight.get(sid)
         if task is None:
-            task = asyncio.create_task(self._synthesize(sid, plain, v, prov), name=f"tts-{sid[:8]}")
+            task = asyncio.create_task(
+                self._synthesize(sid, plain, v, prov, text if script is not None else None, script, ctx),
+                name=f"tts-{sid[:8]}",
+            )
             self._inflight[sid] = task
             task.add_done_callback(self._done(sid))
         return await asyncio.shield(task)
@@ -136,12 +157,21 @@ class SpeechCache:
             task = asyncio.ensure_future(self.speak(text, voice, provider))
             task.add_done_callback(_consume)
 
-    async def _synthesize(self, sid: str, text: str, voice: str, provider: TTSProvider) -> Spoken:
+    async def _synthesize(
+        self,
+        sid: str,
+        text: str,
+        voice: str,
+        provider: TTSProvider,
+        caption: str | None = None,
+        script: Script | None = None,
+        context: SpeechContext | None = None,
+    ) -> Spoken:
         last: Exception | None = None
         async with self._sem(provider):
             for attempt in range(1 + max(0, self.retries)):
                 try:
-                    speech = await provider.synthesize(text, voice)
+                    speech = await provider.synthesize(text, voice, context)
                     break
                 except Exception as e:
                     last = e
@@ -154,7 +184,10 @@ class SpeechCache:
         file = f"{sid}.{speech.format}"
         self.directory.mkdir(parents=True, exist_ok=True)
         _write(self.directory / file, speech.audio)
-        marks = [[m.text, round(m.start, 4), round(m.end, 4)] for m in speech.marks] if speech.marks else None
+        found = speech.marks
+        if script is not None and caption is not None:
+            found = caption_marks(caption, script, speech)
+        marks = [[m.text, round(m.start, 4), round(m.end, 4)] for m in found] if found else None
         meta = {
             "file": file,
             "duration_s": round(speech.duration_s, 4),
@@ -162,15 +195,27 @@ class SpeechCache:
             "provider": provider.name,
             "voice": voice,
             "text": text,
+            "caption": caption,
+            "tone": context.tone if context else None,
         }
         _write(self.directory / f"{sid}.json", json.dumps(meta, ensure_ascii=False).encode("utf-8"))
-        return Spoken(file, speech.duration_s, speech.marks)
+        return Spoken(file, speech.duration_s, found)
 
     async def close(self) -> None:
         for task in list(self._inflight.values()):
             task.cancel()
         for provider in {id(p): p for p in [self.provider, *self.providers.values()]}.values():
             await provider.close()
+
+
+def caption_marks(caption: str, script: Script, speech: Speech) -> tuple[WordMark, ...] | None:
+    """The times of the script's entries, as marks on the caption's words (entry k is caption word k)."""
+    words = caption_words(caption)
+    if len(words) != len(script.spoken):
+        return speech.marks
+    said = [k for k, entry in enumerate(script.spoken) if entry.strip()]
+    times = word_times([script.spoken[k] for k in said], speech.marks, speech.duration_s)
+    return tuple(WordMark(words[k], t0, t1) for k, (t0, t1) in zip(said, times, strict=True)) or None
 
 
 def _write(path: Path, data: bytes) -> None:

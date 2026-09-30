@@ -236,6 +236,11 @@ async def test_the_first_valid_draft_wins_and_the_other_is_still_counted(pool: E
         if k == 1:  # the first draft of each scene is slow (and valid)
             await release.wait()
             return copy.deepcopy(SCENES[i])
+        if i == 1 and attempt > 1:
+            # Scene 2's corrections are broken too, and slower than its valid draft once released:
+            # the race is decided by the draft, whatever the scheduler does first.
+            await release.wait()
+            await asyncio.sleep(0.3)
         return copy.deepcopy(SCENES[i]) if i != 1 else broken(SCENES[i])
 
     script = Script(scene)

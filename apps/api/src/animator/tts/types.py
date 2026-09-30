@@ -30,6 +30,17 @@ class Speech:
     marks: tuple[WordMark, ...] | None = None
 
 
+@dataclass(frozen=True)
+class SpeechContext:
+    """What surrounds a sentence, for voices that can use it (ElevenLabs): the sentences before and
+    after (so the voice flows across them instead of starting fresh each time) and the sentence's tone
+    (curious, encouraging, ...; Eleven v3 turns it into an audio tag)."""
+
+    previous: str | None = None
+    following: str | None = None
+    tone: str | None = None
+
+
 class TTSError(RuntimeError):
     """Speech could not be synthesized (network, quota, bad key, bad voice). Never fails a lesson."""
 
@@ -44,6 +55,8 @@ class TTSProvider(Protocol):
         """Everything that changes the audio besides the text (cache identity)."""
         ...
 
-    async def synthesize(self, text: str, voice: str | None = None) -> Speech: ...
+    async def synthesize(
+        self, text: str, voice: str | None = None, context: SpeechContext | None = None
+    ) -> Speech: ...
 
     async def close(self) -> None: ...

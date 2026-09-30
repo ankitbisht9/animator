@@ -69,7 +69,13 @@ def build_provider(s: Settings) -> TTSProvider:
         return GoogleTTS(_secret(s.google_tts_api_key), voice, speed, timeout)
     if p == "elevenlabs":
         return ElevenLabsTTS(
-            _secret(s.elevenlabs_api_key), voice, s.animator_tts_model.strip(), speed, timeout
+            _secret(s.elevenlabs_api_key),
+            voice,
+            s.animator_tts_model.strip(),
+            speed,
+            timeout,
+            stability=s.animator_tts_stability,
+            style=s.animator_tts_style,
         )
     if p == "kokoro":
         return KokoroTTS(s.animator_tts_base_url.strip(), voice, speed, timeout)

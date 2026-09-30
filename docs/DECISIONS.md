@@ -1118,3 +1118,89 @@ the deterministic polish could not fix stayed on screen.
 - `ANIMATOR_LAYOUT_POLISH=false` turns off the polish.
 - Deleting `animation.v6.md` returns the prompt to v5.
 - Git tag `backup/before-visual-glitch-fixes` with `.env.backup-before-visual-glitch-fixes`.
+
+---
+
+## ADR-041 The teacher's voice: no dead air, a speech script, spoken punctuation (2026-09-30)
+
+**Problem** (heard with ElevenLabs):
+- A 1-2 s cut between sentences within a scene.
+- A flat, robotic delivery: questions not sounding like questions, no pauses at commas.
+- Hinglish that did not sound like an Indian teacher.
+- Roman Hindi read with English spelling rules: "sunati" said as "sunti", "ghumati" as "ghumti".
+
+**Causes.**
+- **The cut.** A beat lasted until its audio file ended, plus a 0.35 s pause. Voices put up to 0.9 s of
+  silence after the last word (measured on edge: 0.88 s), so about 1.3 s was heard. Beats were also only ever
+  lengthened, so the model's generous beat times stayed as silence after short sentences.
+- **Pronunciation.** Roman Hindi is ambiguous (a/aa, i/ee), and voices resolve it with English rules. Tested
+  on edge's `hi-IN-SwaraNeural`: "sunati" became सुनती and "ghumati" became घूमती. The same words written in
+  Devanagari were said right.
+- **Punctuation.** `:` and `;` were read as full stops.
+- **Each sentence was synthesized alone**, so it started with fresh intonation, and the voice had no idea of
+  its tone.
+- **How the Hinglish is written.** The outline and storyboard calls write it directly, in Roman letters; it is
+  not translated from English. They were told only "Hinglish, Roman letters, English terms".
+
+**Decision.** All changes are in the voice layer and the Hinglish language line. English lessons receive the
+same model instructions as before. The visuals and the scene prompt are unchanged.
+1. **Beats fitted to the speech** (`ANIMATOR_TTS_FIT_BEATS`, on).
+   - A beat lasts until its last word ends, plus `ANIMATOR_TTS_PAUSE_S` (0.35 s; 0.6 s after a scene's last
+     sentence). Long silences are shortened, but not below what the beat's own actions need (an action at
+     `beat:b2` with a 2 s delay keeps 2.3 s).
+   - Three timings are tried in order: fitted, halfway, stretch-only. The first that the engine finds valid
+     with no more visual glitches than before is kept; otherwise the model's timing stays.
+   - The halfway try exists because action durations are not scaled. A fully fitted scene can move a label
+     across an object that is mid-motion (seen once in 13 scenes: `LABEL_OCCLUDES` at 5 s); halfway kept it clean.
+2. **The speech script** (`ANIMATOR_TTS_SCRIPT=hinglish`; `tts/script.py`, prompt `speech_script.v1.md`).
+   - One `lightweight` call per scene (Luna, low) rewrites each caption for the voice: Hindi in Devanagari,
+     English terms as they are, spoken punctuation, and a tone.
+   - It must return exactly one entry per caption word, so the voice's word times map back onto the caption
+     words and the captions keep lighting up word by word. The captions themselves never change.
+   - It runs while the scene is drawn (with the speech prefetch) and is cached in `var/tts/scripts`.
+   - A failed call, or a reply that does not line up, speaks the caption as written.
+3. **Spoken punctuation without a script**: `:` and `;` are read as commas (not `10:30`).
+4. **ElevenLabs delivery.**
+   - Each request carries the previous and next sentence (`previous_text`/`next_text`), so the intonation
+     flows.
+   - `ANIMATOR_TTS_STABILITY` 0.4 and `ANIMATOR_TTS_STYLE` 0.3 by default (more expressive than the API
+     defaults).
+   - `eleven_v3` gets the tone as an audio tag (`[curious]`, `[encouraging]`, ...). The tag is not a caption
+     word.
+5. **The Hinglish language line** now describes a warm Indian teacher: short sentences; dekho, socho, chalo,
+   achha, yaani; questions to the learner; praise; tum or aap; a comma at every pause, `?` and `!`, never `;`
+   or `:`; the common Roman spellings. Everything on screen stays English (ADR-039).
+
+**Measured** (live, ElevenLabs `eleven_flash_v2_5`, two 30-second Hinglish lessons and one English):
+- Silence between sentences: 0.35 s in the Hinglish lessons; the English lesson averaged 0.59 s. Before, it was
+  about 1.3 s. The English lesson's one 1.8 s gap was in the scene whose fitting added a glitch; the halfway try
+  now brings it to about 1.1 s.
+- The speech script: 3 calls, $0.001 per lesson, 2-4 s each, in parallel with the scene calls, so no added
+  wait. Devanagari came back for every Hindi word (देखो, सोचो, बिल्कुल सही), the English terms stayed English,
+  and the tones matched (questions curious, praise excited or warm).
+- Lessons were ready in 30-34 s, first scene playable in 19-22 s, scenes valid, 0 glitches left.
+- ElevenLabs: about 0.5 credit per character on flash (574 characters for a 30-second lesson).
+
+**Scene effort (asked with this ADR: would Luna at its maximum effort place objects better?).** Luna's top
+effort is `high`; `max` and `xhigh` map to it (`config/models.json`). First drafts of the same 17 scene briefs
+as ADR-040, through the pipeline's own checks and polish:
+
+| Luna effort | Valid first drafts | Glitch-free | Time per scene (median / max) | Cost per scene |
+|---|---|---|---|---|
+| low (current) | 12 | 8 | 15 s / 27 s | $0.0037 |
+| medium | 15 | 13 | 32 s / 61 s | $0.0076 |
+| high (= max) | 11 | 10 | 61 s / 107 s | $0.0110 |
+
+- High is not better than medium. It made more reference and schema errors (unknown objects and actions,
+  invalid fields), and it is 4x slower. ADR-032 saw the same on whole lessons.
+- Medium drafts are cleaner, but they take twice as long. Scenes are drawn in parallel, so a 30-second lesson
+  would take about 45-60 s instead of about 30 s, against the speed rule (generation time no longer than the
+  lesson). At low, the corrections and the glitch repair round catch most of the difference: the live lessons
+  above had 0 glitches left.
+- Low stays. `ANIMATOR_EFFORT_ANIMATION_PLANNER=medium` is the one setting to change for cleaner first drafts
+  at the cost of speed. The sample is small: the same briefs at low gave 15 valid drafts in ADR-040 and 12 here.
+
+**Rollback.**
+- `ANIMATOR_TTS_SCRIPT=off` reads the captions as written.
+- `ANIMATOR_TTS_FIT_BEATS=0` only stretches beats, as before.
+- Git tag `backup/before-tts-teacher-voice` with `.env.backup-before-tts-teacher-voice`.

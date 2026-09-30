@@ -135,8 +135,18 @@ class Settings(BaseSettings):
     azure_speech_region: str = ""
     google_tts_api_key: SecretStr | None = None
     elevenlabs_api_key: SecretStr | None = None
-    # Silence after each spoken beat before the next one starts.
+    # Pause between two sentences: from the last word of one to the start of the next (ADR-041).
     animator_tts_pause_s: float = Field(default=0.35, ge=0.0, le=3.0)
+    # Fit each sentence's time to its speech (shorten long silences as well as lengthen short beats),
+    # when the engine confirms the animation still works; otherwise beats only grow (ADR-041).
+    animator_tts_fit_beats: bool = True
+    # The speech script (ADR-041): hinglish = Hindi words go to the voice in Devanagari so they are
+    # pronounced right ("sunati", not "sunti"), with spoken punctuation and a tone; all = also for
+    # English lessons (punctuation and tone); off = the captions are read as written.
+    animator_tts_script: Literal["off", "hinglish", "all"] = "hinglish"
+    # ElevenLabs delivery: lower stability is livelier and more human, style adds expression.
+    animator_tts_stability: float = Field(default=0.4, ge=0.0, le=1.0)
+    animator_tts_style: float = Field(default=0.3, ge=0.0, le=1.0)
     animator_tts_concurrency: int = Field(default=8, ge=1, le=32)
     animator_tts_timeout_s: float = 30.0
     animator_tts_cache_dir: Path = Path("var/tts")

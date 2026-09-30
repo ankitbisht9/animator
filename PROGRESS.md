@@ -364,3 +364,16 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   with those measurements (`ANIMATOR_GLITCH_REPAIR`), kept only if it helps. The prompt is now `animation.v6`.
 - On 50 reviewed scenes: 35 glitch-free as written, 44 after the polish, 49 after one repair.
 - Model research: GPT-6.1 Sol is cleaner on first drafts but 2.3x slower and 21x the price per scene; Luna stays.
+
+## The teacher's voice (ADR-041)
+
+- No dead air: each sentence lasts until its last word, plus 0.35 s. Beats are fitted both ways; the timing is
+  kept only if the scene stays valid with no new glitch (fitted, halfway, then stretch-only). The silence
+  between sentences went from about 1.3 s to 0.35 s.
+- Speech script for Hinglish: one small call per scene writes what the voice reads. Hindi goes in Devanagari
+  (सुनाती, not "sunti"), with spoken punctuation and a tone. It returns one entry per caption word, so the
+  captions still light up word by word. Cost: about $0.001 per lesson, with no added wait.
+- `:` and `;` are read as commas. ElevenLabs gets the neighbouring sentences for flowing intonation, stability
+  0.4 and style 0.3, and tone tags on `eleven_v3`.
+- The Hinglish language line now asks for a warm Indian teacher's way of speaking. Visuals and the scene prompt
+  are unchanged.

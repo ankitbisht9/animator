@@ -33,9 +33,19 @@ def caption_words(text: str) -> list[str]:
     return [w for w in _SPACES.split(strip_markup(text)) if w]
 
 
+def _spoken(word: str) -> str:
+    """Written punctuation as spoken punctuation: most voices read ';' and ':' as full stops, which
+    chops a sentence; a comma is the pause a teacher makes there. (Times like 10:30 are left alone.)"""
+    if word in (";", ":"):
+        return ","
+    if word.endswith((";", ":")):
+        return word[:-1] + ","
+    return word
+
+
 def speech_text(text: str) -> str:
-    """What the voice reads: the caption's words on one line."""
-    return " ".join(caption_words(text))
+    """What the voice reads: the caption's words on one line, punctuated for speaking."""
+    return " ".join(_spoken(w) for w in caption_words(text))
 
 
 def _norm(s: str) -> str:

@@ -29,12 +29,17 @@ This also holds for lessons that were made with a voice. Restart the API (`make 
 2. **When a scene is valid**, every beat is spoken (cached by content: the same sentence in the same voice is
    synthesized only once, across drafts, scenes and lessons). Files go to `var/tts/<id>.mp3`, plus
    `<id>.json` holding the duration and word timings.
-3. **Retiming.** A beat whose speech is longer than the beat is stretched to fit (speech, then a 0.35 s pause):
-   - times inside a stretched beat move proportionally;
-   - later beats and the scene end move later;
-   - beat references, `after`/`with` chains, delays and motion durations are unchanged.
-   The retimed scene is validated by the engine again, and the original is kept if that fails. Beats are never
-   shortened: the pictures keep the time the model gave them.
+3. **Retiming (fitting, ADR-041).** Each beat lasts until its last word is said, then a 0.35 s pause
+   (`ANIMATOR_TTS_PAUSE_S`; the scene's last beat rests 0.6 s). The time is measured to the last word, not to
+   the end of the audio file: voices add up to 0.9 s of silence after a sentence, which used to be heard as a
+   1-2 s cut between sentences.
+   - A beat whose speech is longer is stretched; a beat with a long silence after its sentence is shortened, but
+     never below what its own actions need (an action starting at `beat:b2` with a 2 s delay keeps its 2 s).
+   - Times inside a beat move proportionally; later beats and the scene end move with it. Beat references,
+     `after`/`with` chains, delays and motion durations are unchanged.
+   - Three timings are tried in order: fitted, halfway (half the extra silence kept), and stretch-only. The
+     first one that the engine finds valid with no more visual glitches than before is kept; otherwise the
+     scene keeps the model's timing. `ANIMATOR_TTS_FIT_BEATS=0` tries stretch-only, as before ADR-041.
 4. **Word timings.** The provider's word marks are matched to the caption's words by their letters and digits.
    A mark that covers several words ("9.8 m/s²" said as one unit) is shared between them. Words said differently
    ("twelve" for "12"), and every word from providers without marks, are estimated from word length and
@@ -105,8 +110,16 @@ List all of them with `uv run edge-tts --list-voices`.
 3. Optional: pick a voice in **Voices** > **Voice Library**, add it to "My Voices", and copy its **Voice ID**.
 4. In `.env`: `ANIMATOR_TTS_PROVIDER=elevenlabs`, `ELEVENLABS_API_KEY=<the key>`, and optionally
    `ANIMATOR_TTS_VOICE=<voice id>`.
-   - `ANIMATOR_TTS_MODEL=eleven_flash_v2_5` doubles the free quota (half a credit per character) at slightly
-     lower expressiveness. The default is `eleven_multilingual_v2`.
+   - `ANIMATOR_TTS_MODEL` picks the model:
+     - `eleven_multilingual_v2` (the default): the most natural and even delivery.
+     - `eleven_flash_v2_5`: fastest (about 75 ms), half a credit per character, so it doubles the quota.
+       Slightly flatter.
+     - `eleven_v3`: the most expressive. It gets the sentence's tone as an audio tag (`[curious]`,
+       `[encouraging]`, ...). It is slower, and its stability is only 0, 0.5 or 1.
+   - `ANIMATOR_TTS_STABILITY` (0.4) and `ANIMATOR_TTS_STYLE` (0.3) set the delivery: lower stability and higher
+     style are more emotional and less even.
+   - `ANIMATOR_TTS_CONCURRENCY`: ElevenLabs allows 2 requests at once on the free plan, 3 on Starter, 5 on
+     Creator.
 5. Restart `make dev`. A 1-minute lesson uses about 700-900 characters.
 
 ### OpenAI TTS (paid, no new key)
@@ -184,6 +197,41 @@ Swara was chosen by a listening test (ADR-039). The same Hinglish lines were spo
 an audio model rated gender, accent and naturalness. Swara scored highest: Hindi 9-10, English terms 8-9,
 naturalness 9. Kokoro's Hindi voices were heard as male or English-sounding.
 
+## The teacher's voice (ADR-041)
+
+**How the Hinglish is written.** The Hinglish is written directly by the lesson's own model calls (outline and
+storyboard), in Roman letters. It is not written in English and then translated. The language line those calls
+receive (`pipeline/language.py`) asks for the way a warm Indian teacher talks:
+- short sentences;
+- dekho, socho, chalo, achha, yaani, bilkul;
+- real questions to the learner, and praise ("Bilkul sahi!");
+- tum or aap, used consistently;
+- a comma wherever a teacher pauses, `?` on every question, `!` for surprise or praise, never `;` or `:`.
+
+**The speech script.** The captions stay in Roman letters, but that is not what the voice reads. For Hinglish
+lessons (`ANIMATOR_TTS_SCRIPT=hinglish`), one small model call per scene (the `lightweight` stage, about $0.0004,
+run while the scene is drawn) rewrites each caption for the voice:
+- **Hindi words in Devanagari.** Voices read Roman Hindi with English spelling rules: "sunati" was said as
+  "sunti", and "ghumati" as "ghumti". Written as सुनाती and घुमाती, they are pronounced right by every provider.
+- **English terms stay English**: hypotenuse, square, force.
+- **Spoken punctuation.** `:` and `;` become commas (voices read them as full stops), and commas go where a
+  teacher pauses.
+- **A tone for the sentence**: curious, encouraging, excited, thoughtful, warm, serious or neutral. ElevenLabs
+  `eleven_v3` receives it as an audio tag. The other voices hear the tone through the punctuation.
+
+It returns exactly one spoken entry per caption word, so each caption word still lights up when it is said. The
+scripts are cached in `var/tts/scripts/`. If the call fails, or a reply does not line up with the caption's words,
+that caption is read as written. `ANIMATOR_TTS_SCRIPT=all` scripts English lessons too (for tone and
+punctuation); `off` turns it off. Without a script, `:` and `;` are still read as commas.
+
+**Flow between sentences.** ElevenLabs (except `eleven_v3`) gets the previous and the next sentence with each
+request, so the intonation carries across sentences instead of every sentence starting fresh.
+
+Measured on live lessons (ElevenLabs `eleven_flash_v2_5`):
+- the silence between sentences went from about 1.3 s to 0.35 s;
+- the speech script added 3 calls and $0.001 to a 30-second Hinglish lesson, and no waiting (it runs while
+  the scenes are drawn).
+
 ## No voice?
 
 - The lesson page says "Voice: N scene(s) have captions only" with the reason, and the home page shows a
@@ -195,8 +243,9 @@ naturalness 9. Kokoro's Hindi voices were heard as male or English-sounding.
 ## Adding a provider
 
 A provider is a class with `name`, `voice` (its default voice), `hinglish_voice`, `model`, a `cache_key(voice)`
-method (everything that changes the audio besides the text), `async synthesize(text, voice=None) -> Speech` and
-`async close()`. `Speech` holds the audio bytes, their format
+method (everything that changes the audio besides the text), `async synthesize(text, voice=None, context=None)
+-> Speech` and `async close()`. `context` (a `SpeechContext`: the previous and next sentence and the tone) may be
+ignored. `Speech` holds the audio bytes, their format
 (`mp3`/`wav`), the duration, and optional word marks. Add it to `animator/tts/providers.py`, to `build_provider` in
 `animator/tts/__init__.py`, and to the `ANIMATOR_TTS_PROVIDER` choices in `config.py`. Test it over a mocked HTTP
 transport (see `apps/api/tests/test_tts.py`). Nothing else changes.
@@ -204,7 +253,9 @@ transport (see `apps/api/tests/test_tts.py`). Nothing else changes.
 ## Files
 
 - `apps/api/src/animator/tts/`: the interface, providers, word timing, audio duration, cache.
-- `apps/api/src/animator/pipeline/narration.py`: retiming and the per-scene narration record.
+- `apps/api/src/animator/tts/script.py` and `speech_script.v1.md`: the speech script and its prompt.
+- `apps/api/src/animator/pipeline/narration.py`: fitting beats to speech and the per-scene narration record.
+- `apps/api/src/animator/pipeline/language.py`: how the lesson's calls are told to write Hinglish.
 - `apps/api/src/animator/api/tts.py`: serves the audio.
 - `apps/api/src/animator/export/narration.py`: the export's narration track.
 - `packages/components/src/Caption.tsx`: word-timed captions.
