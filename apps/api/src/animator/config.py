@@ -115,7 +115,11 @@ class Settings(BaseSettings):
         "edge"
     )
     animator_tts_voice: str = ""  # empty = the provider's default voice
-    # The voice of Hinglish lessons; empty = the provider's Hinglish default (ADR-038).
+    # The provider and voice of Hinglish lessons; empty = the main provider and its Hinglish default
+    # (ADR-038, ADR-039). Kokoro reads Roman-script Hinglish with English sounds: use edge for it.
+    animator_tts_provider_hinglish: Literal[
+        "", "edge", "azure", "google", "elevenlabs", "kokoro", "openai", "fake"
+    ] = ""
     animator_tts_voice_hinglish: str = ""
     animator_tts_speed: float = Field(default=1.0, ge=0.5, le=2.0)
     animator_tts_model: str = ""  # elevenlabs / openai model; empty = the provider's default

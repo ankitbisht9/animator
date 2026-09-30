@@ -288,8 +288,12 @@ class Pipeline:
         if self.speech is not None:
             # The storyboard's sentences are what the scene will say: synthesize them while the scene
             # is being written, so the voice adds no waiting.
-            voice = self.speech.voice_for(gen.request.language)
-            self.speech.prefetch((b.narration for b in rec.brief.beats), voice)
+            language = gen.request.language
+            self.speech.prefetch(
+                (b.narration for b in rec.brief.beats),
+                self.speech.voice_for(language),
+                self.speech.provider_for(language),
+            )
         try:
             await self._attempts(
                 gen, rec, prev_summary, prev_state, ctx, changed, previous_scenes, max_attempts, rivals
@@ -309,7 +313,8 @@ class Pipeline:
             if not res.ok or not beats:
                 return
             voice = self.speech.voice_for(gen.request.language)
-            spoken = await speak_beats(self.speech, beats, voice)
+            provider = self.speech.provider_for(gen.request.language)
+            spoken = await speak_beats(self.speech, beats, voice, provider)
             if not spoken:
                 return
             retimed = retime(rec.dsl, beats, needs(spoken, beats, self.settings.animator_tts_pause_s))
@@ -321,7 +326,7 @@ class Pipeline:
                     beats = list(again.beats)
                 else:
                     log.warning("scene %s: the retimed scene failed validation; timing kept", rec.id)
-            rec.narration = narration_record(self.speech, beats, spoken, voice)
+            rec.narration = narration_record(beats, spoken, provider.name, voice)
             gen.metrics.tts_chars += sum(len(b.text) for b in beats if b.id in spoken)
             gen.metrics.tts_audio_s = round(
                 gen.metrics.tts_audio_s + sum(s.duration_s for s in spoken.values()), 2

@@ -129,7 +129,8 @@ endpoint, which also returns when every word is said (exact caption sync).
    ANIMATOR_TTS_PROVIDER=kokoro
    ANIMATOR_TTS_BASE_URL=http://localhost:8880
    ANIMATOR_TTS_VOICE=af_heart
-   ANIMATOR_TTS_VOICE_HINGLISH=hm_omega
+   ANIMATOR_TTS_PROVIDER_HINGLISH=edge
+   ANIMATOR_TTS_VOICE_HINGLISH=hi-IN-SwaraNeural
    ANIMATOR_TTS_CONCURRENCY=1
    ANIMATOR_TTS_TIMEOUT_S=60
    ```
@@ -146,6 +147,11 @@ male, `bf_`/`bm_` British, `hf_`/`hm_` Hindi, and also Spanish (`e`), French (`f
 `af_nicole` and `bf_emma` B-; `am_michael`, `am_fenrir`, `am_puck` C+ (the best male voices); the Hindi voices C.
 Voices can be blended: `af_bella+af_sky`, or weighted `af_bella(2)+af_sky(1)`.
 
+**Kokoro cannot speak Roman-script Hinglish with an Indian accent**, not even in its Hindi voices: its Hindi
+pronunciation rules expect Devanagari, and Roman letters are read with English sounds ("neeche" comes out as
+English "neech", "hai" as "hi"). So Hinglish lessons go to edge (`ANIMATOR_TTS_PROVIDER_HINGLISH=edge`), whose
+Indian voices read Roman Hinglish natively, while English lessons stay on Kokoro.
+
 ## Choosing a voice by listening
 
 - **Kokoro's own page**: http://localhost:8880/web/ while Kokoro runs. Type any text, pick a voice, play it.
@@ -154,27 +160,29 @@ Voices can be blended: `af_bella+af_sky`, or weighted `af_bella(2)+af_sky(1)`.
   `--all` for every voice) and writes `var/voice-samples/<provider>/index.html`. Open it and click play; each row
   shows the `.env` line for that voice.
 
-## Lesson language: English or Hinglish
+## Spoken language: English or Hinglish
 
-The create form has a **Language** choice.
+The create form has a **Spoken in** choice: the language the explainer speaks.
 - **English**: unchanged; the model receives exactly the same instructions as before.
-- **Hinglish**: the everyday Hindi-English mix, written in Roman letters, with technical terms in English
-  ("Socho, agar hum ball ko upar phenkein, toh gravity use wapas neeche kheenchti hai."). Narration, questions
-  and checkpoint choices are in Hinglish; titles and labels are short, in simple English or Hinglish. Devanagari
-  is never used, because the fonts cannot draw it.
+- **Hinglish**: only the narration changes. The voice, and the captions that show what it says, are in the everyday
+  Hindi-English mix, written in Roman letters, with technical terms in English ("Socho, agar hum ball ko upar
+  phenkein, toh gravity use wapas neeche kheenchti hai.").
+- **Everything drawn in the visuals stays English** in both languages: lesson and scene titles, labels, cards,
+  badges, speech bubbles, readouts, equations and checkpoint questions (ADR-039).
 
-A Hinglish lesson speaks with `ANIMATOR_TTS_VOICE_HINGLISH`. When that is empty, each provider's Hinglish
-default is used:
+A Hinglish lesson speaks through `ANIMATOR_TTS_PROVIDER_HINGLISH` (empty = the main provider) with
+`ANIMATOR_TTS_VOICE_HINGLISH` (empty = that provider's Hinglish default):
 
 | Provider | Hinglish voice | |
 |---|---|---|
-| `kokoro` | `hm_omega` (male) | the clearest Kokoro voice for Hinglish; `hf_beta` is the female option |
-| `edge`, `azure` | `en-IN-NeerjaExpressiveNeural` (female) | also good: `en-IN-PrabhatNeural` (male), `hi-IN-SwaraNeural`, `hi-IN-MadhurNeural` |
-| `google` | `en-IN-Neural2-A` | Indian English |
+| `edge`, `azure` | `hi-IN-SwaraNeural` (female, native Hindi) | recommended; also `en-IN-NeerjaNeural` and `en-IN-NeerjaExpressiveNeural` (female, Indian English) |
+| `google` | `en-IN-Neural2-A` (female, Indian English) | |
+| `kokoro` | `hf_alpha` (female) | English-sounding: see the Kokoro section, and use edge for Hinglish |
 | `elevenlabs`, `openai` | the English voice | their multilingual models speak Hindi |
 
-Chosen by a listening test: the same Hinglish sentences in every candidate voice, transcribed back by a speech
-recognizer (ADR-038).
+Swara was chosen by a listening test (ADR-039). The same Hinglish lines were spoken by every female candidate, and
+an audio model rated gender, accent and naturalness. Swara scored highest: Hindi 9-10, English terms 8-9,
+naturalness 9. Kokoro's Hindi voices were heard as male or English-sounding.
 
 ## No voice?
 

@@ -351,3 +351,6 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   terms), each with its own voice (`ANIMATOR_TTS_VOICE_HINGLISH`).
 - Voice failures and `.env` mistakes are shown in the app instead of silently leaving captions only.
 - `scripts/tts_samples.py`: listen to the voices before choosing.
+- Spoken language (ADR-039): Hinglish changes only the voice and captions; every text in the visuals stays English.
+  Hinglish lessons speak with Microsoft's native Hindi female voice `hi-IN-SwaraNeural` (edge, free), while English
+  lessons stay on Kokoro (`ANIMATOR_TTS_PROVIDER_HINGLISH`). Kokoro reads Roman-script Hindi with English sounds.

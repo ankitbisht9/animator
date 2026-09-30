@@ -131,13 +131,34 @@ def build_speech(
             log.warning("narration audio is off: %s", e)
             return None
     voices = {"hinglish": s.animator_tts_voice_hinglish.strip()}
+    providers: dict[str, TTSProvider] = {}
+    other = s.animator_tts_provider_hinglish
+    if other and other != provider.name:
+        try:
+            # The Hinglish provider speaks only Hinglish lessons: its own default voice, not
+            # ANIMATOR_TTS_VOICE (which names a voice of the main provider).
+            providers["hinglish"] = build_provider(
+                s.model_copy(update={"animator_tts_provider": other, "animator_tts_voice": ""})
+            )
+        except TTSError as e:
+            log.warning(
+                "Hinglish lessons use %s: ANIMATOR_TTS_PROVIDER_HINGLISH=%s is not usable (%s)",
+                provider.name,
+                other,
+                e,
+            )
     speech = SpeechCache(
-        provider, s.resolve(s.animator_tts_cache_dir), s.animator_tts_concurrency, voices=voices
+        provider,
+        s.resolve(s.animator_tts_cache_dir),
+        s.animator_tts_concurrency,
+        voices=voices,
+        providers=providers,
     )
     log.info(
-        "narration audio: %s, voice %s (Hinglish: %s)",
+        "narration audio: %s, voice %s (Hinglish: %s, voice %s)",
         provider.name,
         provider.voice,
+        speech.provider_for("Hinglish").name,
         speech.voice_for("Hinglish"),
     )
     return speech

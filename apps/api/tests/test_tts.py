@@ -338,9 +338,51 @@ def test_each_lesson_language_has_a_voice(tmp_path: Path) -> None:
     assert speech is not None and speech.provider.voice == "af_heart"
     assert speech.voice_for("Hinglish") == "hf_beta"
     default = build_speech(settings(animator_tts_enabled=True, animator_tts_provider="kokoro"))
-    assert default is not None and default.voice_for("Hinglish") == "hm_omega"
+    assert default is not None and default.voice_for("Hinglish") == "hf_alpha"
     edge = build_speech(settings(animator_tts_enabled=True))
-    assert edge is not None and edge.voice_for("Hinglish") == "en-IN-NeerjaExpressiveNeural"
+    assert edge is not None and edge.voice_for("Hinglish") == "hi-IN-SwaraNeural"  # native Hindi, female
+
+
+def test_hinglish_lessons_can_use_another_provider(tmp_path: Path) -> None:
+    """English on a local Kokoro, Hinglish on edge's Indian voice (Kokoro reads Roman letters with English
+    sounds)."""
+    s = settings(
+        animator_tts_enabled=True,
+        animator_tts_provider="kokoro",
+        animator_tts_voice="af_heart",
+        animator_tts_provider_hinglish="edge",
+        animator_tts_cache_dir=tmp_path,
+    )
+    speech = build_speech(s)
+    assert speech is not None
+    assert (speech.provider_for("English").name, speech.voice_for("English")) == ("kokoro", "af_heart")
+    assert (speech.provider_for("Hinglish").name, speech.voice_for("Hinglish")) == (
+        "edge",
+        "hi-IN-SwaraNeural",
+    )
+    chosen = build_speech(s.model_copy(update={"animator_tts_voice_hinglish": "en-IN-NeerjaNeural"}))
+    assert chosen is not None and chosen.voice_for("Hinglish") == "en-IN-NeerjaNeural"
+    # A Hinglish provider that cannot be used (no key) leaves Hinglish on the main provider.
+    keyless = build_speech(s.model_copy(update={"animator_tts_provider_hinglish": "google"}))
+    assert keyless is not None and keyless.provider_for("Hinglish").name == "kokoro"
+    assert keyless.voice_for("Hinglish") == "hf_alpha"
+
+
+async def test_each_provider_synthesizes_its_own_languages(tmp_path: Path) -> None:
+    main, other = FakeTTS(), FakeTTS(seconds_per_word=0.2)
+    other.name = "other"
+    cache = SpeechCache(main, tmp_path, concurrency=1, providers={"Hinglish": other})
+    assert cache.provider_for("hinglish") is other and cache.provider_for("English") is main
+    english = await cache.speak("Look at the tank.")
+    hinglish = await cache.speak(
+        "Tank ko dekho.", cache.voice_for("Hinglish"), cache.provider_for("Hinglish")
+    )
+    assert main.calls == ["Look at the tank."] and other.calls == ["Tank ko dekho."]
+    assert english.file != hinglish.file and other.voices == ["fake_hinglish"]
+    meta = json.loads((tmp_path / hinglish.file.replace(".wav", ".json")).read_text(encoding="utf-8"))
+    assert meta["provider"] == "other" and meta["voice"] == "fake_hinglish"
+    assert cache._sem(main) is not cache._sem(other)  # one queue each: a slow Kokoro never holds up edge
+    await cache.close()
 
 
 def test_a_setting_written_twice_in_env_is_reported(tmp_path: Path) -> None:
@@ -441,7 +483,7 @@ def test_the_narration_record_times_every_caption_word(tmp_path: Path) -> None:
         Beat(id="b1", text="Look at the **tank**.", start=0.5, end=3),
         Beat(id="b2", text="-", start=3, end=5),
     ]
-    rec = narration_record(cache, beats, spoken)
+    rec = narration_record(beats, spoken, "fake", "fake")
     assert rec["provider"] == "fake" and len(rec["beats"]) == 1
     beat = rec["beats"][0]
     assert beat["start"] == 0.5 and beat["audio"] == spoken["b1"].file and beat["timed"] is True
@@ -452,10 +494,14 @@ def test_the_narration_record_times_every_caption_word(tmp_path: Path) -> None:
 
 
 async def spoken_lesson(
-    pool: EngineWorkerPool, tmp_path: Path, tts: FakeTTS, language: str = "English"
+    pool: EngineWorkerPool,
+    tmp_path: Path,
+    tts: FakeTTS,
+    language: str = "English",
+    hinglish: FakeTTS | None = None,
 ) -> Generation:
     s = settings(animator_tts_enabled=True, animator_tts_cache_dir=tmp_path)
-    speech = SpeechCache(tts, tmp_path)
+    speech = SpeechCache(tts, tmp_path, providers={"hinglish": hinglish} if hinglish else None)
     fake = FakeLLM(Script(), usage=Usage(1000, 0, 500), cost=0.01)
     runner = GenerationRunner(MemoryStore(), Pipeline(EngineClient(pool), fake, s, None, speech), s)
     gen = await runner.start(GenerationRequest(topic="Archimedes' principle", language=language))
@@ -490,6 +536,12 @@ async def test_a_hinglish_lesson_speaks_with_the_hinglish_voice(
     assert gen.status == "complete" and all(s.narration for s in gen.scenes)
     assert set(tts.voices) == {"fake_hinglish"}  # the prefetch too
     assert all(s.narration and s.narration["voice"] == "fake_hinglish" for s in gen.scenes)
+    # With a Hinglish provider, it alone speaks the lesson (prefetch included).
+    main, indian = FakeTTS(), FakeTTS(seconds_per_word=0.25)
+    indian.name = "indian"
+    gen = await spoken_lesson(pool, tmp_path / "2", main, language="Hinglish", hinglish=indian)
+    assert gen.status == "complete" and main.calls == [] and indian.calls
+    assert all(s.narration and s.narration["provider"] == "indian" for s in gen.scenes)
 
 
 async def test_failing_speech_never_fails_the_lesson(pool: EngineWorkerPool, tmp_path: Path) -> None:
@@ -523,6 +575,7 @@ def test_the_api_serves_narration_only_when_the_switch_is_on(worker_script: Path
             "provider": "edge",
             "voice": "fake",
             "voices": {"Hinglish": "fake_hinglish"},
+            "providers": {"Hinglish": "fake"},
             "problem": None,
             "warnings": [],  # tests pass their own settings: no .env is read
         }
@@ -607,4 +660,7 @@ def test_english_prompts_are_unchanged_and_hinglish_is_spelled_out() -> None:
     assert language_line("English") == "English"  # English lessons send exactly what they did before
     assert language_line("Spanish") == "Spanish"
     line = language_line("Hinglish")
-    assert line == language_line("hinglish") and "Roman" in line and "never in Devanagari" in line
+    assert line == language_line("hinglish") and "Roman" in line and "never Devanagari" in line
+    # Hinglish is the spoken language only: what is drawn on screen stays English.
+    assert "narration only" in line and "EVERYTHING ELSE IS IN ENGLISH" in line
+    assert all(w in line for w in ("titles", "labels", "speech bubbles", "checkpoint questions"))

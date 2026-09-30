@@ -86,7 +86,8 @@ class _Http:
 class EdgeTTS:
     name = "edge"
     DEFAULT_VOICE = "en-US-AvaMultilingualNeural"
-    HINGLISH_VOICE = "en-IN-NeerjaExpressiveNeural"  # Indian English: reads Roman-script Hindi well
+    # Native Hindi, female: reads Roman-script Hinglish with an Indian accent (ADR-039).
+    HINGLISH_VOICE = "hi-IN-SwaraNeural"
 
     def __init__(self, voice: str = "", speed: float = 1.0, timeout_s: float = 30.0) -> None:
         self.voice = voice or self.DEFAULT_VOICE
@@ -176,7 +177,7 @@ class AzureTTS(_Http):
 class GoogleTTS(_Http):
     name = "google"
     DEFAULT_VOICE = "en-US-Neural2-F"
-    HINGLISH_VOICE = "en-IN-Neural2-A"  # Indian English
+    HINGLISH_VOICE = "en-IN-Neural2-A"  # Indian English, female
     URL = "https://texttospeech.googleapis.com/v1beta1/text:synthesize"
 
     def __init__(
@@ -309,7 +310,9 @@ class KokoroTTS(_Http):
     name = "kokoro"
     DEFAULT_BASE = "http://localhost:8880"
     DEFAULT_VOICE = "af_heart"  # the best-graded Kokoro voice (A)
-    HINGLISH_VOICE = "hm_omega"  # the clearest Hinglish in our listening test (ADR-038)
+    # Kokoro reads Roman letters with English sounds even in its Hindi voices, so Hinglish sounds
+    # English-accented; ANIMATOR_TTS_PROVIDER_HINGLISH=edge gives an Indian voice (ADR-039).
+    HINGLISH_VOICE = "hf_alpha"
 
     def __init__(
         self,

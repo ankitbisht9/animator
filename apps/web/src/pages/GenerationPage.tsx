@@ -158,8 +158,10 @@ export function GenerationPage({ id }: { id: string }) {
         <div>
           <div className="kicker">
             {summary.request.audience} · {summary.request.duration_min} min
-            {summary.request.language && summary.request.language !== "English" && ` · ${summary.request.language}`} ·
-            AI-generated
+            {summary.request.language &&
+              summary.request.language !== "English" &&
+              ` · spoken in ${summary.request.language}`}{" "}
+            · AI-generated
           </div>
           <h1>{title}</h1>
           {summary.subtitle && <p className="lead">{summary.subtitle}</p>}

@@ -40,24 +40,41 @@ class SpeechCache:
         concurrency: int = 6,
         retries: int = 1,
         voices: dict[str, str] | None = None,
+        providers: dict[str, TTSProvider] | None = None,
     ) -> None:
         self.provider = provider
         self.directory = directory
         self.retries = retries
-        # Lesson language -> voice, where it differs from the provider's default voice (ADR-038).
-        self.voices = {"hinglish": provider.hinglish_voice}
-        self.voices.update({k.lower(): v for k, v in (voices or {}).items() if v})
-        # With concurrency 1, a local server (Kokoro on a CPU) works through the sentences in scene
-        # order, so the first scene's speech is ready first.
-        self._sem = asyncio.Semaphore(max(1, concurrency))
+        self.concurrency = max(1, concurrency)
+        # Lesson language -> provider, where it is not the main one (Hinglish on edge while English
+        # lessons use Kokoro, ADR-039), and lesson language -> voice (ADR-038).
+        self.providers = {k.strip().lower(): v for k, v in (providers or {}).items()}
+        self.voices = {"hinglish": self.provider_for("hinglish").hinglish_voice}
+        self.voices.update({k.strip().lower(): v for k, v in (voices or {}).items() if v})
+        # One queue per provider. With concurrency 1, a local server (Kokoro on a CPU) works through
+        # the sentences in scene order, so the first scene's speech is ready first.
+        self._sems: dict[str, asyncio.Semaphore] = {}
         self._inflight: dict[str, asyncio.Task[Spoken]] = {}
+
+    def provider_for(self, language: str) -> TTSProvider:
+        """The provider a lesson in `language` speaks with."""
+        return self.providers.get(language.strip().lower(), self.provider)
 
     def voice_for(self, language: str) -> str:
         """The voice a lesson in `language` speaks with."""
-        return self.voices.get(language.strip().lower()) or self.provider.voice
+        return self.voices.get(language.strip().lower()) or self.provider_for(language).voice
 
-    def _id(self, text: str, voice: str) -> str:
-        return hashlib.sha256(f"{self.provider.cache_key(voice)}\n{text}".encode()).hexdigest()[:32]
+    def _sem(self, provider: TTSProvider) -> asyncio.Semaphore:
+        sem = self._sems.get(provider.name)
+        if sem is None:
+            # ANIMATOR_TTS_CONCURRENCY is for the main provider (1 for a CPU Kokoro); another cloud
+            # provider serving one language keeps its usual parallelism.
+            n = self.concurrency if provider is self.provider or provider.name == "kokoro" else 8
+            sem = self._sems[provider.name] = asyncio.Semaphore(max(n, 1))
+        return sem
+
+    def _id(self, text: str, voice: str, provider: TTSProvider) -> str:
+        return hashlib.sha256(f"{provider.cache_key(voice)}\n{text}".encode()).hexdigest()[:32]
 
     def audio_path(self, name: str) -> Path | None:
         """The cached audio file `name`, if the name is well-formed and the file exists."""
@@ -83,20 +100,21 @@ class SpeechCache:
             else None,
         )
 
-    async def speak(self, text: str, voice: str | None = None) -> Spoken:
-        """The narration beat `text` (caption markup allowed) as cached speech, in `voice` (default:
-        the provider's voice)."""
+    async def speak(self, text: str, voice: str | None = None, provider: TTSProvider | None = None) -> Spoken:
+        """The narration beat `text` (caption markup allowed) as cached speech, in `voice` of
+        `provider` (defaults: the main provider and its voice)."""
         plain = speech_text(text)
         if not plain:
             raise TTSError("nothing to say")
-        v = voice or self.provider.voice
-        sid = self._id(plain, v)
+        prov = provider or self.provider
+        v = voice or prov.voice
+        sid = self._id(plain, v, prov)
         hit = self._load(sid)
         if hit is not None:
             return hit
         task = self._inflight.get(sid)
         if task is None:
-            task = asyncio.create_task(self._synthesize(sid, plain, v), name=f"tts-{sid[:8]}")
+            task = asyncio.create_task(self._synthesize(sid, plain, v, prov), name=f"tts-{sid[:8]}")
             self._inflight[sid] = task
             task.add_done_callback(self._done(sid))
         return await asyncio.shield(task)
@@ -107,21 +125,23 @@ class SpeechCache:
 
         return forget
 
-    def prefetch(self, texts: Iterable[str], voice: str | None = None) -> None:
+    def prefetch(
+        self, texts: Iterable[str], voice: str | None = None, provider: TTSProvider | None = None
+    ) -> None:
         """Start synthesizing now (while the scene is still being written); failures are ignored
         here and retried when the speech is needed."""
         for text in texts:
             if not speech_text(text):
                 continue
-            task = asyncio.ensure_future(self.speak(text, voice))
+            task = asyncio.ensure_future(self.speak(text, voice, provider))
             task.add_done_callback(_consume)
 
-    async def _synthesize(self, sid: str, text: str, voice: str) -> Spoken:
+    async def _synthesize(self, sid: str, text: str, voice: str, provider: TTSProvider) -> Spoken:
         last: Exception | None = None
-        async with self._sem:
+        async with self._sem(provider):
             for attempt in range(1 + max(0, self.retries)):
                 try:
-                    speech = await self.provider.synthesize(text, voice)
+                    speech = await provider.synthesize(text, voice)
                     break
                 except Exception as e:
                     last = e
@@ -130,7 +150,7 @@ class SpeechCache:
             else:
                 raise last if isinstance(last, TTSError) else TTSError(str(last)) from last
         if speech.duration_s <= 0:
-            raise TTSError(f"{self.provider.name}: audio has no duration")
+            raise TTSError(f"{provider.name}: audio has no duration")
         file = f"{sid}.{speech.format}"
         self.directory.mkdir(parents=True, exist_ok=True)
         _write(self.directory / file, speech.audio)
@@ -139,7 +159,7 @@ class SpeechCache:
             "file": file,
             "duration_s": round(speech.duration_s, 4),
             "marks": marks,
-            "provider": self.provider.name,
+            "provider": provider.name,
             "voice": voice,
             "text": text,
         }
@@ -149,7 +169,8 @@ class SpeechCache:
     async def close(self) -> None:
         for task in list(self._inflight.values()):
             task.cancel()
-        await self.provider.close()
+        for provider in {id(p): p for p in [self.provider, *self.providers.values()]}.values():
+            await provider.close()
 
 
 def _write(path: Path, data: bytes) -> None:

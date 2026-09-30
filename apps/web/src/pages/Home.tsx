@@ -13,7 +13,7 @@ const AUDIENCES = [
   "curious adult",
 ];
 const DURATIONS = [1, 2, 3, 5, 8, 10, 15];
-/** Hinglish: the everyday Hindi-English mix, written in Roman letters (ADR-038). */
+/** The language the explainer speaks (voice and captions); on-screen text is always English (ADR-039). */
 const LANGUAGES = ["English", "Hinglish"];
 const EXAMPLES = [
   "Explain Archimedes' principle",
@@ -130,7 +130,7 @@ export function Home() {
               </select>
             </label>
             <label>
-              Language
+              Spoken in
               <select value={language} onChange={(e) => setLanguage(e.target.value)}>
                 {LANGUAGES.map((l) => (
                   <option key={l}>{l}</option>

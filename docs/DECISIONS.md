@@ -981,3 +981,45 @@ nothing to run, keep up with generation, and be removable with a single setting.
 - `ANIMATOR_TTS_PROVIDER=edge`: the fastest provider; Hinglish lessons then use Neerja.
 - `ANIMATOR_TTS_ENABLED=0`: no voice anywhere.
 - Git tag `backup/before-kokoro-hinglish` with `.env.backup-before-kokoro-hinglish`.
+
+## ADR-039 The lesson language is the spoken language; Hinglish speaks with an Indian female voice (2026-09-30)
+
+**Problem.**
+- Hinglish lessons (ADR-038) also wrote their titles, labels and quiz in Hinglish. The user meant only the spoken
+  explanation; everything drawn stays English.
+- The Hinglish voice (Kokoro `hm_omega`) sounded male and English-accented. The user needs a female voice with an
+  Indian (Hindi) accent.
+
+**Decision.**
+1. **The language line tells the model that Hinglish is for the narration only** (the voice and its captions).
+   Everything else is English, exactly as in an English lesson: lesson and scene titles, every text on screen, the
+   descriptions of what happens on screen, and checkpoint questions, choices and explanations.
+   - English lessons are unaffected (byte-identical prompts).
+   - No other prompt, schema, engine or DSL change.
+2. **Captions stay in the spoken language.** English captions over a Hinglish voice were considered. They would
+   need a second, mapped version of every sentence, so more output tokens and time on every scene. And word-by-word
+   highlighting cannot work across two languages, whose words and word order differ: only sentence-level sync
+   would be possible. The user chose Hinglish captions with the Hinglish voice.
+3. **Kokoro cannot give an Indian accent here.** Its phonemizer turns Roman-script Hindi into English phonemes,
+   even in the Hindi voices: "use neeche ... hai" becomes `juːs nˈiːʧ ... hˈI`. The same words in Devanagari get
+   Hindi phonemes (`ˈʊseː nˈiːceː ... hɛː`). Captions must stay in Roman letters (the fonts have no Devanagari).
+4. **A provider per lesson language.**
+   - `ANIMATOR_TTS_PROVIDER_HINGLISH` routes Hinglish lessons to another provider (the user's `.env`: edge),
+     while English stays on Kokoro.
+   - Each provider has its own queue: a CPU Kokoro at concurrency 1 never holds up edge.
+   - A Hinglish provider that cannot be built (a missing key) leaves Hinglish on the main provider, with a warning.
+5. **Default Hinglish voice for edge/azure: `hi-IN-SwaraNeural`**, a native Hindi female voice.
+   - An audio model (gpt-audio-1.5) listened to the same Hinglish lines in each female candidate. Swara scored
+     highest: Hindi 9-10, English terms 8-9, naturalness 9. The Neerja voices came next.
+   - The judge heard Kokoro's `hf_beta` as male in both trials.
+   - The judge's accent labels were not discriminating (it called every voice "native Hindi"), so the phoneme
+     evidence above decides against Kokoro.
+
+**Measured (live).**
+- Hinglish 1-minute lesson:
+  - ready in 25.1 s, first scene playable at 15.6 s, $0.034;
+  - Swara on every scene, with exact word timings;
+  - Hinglish captions; every title, label, card and quiz in English.
+- English 30-second lesson: unchanged (Kokoro `af_heart`, English captions and visuals), $0.029.
+
+**Rollback.** Git tag `backup/before-hinglish-voice-fix` with `.env.backup-before-hinglish-voice-fix`.

@@ -131,6 +131,7 @@ def create_app(
                 "provider": st.animator_tts_provider if st.animator_tts_enabled else None,
                 "voice": speech.provider.voice if speech else None,
                 "voices": {"Hinglish": speech.voice_for("Hinglish")} if speech else {},
+                "providers": {"Hinglish": speech.provider_for("Hinglish").name} if speech else {},
                 "problem": tts_problem(st),
                 "warnings": [
                     f"{name} is set more than once in .env: only the last one counts"

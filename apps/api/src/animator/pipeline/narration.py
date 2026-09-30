@@ -18,7 +18,7 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from animator.tts import SpeechCache, Spoken, caption_words, word_times
+from animator.tts import SpeechCache, Spoken, TTSProvider, caption_words, word_times
 from animator_contracts.protocol import Beat
 
 log = logging.getLogger("animator.narration")
@@ -87,11 +87,11 @@ def retime(
 
 
 async def speak_beats(
-    speech: SpeechCache, beats: Sequence[Beat], voice: str | None = None
+    speech: SpeechCache, beats: Sequence[Beat], voice: str | None = None, provider: TTSProvider | None = None
 ) -> dict[str, Spoken]:
     """Speech for every beat that has words (all at once; most are cached by the prefetch)."""
     todo = [b for b in beats if caption_words(b.text)]
-    results = await asyncio.gather(*(speech.speak(b.text, voice) for b in todo))
+    results = await asyncio.gather(*(speech.speak(b.text, voice, provider) for b in todo))
     return {b.id: s for b, s in zip(todo, results, strict=True)}
 
 
@@ -104,7 +104,7 @@ def needs(spoken: Mapping[str, Spoken], beats: Sequence[Beat], pause_s: float) -
 
 
 def narration_record(
-    speech: SpeechCache, beats: Sequence[Beat], spoken: Mapping[str, Spoken], voice: str | None = None
+    beats: Sequence[Beat], spoken: Mapping[str, Spoken], provider: str, voice: str
 ) -> dict[str, Any]:
     """What the player and the export need: per beat, its audio, start and caption word times."""
     out = []
@@ -124,4 +124,4 @@ def narration_record(
                 "timed": s.marks is not None,
             }
         )
-    return {"provider": speech.provider.name, "voice": voice or speech.provider.voice, "beats": out}
+    return {"provider": provider, "voice": voice, "beats": out}
