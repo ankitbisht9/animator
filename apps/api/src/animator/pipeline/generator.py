@@ -234,7 +234,8 @@ UNTIDY = {
 }
 
 # What a viewer sees as a glitch: text hidden or cut, things out of the stage, one thing drawn into
-# another, a row that wraps. A valid scene still showing one after the polish gets a repair round.
+# another, a row that wraps. Counted per lesson (`glitches_left`); a new timing for the voice must not
+# add one. (ADR-040's model repair round for them was reverted in ADR-042.)
 GLITCHES = {
     "HIDDEN_TEXT",
     "OUT_OF_STAGE",
@@ -502,10 +503,6 @@ class Pipeline:
             attempt.seconds = round(time.perf_counter() - t0, 2)
             rec.attempts.append(attempt)
             if res.ok and res.endState is not None:
-                dsl, res = await self._repair_glitches(
-                    gen, rec, dsl, res, prev_summary, prev_state, ctx, rivals
-                )
-                warnings = [i.model_dump() for i in res.issues if i.severity == "warning"]
                 gen.metrics.glitches_left += len(glitches_of(res))
                 self._accept(rec, dsl, res, warnings, "ready")
                 await changed()
@@ -518,67 +515,6 @@ class Pipeline:
         await self._degrade(rec, prev_state, reason)
         gen.metrics.degraded += 1
         await changed()
-
-    async def _repair_glitches(
-        self,
-        gen: Generation,
-        rec: SceneRecord,
-        dsl: dict[str, Any],
-        res: CompileResult,
-        prev_summary: str | None,
-        prev_state: SceneState | None,
-        ctx: CallContext,
-        rivals: set[asyncio.Task[Draft]],
-    ) -> tuple[dict[str, Any], CompileResult]:
-        """One patch round for the visual glitches a valid scene still shows after the polish, with
-        the engine's measured fixes (SGA-style surgical repair, ADR-040). The repaired scene is kept
-        only when it stays valid and shows fewer glitches; otherwise the scene is kept as it was."""
-        left = glitches_of(res)
-        if not left or not self.settings.animator_glitch_repair:
-            return dsl, res
-        stages = await self.stages()
-        n = len(rec.attempts) + 1
-        issues = [i.model_dump() for i in left][:10]
-        t0 = time.perf_counter()
-        attempt = Attempt(n=n, kind="correction", stage="correction", errors=issues)
-        rec.status = "correcting"
-        gen.metrics.glitch_repairs += 1
-
-        async def one() -> Draft:
-            call = stages.scene(
-                gen, rec, prev_summary, ctx, attempt=n, final=False, previous=dsl, glitches=issues
-            )
-            return await self._draft(call, rec, prev_state)
-
-        count = max(1, self.settings.animator_correction_drafts)
-        tasks = {asyncio.create_task(one()) for _ in range(count)}
-        best: tuple[LLMResult, dict[str, Any], CompileResult] | None = None
-        try:
-            for fut in asyncio.as_completed(tasks):
-                try:
-                    result, fixed, res_fixed, _ = await fut
-                except (LLMRefusal, LLMIncomplete, LLMBadOutput, EngineError):
-                    continue
-                if (
-                    res_fixed.ok
-                    and res_fixed.endState is not None
-                    and len(glitches_of(res_fixed)) < len(left)
-                ):
-                    best = (result, fixed, res_fixed)
-                    break
-        finally:
-            # Drafts still running finish in the background; their cost is counted (`settle`).
-            rivals.update(t for t in tasks if not t.done())
-        attempt.seconds = round(time.perf_counter() - t0, 2)
-        attempt.ok = best is not None
-        attempt.model = best[0].model if best else None
-        final = best[2] if best else res
-        attempt.warnings = len([i for i in final.issues if i.severity == "warning"])
-        rec.attempts.append(attempt)
-        if best is None:
-            log.info("scene %s: glitch repair did not help; keeping the scene as it was", rec.id)
-            return dsl, res
-        return best[1], best[2]
 
     def _shape(self, data: dict[str, Any], rec: SceneRecord) -> dict[str, Any]:
         return normalize(data, rec, independent=self.settings.animator_scene_mode == "parallel")

@@ -1,6 +1,6 @@
 """Visual glitch cleanup (ADR-040): the polish applies the engine's new hints (a wrapped row widened,
-hidden text uncovered, content brought back into the stage), and a valid scene that still shows a
-glitch gets one patch round with the engine's measured fixes, kept only when it helps."""
+hidden text uncovered, content brought back into the stage). ADR-042 reverted the model repair round:
+a valid scene is kept as the polish leaves it, with no extra model call."""
 
 from __future__ import annotations
 
@@ -10,9 +10,8 @@ from typing import Any
 from animator.engine_client import EngineClient, EngineWorkerPool
 from animator.llm import LLMRequest
 from animator.pipeline.generator import GLITCHES, glitches_of
-from animator.pipeline.stages import format_issues
 from animator.pipeline.tidy import autofix
-from tests.test_pipeline import SCENES, Script, run, settings
+from tests.test_pipeline import SCENES, Script, run
 
 JAR = {
     "id": "jar",
@@ -74,29 +73,7 @@ def test_autofix_widens_a_wrapped_row_and_moves_what_the_engine_says() -> None:
     assert note["place"] == {"x": 1440, "y": 400}
 
 
-def test_repair_messages_carry_the_engines_measured_fix() -> None:
-    text = format_issues(
-        [
-            {
-                "code": "OUT_OF_STAGE",
-                "path": "/objects/v",
-                "message": "'v' reaches 16 px outside the stage.",
-                "fix": {"dx": -24, "dy": 0},
-            },
-            {
-                "code": "TEXT_WRAPPED",
-                "path": "/objects/row",
-                "message": "wraps",
-                "fix": {"dx": 0, "dy": 0, "params": {"maxWidth": 1100}},
-            },
-        ],
-        hints=True,
-    )
-    assert "[engine: move it by about (-24, 0) px]" in text and "[engine: set maxWidth to 1100]" in text
-    assert "[engine" not in format_issues([{"code": "X", "message": "m", "fix": {"dx": 5, "dy": 0}}])
-
-
-# ---------------------------------------------------------------------- the repair round
+# ---------------------------------------------------------------------- no model repair round (ADR-042)
 
 
 async def glitch_count(pool: EngineWorkerPool, dsl: dict[str, Any]) -> list[str]:
@@ -112,7 +89,7 @@ async def test_the_glitch_scene_really_has_a_glitch_the_polish_cannot_fix(pool: 
 
 
 def scripted(repair: dict[str, Any] | None) -> Script:
-    """Scene 1 comes with the pebble through the jar's floor; its next call returns `repair`."""
+    """Scene 1 comes with the pebble through the jar's floor; any next call would return `repair`."""
 
     def scene(i: int, attempt: int, req: LLMRequest) -> Any:
         if i == 0:
@@ -122,35 +99,13 @@ def scripted(repair: dict[str, Any] | None) -> Script:
     return Script(scene)
 
 
-async def test_a_glitch_the_polish_cannot_fix_gets_one_patch_round(pool: EngineWorkerPool) -> None:
-    script = scripted({"objects": [pebble(470)]})  # the patch: only the pebble, moved up into the jar
+async def test_a_valid_scene_with_a_glitch_gets_no_extra_model_call(pool: EngineWorkerPool) -> None:
+    script = scripted({"objects": [pebble(470)]})
     gen, _ = await run(pool, script)
     s1 = gen.scenes[0]
-    assert s1.status == "ready" and len(s1.attempts) == 2
-    assert [e["code"] for e in s1.attempts[1].errors] == ["LEAVES_CONTAINER"] and s1.attempts[1].ok
-    req = next(r for r in script.calls if r.label == "scene 1 attempt 2")
-    text = req.messages[0].parts[-1].text  # type: ignore[union-attr]
-    assert req.stage == "correction" and "visual glitches" in text and "LEAVES_CONTAINER" in text
-    assert (
-        s1.dsl is not None and next(o for o in s1.dsl["objects"] if o["id"] == "pebble")["place"]["y"] == 470
-    )
-    assert gen.metrics.glitch_repairs == 1 and gen.metrics.glitches_left == 0
-    assert gen.metrics.corrections == 0  # a valid scene cleaned up is not a failed attempt
-
-
-async def test_a_repair_that_does_not_help_is_dropped(pool: EngineWorkerPool) -> None:
-    gen, _ = await run(pool, scripted({"objects": [pebble(560)]}))  # still through the floor
-    s1 = gen.scenes[0]
-    assert s1.status == "ready" and s1.attempts[-1].ok is False
+    assert s1.status == "ready" and len(s1.attempts) == 1
+    assert not any(r.label == "scene 1 attempt 2" for r in script.calls)
     assert (
         s1.dsl is not None and next(o for o in s1.dsl["objects"] if o["id"] == "pebble")["place"]["y"] == 560
     )
-    # Scenes 2-4 carry the jar and pebble over (continuity) and try their own repair too.
-    assert gen.metrics.glitch_repairs >= 1 and gen.metrics.glitches_left >= 1
-
-
-async def test_the_repair_round_can_be_switched_off(pool: EngineWorkerPool) -> None:
-    script = scripted({"objects": [pebble(470)]})
-    gen, _ = await run(pool, script, settings(animator_glitch_repair=False))
-    assert not any(r.label == "scene 1 attempt 2" for r in script.calls)
-    assert len(gen.scenes[0].attempts) == 1 and gen.metrics.glitch_repairs == 0
+    assert gen.metrics.glitch_repairs == 0 and gen.metrics.glitches_left >= 1

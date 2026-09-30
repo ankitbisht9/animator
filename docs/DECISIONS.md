@@ -1068,13 +1068,13 @@ the deterministic polish could not fix stayed on screen.
    - Touches (a sperm reaching an egg) are not glitches.
    - Letters written on a magnet's pole are not glitches.
    - A see-through region under an object is not an overlap.
-5. **One repair round (`ANIMATOR_GLITCH_REPAIR`, on).**
+5. **One repair round (`ANIMATOR_GLITCH_REPAIR`, on).** *(Reverted by ADR-042.)*
    - A valid scene that still shows a glitch after the polish gets one patch round. The message lists the
      glitches with the engine's measured moves, "move it by about (-24, 0) px" (SGA's surgical patching).
    - The result is kept only if it stays valid and shows fewer glitches.
    - Only affected scenes pay: $0.005-0.02 and 7-20 s.
    - `glitch_repairs` and `glitches_left` are recorded per lesson.
-6. **Prompt `animation.v6`**: v5 plus the no-glitch rules (text never covered, margins, rows of at most about
+6. **Prompt `animation.v6`** *(reverted by ADR-042)*: v5 plus the no-glitch rules (text never covered, margins, rows of at most about
    16 items, contents stay in their container, shapes stand on the ground, arrows are not rotated).
 
 **Measured.**
@@ -1167,7 +1167,7 @@ same model instructions as before. The visuals and the scene prompt are unchange
      defaults).
    - `eleven_v3` gets the tone as an audio tag (`[curious]`, `[encouraging]`, ...). The tag is not a caption
      word.
-5. **The Hinglish language line** now describes a warm Indian teacher: short sentences; dekho, socho, chalo,
+5. **The Hinglish language line** *(reverted by ADR-042)* now describes a warm Indian teacher: short sentences; dekho, socho, chalo,
    achha, yaani; questions to the learner; praise; tum or aap; a comma at every pause, `?` and `!`, never `;`
    or `:`; the common Roman spellings. Everything on screen stays English (ADR-039).
 
@@ -1204,3 +1204,41 @@ as ADR-040, through the pipeline's own checks and polish:
 - `ANIMATOR_TTS_SCRIPT=off` reads the captions as written.
 - `ANIMATOR_TTS_FIT_BEATS=0` only stretches beats, as before.
 - Git tag `backup/before-tts-teacher-voice` with `.env.backup-before-tts-teacher-voice`.
+
+---
+
+## ADR-042 Model-side changes of ADR-040 and ADR-041 reverted (2026-09-30)
+
+**Why.** The user found the scenes worse after ADR-040 and ADR-041: poorly placed objects that do not relate to
+each other, and a scene replaced by the "Simplified scene" card showing its description. The user asked for every
+change on the model side to be reverted, without new fixes.
+
+**What was on the model side.**
+- No model was switched. Every stage still uses gpt-6-luna at the same efforts; the effort benchmark in ADR-041 ran
+  outside the app.
+- ADR-040: the scene prompt `animation.v6`, and the model repair round for visual glitches (the `glitches` message
+  in `stages.py`, `Pipeline._repair_glitches`, `ANIMATOR_GLITCH_REPAIR`).
+- ADR-041: the longer Hinglish language line. It is sent to every stage of a Hinglish lesson, the scene stage
+  included.
+
+**Decision.** All three are reverted to their state before ADR-040:
+- `animation.v6.md` is deleted, so scenes use `animation.v5` again;
+- `stages.py` is restored as it was at ADR-039;
+- the repair round and its setting are removed;
+- `language.py` is restored as it was at ADR-040.
+
+Kept (not model-side):
+- the engine's glitch checks and the deterministic polish (ADR-040);
+- the voice layer (ADR-041), including its own speech-script call, which only rewrites what the voice reads;
+- the `glitches_left` count per lesson.
+The inert `gpt-6.1-sol` entries in `config/models.json` and `config/pricing.json` stay; no stage uses them.
+
+**What was seen.** In the two reported lessons (Hinglish, 1 minute):
+- One scene failed four times: a keyframe color written as text, overlapping labels, then parents that did not
+  exist. The pipeline then showed its fallback card. That is the model failing to write a valid scene.
+- No literal `
+` was found in any saved scene of the last 40 lessons. The one line break in a scene was a real
+  one ("North: summer / South: winter").
+
+**Rollback.** Git tag `backup/before-scene-voice-and-llm-revert` with
+`.env.backup-before-scene-voice-and-llm-revert`.

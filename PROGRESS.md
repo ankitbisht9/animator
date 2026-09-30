@@ -377,3 +377,9 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   0.4 and style 0.3, and tone tags on `eleven_v3`.
 - The Hinglish language line now asks for a warm Indian teacher's way of speaking. Visuals and the scene prompt
   are unchanged.
+
+## Model-side changes reverted (ADR-042)
+
+- Scenes use prompt `animation.v5` again, there is no model repair round for glitches, and the Hinglish language
+  line is back to ADR-039's. No model was ever switched (gpt-6-luna throughout).
+- The engine checks, the polish and the voice layer stay.

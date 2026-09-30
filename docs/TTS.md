@@ -201,12 +201,8 @@ naturalness 9. Kokoro's Hindi voices were heard as male or English-sounding.
 
 **How the Hinglish is written.** The Hinglish is written directly by the lesson's own model calls (outline and
 storyboard), in Roman letters. It is not written in English and then translated. The language line those calls
-receive (`pipeline/language.py`) asks for the way a warm Indian teacher talks:
-- short sentences;
-- dekho, socho, chalo, achha, yaani, bilkul;
-- real questions to the learner, and praise ("Bilkul sahi!");
-- tum or aap, used consistently;
-- a comma wherever a teacher pauses, `?` on every question, `!` for surprise or praise, never `;` or `:`.
+receive is in `pipeline/language.py`. (ADR-041 had lengthened it into a teacher-style brief; ADR-042 reverted it
+to the ADR-039 line, because the scene-drawing model receives it too.)
 
 **The speech script.** The captions stay in Roman letters, but that is not what the voice reads. For Hinglish
 lessons (`ANIMATOR_TTS_SCRIPT=hinglish`), one small model call per scene (the `lightweight` stage, about $0.0004,
