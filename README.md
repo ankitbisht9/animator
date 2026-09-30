@@ -141,6 +141,9 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   `uv run python scripts/tts_samples.py`. Setup, keys and voices: [docs/TTS.md](docs/TTS.md).
 - `ANIMATOR_LLM_PROVIDER`: `openai` (live), `record` (live, and also saves every call under
   `ANIMATOR_LLM_FIXTURES_DIR` for offline replay), `replay` (offline from those recordings).
+- Visual glitches: the engine checks every scene for text hidden or cut off, content leaving the stage, things
+  drawn into each other and rows that wrap. The polish applies the sure fixes, and a scene that still shows a
+  glitch gets one quick model repair (`ANIMATOR_GLITCH_REPAIR`, ADR-040).
 - Optional quality passes: `ANIMATOR_ENABLE_LLM_CRITIC`, `ANIMATOR_ENABLE_VISUAL_CRITIC` (reviews rendered
   keyframes with a vision model; slower and more expensive).
 

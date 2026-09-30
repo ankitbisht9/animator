@@ -1023,3 +1023,98 @@ nothing to run, keep up with generation, and be removable with a single setting.
 - English 30-second lesson: unchanged (Kokoro `af_heart`, English captions and visuals), $0.029.
 
 **Rollback.** Git tag `backup/before-hinglish-voice-fix` with `.env.backup-before-hinglish-voice-fix`.
+
+## ADR-040 Visual glitches: geometric checks, measured fixes, and one repair round (2026-09-30)
+
+**Problem.** A review of 50 recent scenes found glitches a viewer notices:
+- a row of numbers wrapping onto two lines, so boxes and pointers aimed at the wrong items;
+- a card, a ramp or a magnifier drawn over text;
+- a beaker drawn into a tank, and a block sunk through a tank's floor;
+- text 24 px from the frame edge, and a shape running behind the caption bar;
+- arrows that ended up in the frame's corner;
+- a ring cutting through the row it circled.
+
+Most of these were not detected at all. A valid scene's warnings were never sent back to the model, so anything
+the deterministic polish could not fix stayed on screen.
+
+**Research.**
+- Studies of LLM-made teaching videos report the same problems: layout is the weakest part (Code2Video,
+  TheoremExplainAgent).
+- SGA ("Plug & Play Geometric Verification for Educational Video Synthesis", 2026) found that exact geometric
+  checks with a measured minimum move beat vision-model critics. People preferred its videos in 84% of
+  comparisons, and 93% on overlaps. It also checks positions at rest, not in the middle of a motion.
+- Our engine already follows that design, so this ADR fills in its gaps.
+
+**Decision.**
+1. **Engine bugs.**
+   - Objects drawn from their endpoints (arrows, lines) rotate and scale about their own center; they used to
+     swing around the frame's corner.
+   - A `circle` marker draws a ring that clears its target's corners: an ellipse through points beyond the
+     corners, or a capsule around a long row.
+2. **New checks** (warnings, most with a measured fix):
+   - `HIDDEN_TEXT`: text, or an arrow's label, covered by something drawn after it. The fix moves the lighter
+     of the two.
+   - `OUT_OF_STAGE`: content within 40 px of a side edge (the fix moves it to 48 px), more than 24 px into the
+     caption zone, or deep in the title bar.
+   - `TEXT_WRAPPED`: a row of short items that wraps. The fix sets the width that keeps it on one line;
+     otherwise the message asks for at most about 16 items with "…".
+   - `LEAVES_CONTAINER`: something that was inside a container, or sticks out through its floor or walls, at
+     rest.
+   - Two containers overlapping by more than 35% (a catch cup under a spout overlaps about 27%, on purpose).
+   - A plain line (a wire) running through a label's text.
+3. **Calibrated against the approved fixture lessons.** They stay free of warnings. The one real finding there,
+   a pendulum crammed into the gallery's corner, was moved 50 px; the only visual change is that one frame.
+4. **False alarms removed on real scenes.**
+   - Touches (a sperm reaching an egg) are not glitches.
+   - Letters written on a magnet's pole are not glitches.
+   - A see-through region under an object is not an overlap.
+5. **One repair round (`ANIMATOR_GLITCH_REPAIR`, on).**
+   - A valid scene that still shows a glitch after the polish gets one patch round. The message lists the
+     glitches with the engine's measured moves, "move it by about (-24, 0) px" (SGA's surgical patching).
+   - The result is kept only if it stays valid and shows fewer glitches.
+   - Only affected scenes pay: $0.005-0.02 and 7-20 s.
+   - `glitch_repairs` and `glitches_left` are recorded per lesson.
+6. **Prompt `animation.v6`**: v5 plus the no-glitch rules (text never covered, margins, rows of at most about
+   16 items, contents stay in their container, shapes stand on the ground, arrows are not rotated).
+
+**Measured.**
+- The 50 reviewed scenes, as the model wrote them, then after the polish, then after one repair of the 6
+  still glitched:
+
+  | | Glitch-free |
+  |---|---|
+  | As written | 35 of 50 |
+  | After the polish | 44 |
+  | After one repair | 49 |
+
+- Rendered before and after:
+  - the number rows sit on one line, circled cleanly;
+  - the beaker stands beside the tank, and the blocks stay in their tanks;
+  - the recap card no longer covers the arrow.
+- Twelve new live lessons (v6, checks, repair; voice off):
+  - 30 s-1 min lessons, ready in 24-38 s;
+  - first scene playable in 14-36 s (a scene that needs a correction or a repair first pays 7-20 s);
+  - $0.020-0.060 per lesson;
+  - no simplified scenes;
+  - the second round had 1 glitch left in 20 scenes.
+
+**Model research.**
+- There is no GPT-6.1 Luna. The only 6.1 model is **GPT-6.1 Sol** (DevDay, 29 Sep 2026): $2 input,
+  $0.10 cached, $10 output per 1M tokens, 20x Luna.
+- On the same 17 scene briefs:
+
+  | | GPT-6 Luna (low) | GPT-6.1 Sol (low) |
+  |---|---|---|
+  | Valid first drafts | 15 | 14 |
+  | Glitch-free after the polish | 9 | 12 |
+  | Time per scene (median) | 14 s | 32 s |
+  | Cost per scene | $0.0034 | $0.073 |
+
+- Luna with the repair round gets about as clean, faster and at a fraction of the cost, so Luna stays.
+- `gpt-6.1-sol` is added to `config/pricing.json` and `config/models.json` for anyone who wants to try it.
+
+**Rollback.**
+- `ANIMATOR_GLITCH_REPAIR=false` turns off the repair round.
+- `ANIMATOR_LAYOUT_POLISH=false` turns off the polish.
+- Deleting `animation.v6.md` returns the prompt to v5.
+- Git tag `backup/before-visual-glitch-fixes` with `.env.backup-before-visual-glitch-fixes`.

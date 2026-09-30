@@ -84,6 +84,10 @@ class Settings(BaseSettings):
     animator_layout_polish: bool = True
     # Corrections reply with only what changes (a few hundred tokens) instead of the whole scene.
     animator_patch_corrections: bool = True
+    # A valid scene that still shows a visual glitch after the polish (hidden text, something cut by
+    # the frame or the caption bar, an overlap, a row wrapping) gets one quick patch round with the
+    # engine's measured fixes (ADR-040). Only affected scenes pay it (a patch: about $0.002).
+    animator_glitch_repair: bool = True
     animator_enable_llm_critic: bool = False
     animator_enable_visual_critic: bool = False
     animator_chunk_target_duration_s: float = 75.0

@@ -3,6 +3,7 @@
   "models": {
     "gpt-6-astra": { "reasoning": true, "efforts": ["none", "low", "medium", "high", "xhigh", "max"], "vision": true },
     "gpt-6-sol": { "reasoning": true, "efforts": ["none", "low", "medium", "high", "xhigh", "max"], "vision": true },
+    "gpt-6.1-sol": { "reasoning": true, "efforts": ["low", "medium", "high", "xhigh", "max"], "vision": true },
     "gpt-6-luna": { "reasoning": true, "efforts": ["none", "low", "medium", "high"], "vision": true },
     "gpt-5": { "reasoning": true, "efforts": ["minimal", "low", "medium", "high"], "vision": true },
     "gpt-5-mini": { "reasoning": true, "efforts": ["minimal", "low", "medium", "high"], "vision": true },

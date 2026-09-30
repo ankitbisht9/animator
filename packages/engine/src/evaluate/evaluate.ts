@@ -283,7 +283,16 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
     // Two matrices: `raw` (layout: placement, anchors, followers) and `m` (visual:
     // adds entrance/emphasis effects). Followers attach to raw geometry so a
     // popping or sliding object does not jostle the labels and arrows around it.
-    const own = objectMatrix(x, y, rot, scl);
+    // An object drawn from its endpoints (arrow, line, vector) has its geometry in world coordinates:
+    // it turns and scales in place, about its own center, not about the world origin.
+    let own = objectMatrix(x, y, rot, scl);
+    if (spec?.worldSpace && (rot !== 0 || scl !== 1)) {
+      const c = center(geo.bbox);
+      own = multiply(
+        translation(x + c.x, y + c.y),
+        multiply(multiply(rotation(rot), scaling(scl)), translation(-c.x, -c.y)),
+      );
+    }
     let raw: Mat = own;
     let m: Mat = own;
     let parentAlpha = 1;

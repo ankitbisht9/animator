@@ -24,6 +24,11 @@
       "cached_input": 0.2,
       "output": 10.0
     },
+    "gpt-6.1-sol": {
+      "input": 2.0,
+      "cached_input": 0.1,
+      "output": 10.0
+    },
     "gpt-6-luna": {
       "input": 0.1,
       "cached_input": 0.01,

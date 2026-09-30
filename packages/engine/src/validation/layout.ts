@@ -38,6 +38,37 @@ export function fitHint(box: Rect): IssueFix | undefined {
   return scale < 0.999 ? { dx, dy, scale: roundTo(scale, 3) } : { dx, dy };
 }
 
+/** The move that brings a box inside the stage (`margin` in from its edges), or undefined when the box
+ * is bigger than the stage or already inside. Never shrinks. */
+export function stageFitHint(box: Rect, stage: Rect, margin = 12): IssueFix | undefined {
+  const inner = expand(stage, -margin);
+  if (box.w > inner.w || box.h > inner.h) return undefined;
+  const shift = (lo: number, size: number, min: number, max: number) =>
+    lo < min ? min - lo : lo + size > max ? max - (lo + size) : 0;
+  const dx = roundTo(shift(box.x, box.w, inner.x, inner.x + inner.w), 1);
+  const dy = roundTo(shift(box.y, box.h, inner.y, inner.y + inner.h), 1);
+  return dx === 0 && dy === 0 ? undefined : { dx, dy };
+}
+
+/** Where content may be: below the title bar, above the caption bar, clear of the frame edges. */
+export function safeArea(cs: CompiledScene): Rect {
+  // Sides: 40 px (text 24 px from the frame edge still looks cut off); fixes move content to 48 px,
+  // the stage's own margin.
+  const side = 40;
+  const top = cs.layout === "title_card" || cs.layout === "no_title" ? FIT_MARGIN : 104;
+  const bottom = cs.captions ? CAPTION_BAR.y : CANVAS_RECT.h - FIT_MARGIN;
+  return { x: side, y: top, w: CANVAS_RECT.w - 2 * side, h: bottom - top };
+}
+
+/** A row of short items ("1 2 3 ... 16", "A B C D E F") written as one text. */
+export function rowLike(text: string): boolean {
+  const tokens = text.replace(/\*\*/g, "").split(/\s+/).filter(Boolean);
+  return tokens.length >= 5 && tokens.filter((w) => w.length <= 3).length >= 0.7 * tokens.length;
+}
+
+/** Shapes that hold content drawn on them (an icon in a circle, a word on a box). */
+const HOLDERS = new Set(["rectangle", "circle", "ellipse", "polygon", "path", "card", "note", "block", "container"]);
+
 const inRect = (p: Vec2, r: Rect) => p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
 
 /** Things drawn through or around others by nature: effects, fluids, plots, containers, pipes. */
@@ -195,6 +226,20 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
     (parentOf.get(a) !== undefined && parentOf.get(a) === parentOf.get(b));
   let clutterMax = 0;
   let clutterT = 0;
+  const prepById = new Map(cs.objects.map((o) => [o.id, o.prep]));
+  // `object|container` pairs seen fully inside at rest (a block in a tank), and texts checked for wrapping.
+  const insideOnce = new Set<string>();
+  const wrapChecked = new Set<string>();
+  // Moving objects are checked at rest (after each move), not in passing (SGA: transient overlaps during
+  // a motion are fine, the positions it rests in are not).
+  const actions = Object.values(cs.actions);
+  const moving = (id: string, t: number) =>
+    actions.some(
+      (a) =>
+        a.start < t &&
+        t < a.end &&
+        (a.action === "run_solver" || (a.target === id && (a.action === "move" || a.action === "animate"))),
+    );
 
   for (const t of sampleTimes(cs)) {
     const frame = evaluate(cs, t);
@@ -369,13 +414,19 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
       const ra = screen.get(a.id) as Rect;
       for (const b of counted) {
         if (b === a || spec(b)?.labelLike || spec(b)?.worldSpace || b.type === "equation") continue;
-        if (followTarget.get(a.id) === b.id || parentOf.get(a.id) === b.id || parentOf.get(b.id) === a.id) continue;
+        if (parentOf.get(a.id) === b.id || parentOf.get(b.id) === a.id) continue;
         const rb = screen.get(b.id) as Rect;
         const ov = intersection(ra, rb);
-        if (ov && (area(ov) > 0.35 * area(ra) || area(ov) > 0.25 * area(rb))) {
+        if (!ov) continue;
+        // A label straddling a larger object's edge half-covers both, even when pinned to it on purpose
+        // ("Down" pinned under a person's feet, but overlapping them).
+        const share = area(ov) / Math.max(1, area(ra));
+        const straddles = share >= 0.15 && share < 0.9 && area(ra) < area(rb);
+        const covers = area(ov) > 0.35 * area(ra) || area(ov) > 0.25 * area(rb);
+        if (followTarget.get(a.id) === b.id ? straddles : straddles || covers) {
           // A label sitting inside an object (a name written on a box) is meant; one straddling the
           // object's edge is not, and has a sure fix: move it clear.
-          const inside = area(ov) / Math.max(1, area(ra));
+          const inside = share;
           const zoom = a.layer === "overlay" ? 1 : frame.camera.zoom;
           report(
             "LABEL_OCCLUDES",
@@ -414,6 +465,8 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
         const b = solids[j] as FrameObject;
         if (sameDrawing(a.id, b.id) || related(a.id, b.id)) continue;
         const [lower, upper] = (drawnAt.get(a.id) ?? 0) < (drawnAt.get(b.id) ?? 0) ? [a, b] : [b, a];
+        // See-through shapes (a Venn diagram, a pale "displaced water" region under a ship) hide nothing.
+        if (upper.alpha < 0.9 || lower.alpha < 0.9) continue;
         const rl = screen.get(lower.id) as Rect;
         const ru = screen.get(upper.id) as Rect;
         const ov = intersection(rl, ru);
@@ -421,7 +474,10 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
         // Content drawn on a shape (an icon in a circle, a chloroplast in a cell) sits inside it: fine.
         // Otherwise the covered share of the lower object decides: a wheel under a cart's edge (a
         // touch) is fine, a box drawn over half a wheel, or a magnet drawn into another, is not.
-        if (area(ov) >= 0.9 * area(ru) || area(ov) < 0.25 * area(rl)) continue;
+        // (A small thing across a bigger thing's edge is often a deliberate touch, a sperm reaching an
+        // egg, so only the covered share of the lower object counts here.)
+        const onTop = area(ov) >= 0.9 * area(ru);
+        if (onTop ? HOLDERS.has(lower.type) || area(ov) < 0.15 * area(rl) : area(ov) < 0.25 * area(rl)) continue;
         const zoom = upper.layer === "overlay" ? 1 : frame.camera.zoom;
         report(
           "OBJECT_OVERLAP",
@@ -434,6 +490,180 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
         );
       }
     }
+    // Two containers drawn into each other (an overflow can over a tank's wall). Containers are glass, so
+    // they are left out of the solid overlaps above; one container over another still reads as a glitch.
+    const vessels = counted.filter((o) => o.type === "container");
+    for (let i = 0; i < vessels.length; i++) {
+      for (let j = i + 1; j < vessels.length; j++) {
+        const a = vessels[i] as FrameObject;
+        const b = vessels[j] as FrameObject;
+        if (related(a.id, b.id)) continue;
+        const [lower, upper] = (drawnAt.get(a.id) ?? 0) < (drawnAt.get(b.id) ?? 0) ? [a, b] : [b, a];
+        const rl = screen.get(lower.id) as Rect;
+        const ru = screen.get(upper.id) as Rect;
+        const ov = intersection(rl, ru);
+        // A catch cup under an overflow can's spout overlaps the can's box (spout included) by about a
+        // quarter on purpose; a beaker drawn into a tank's wall overlaps it by nearly half.
+        if (!ov || area(ov) < 0.35 * Math.min(area(rl), area(ru))) continue;
+        report(
+          "OBJECT_OVERLAP",
+          `${upper.id}|${lower.id}`,
+          `'${upper.id}' covers part of '${lower.id}' at ${roundTo(t, 2)}s.`,
+          t,
+          "warning",
+          "Keep separate containers apart (32 px or more).",
+          clearHint(ru, rl, upper.layer === "overlay" ? 1 : frame.camera.zoom),
+        );
+      }
+    }
+
+    // Text hidden under something drawn after it (a ramp over its "height" label, a card over a
+    // label). The sure fix moves the lighter of the two: a free annotation, or the smaller one.
+    const covers = counted.filter((o) => {
+      const sp = spec(o);
+      return (
+        !sp?.strokeLine &&
+        !sp?.worldSpace &&
+        !sp?.decorative &&
+        !NOT_SOLID.has(o.type) &&
+        !(o.type === "path" && o.params.closed !== true) &&
+        o.alpha >= 0.9
+      );
+    });
+    // Text: labels and panels, and connectors carrying a label (an arrow marked "motion").
+    const texts = [
+      ...labels,
+      ...counted.filter((o) => spec(o)?.strokeLine && typeof o.params.label === "string" && o.params.label.trim()),
+    ];
+    for (const txt of texts) {
+      const rt = screen.get(txt.id) as Rect;
+      for (const u of covers) {
+        if (u === txt || (drawnAt.get(u.id) ?? 0) <= (drawnAt.get(txt.id) ?? 0)) continue;
+        if (parentOf.get(txt.id) === u.id || parentOf.get(u.id) === txt.id) continue;
+        // Two labels overlapping are LABEL_OVERLAP (an error) already.
+        if (spec(u)?.labelLike && seen.has(`LABEL_OVERLAP|${txt.id}|${u.id}`)) continue;
+        if (spec(u)?.labelLike && seen.has(`LABEL_OVERLAP|${u.id}|${txt.id}`)) continue;
+        const ru = screen.get(u.id) as Rect;
+        const ov = intersection(rt, ru);
+        if (!ov) continue;
+        // A connector's box is mostly empty space around its stroke and label: only a cover over half of
+        // it surely hides the label.
+        const hides = spec(txt)?.strokeLine
+          ? area(ov) >= 0.5 * area(rt)
+          : area(ov) >= 0.15 * area(rt) || (area(ov) >= 0.4 * area(ru) && area(ov) >= 600);
+        if (!hides) continue;
+        const moveCover = !!spec(u)?.labelLike || area(ru) <= area(rt);
+        const [mover, still] = moveCover ? [u, txt] : [txt, u];
+        report(
+          "HIDDEN_TEXT",
+          `${mover.id}|${still.id}`,
+          `'${txt.id}' is hidden under '${u.id}' at ${roundTo(t, 2)}s.`,
+          t,
+          "warning",
+          "Move one of them so the text is fully visible; text must never be drawn under another object.",
+          clearHint(
+            screen.get(mover.id) as Rect,
+            screen.get(still.id) as Rect,
+            mover.layer === "overlay" ? 1 : frame.camera.zoom,
+          ),
+        );
+      }
+    }
+
+    // Content reaching out of the safe area: into the title bar, behind the caption bar, or against the
+    // frame edge (clipped-looking text). Large regions (ground, water), connectors and titles are exempt.
+    const safe = safeArea(cs);
+    for (const o of counted) {
+      const sp = spec(o);
+      if (o.layer === "overlay" || sp?.decorative || sp?.strokeLine || sp?.worldSpace) continue;
+      if (NOT_SOLID.has(o.type) && o.type !== "container" && !sp?.labelLike) continue;
+      const r = screen.get(o.id) as Rect;
+      if (r.w > 0.9 * safe.w || r.h > 0.9 * safe.h) continue;
+      if (seen.has(`OUT_OF_BOUNDS|${o.id}`) || seen.has(`NEAR_EDGE|${o.id}`)) continue;
+      if (sp?.labelLike && r.y + r.h <= safe.y + 4) continue; // a title in the title bar
+      // Against a frame edge, text looks cut: strict. Near the caption bar, a little tolerance (the
+      // caption is a pill in the middle). Into the title bar only when deep (covering the title itself
+      // is TITLE_COVERED).
+      const side = Math.max(safe.x - r.x, r.x + r.w - (safe.x + safe.w));
+      const below = r.y + r.h - (safe.y + safe.h);
+      const above = safe.y - r.y;
+      const beyond = Math.max(side, below, above);
+      if (side <= 2 && below <= 24 && above <= 60) continue;
+      const zoom = frame.camera.zoom;
+      const fix = stageFitHint(r, safe, 8);
+      report(
+        "OUT_OF_STAGE",
+        o.id,
+        `'${o.id}' reaches ${Math.round(beyond)} px outside the stage at ${roundTo(t, 2)}s.`,
+        t,
+        "warning",
+        `Keep everything inside the stage (x ${safe.x} to ${safe.x + safe.w}, y ${safe.y} to ${safe.y + safe.h}).`,
+        fix
+          ? { dx: roundTo(fix.dx / Math.max(0.01, zoom), 1), dy: roundTo(fix.dy / Math.max(0.01, zoom), 1) }
+          : undefined,
+      );
+    }
+
+    // A row of short items written as one text that wraps onto a second line: the things placed along
+    // the row (boxes, a pointer, a highlight) no longer line up with it. The sure fix widens the text.
+    for (const o of labels) {
+      if ((o.type !== "text" && o.type !== "label") || wrapChecked.has(o.id)) continue;
+      wrapChecked.add(o.id);
+      const words = typeof o.params.text === "string" ? o.params.text : "";
+      const sp = spec(o);
+      if (!sp || !rowLike(words)) continue;
+      const ctx = { theme, prep: prepById.get(o.id) };
+      const now = sp.geometry(o.params, ctx).bbox;
+      const one = sp.geometry({ ...o.params, maxWidth: 1e5 }, ctx).bbox;
+      if (now.h <= one.h * 1.4) continue;
+      const want = Math.ceil(one.w + 8);
+      const limit = o.type === "label" ? 1200 : 1600;
+      const fits = want <= Math.min(limit, cs.stage.w - 2 * FIT_MARGIN);
+      report(
+        "TEXT_WRAPPED",
+        o.id,
+        `'${o.id}' is a row of items but wraps onto ${Math.round(now.h / Math.max(1, one.h))} lines.`,
+        t,
+        "warning",
+        fits
+          ? `Give it maxWidth ${want} so the row stays on one line.`
+          : "Too many items for one line: show at most about 16, abbreviating the middle with '…' (1 2 3 … 62 63 64), in one text or one object per item.",
+        fits ? { dx: 0, dy: 0, params: { maxWidth: want } } : undefined,
+      );
+    }
+
+    // Something that was inside a container at rest and later rests partly outside it: a block sunk
+    // through the bottom of its tank. Checked at rest only (passing through the rim is fine).
+    for (const c of vessels) {
+      const rc = screen.get(c.id) as Rect;
+      for (const o of counted) {
+        const sp = spec(o);
+        if (o === c || sp?.labelLike || sp?.strokeLine || sp?.worldSpace || NOT_SOLID.has(o.type)) continue;
+        if (moving(o.id, t)) continue;
+        const ro = screen.get(o.id) as Rect;
+        const ov = intersection(ro, rc);
+        const inside = ov ? area(ov) / Math.max(1, area(ro)) : 0;
+        const key = `${o.id}|${c.id}`;
+        // Through the floor or a wall (not over the rim: a scale's hook dipping in from above is fine).
+        const through =
+          inside > 0.2 &&
+          inside < 0.95 &&
+          ro.y > rc.y &&
+          (ro.y + ro.h > rc.y + rc.h + 6 || ro.x < rc.x - 6 || ro.x + ro.w > rc.x + rc.w + 6);
+        if (inside >= 0.9) insideOnce.add(key);
+        if (through || (insideOnce.has(key) && inside > 0.05 && inside < 0.8)) {
+          report(
+            "LEAVES_CONTAINER",
+            key,
+            `'${o.id}' sticks out of '${c.id}' at ${roundTo(t, 2)}s.`,
+            t,
+            "warning",
+            `End its motion inside '${c.id}' (above its floor, between its walls).`,
+          );
+        }
+      }
+    }
+
     // Connectors (arrows, vectors, dimensions, brackets): running through a label's text area, through
     // another object (in one side and out the other), or across another connector. An arrow with a
     // `curve` gets a sure fix: the smallest bend that clears everything.
@@ -511,6 +741,30 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
       const best = candidates.find((cand) => clear(cand.draw));
       return best ? { dx: 0, dy: 0, params: best.fix } : undefined;
     };
+    // Plain lines (wires, leaders drawn as lines) running through a label's text: always a glitch. They
+    // are not checked against objects (an axis through the Earth is meant).
+    for (const ln of counted) {
+      if (ln.type !== "line") continue;
+      const a = ln.params.from as Vec2 | undefined;
+      const b = ln.params.to as Vec2 | undefined;
+      if (!a || !b || typeof a.x !== "number" || typeof b.x !== "number") continue;
+      const m = ln.layer === "overlay" ? ln.matrix : multiply(cam, ln.matrix);
+      const n = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 8));
+      const pts = Array.from({ length: n + 1 }, (_, i) =>
+        apply(m, { x: a.x + ((b.x - a.x) * i) / n, y: a.y + ((b.y - a.y) * i) / n }),
+      );
+      for (const lb of labels) {
+        if (!unrelated(ln, lb) || !crossesLabel(pts, lb)) continue;
+        report(
+          "CONNECTOR_CROSSES_LABEL",
+          `${ln.id}|${lb.id}`,
+          `'${ln.id}' runs across '${lb.id}' at ${roundTo(t, 2)}s.`,
+          t,
+          "warning",
+          "Move the label beside the line, or route the line around it.",
+        );
+      }
+    }
     connectors.forEach((k, i) => {
       const { c, pts } = k;
       let fix: IssueFix | undefined | null = null; // computed once, on the first problem

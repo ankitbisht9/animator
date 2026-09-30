@@ -639,6 +639,30 @@ export const note = defineComponentSpec({
 
 // ------------------------------------------------------------------ marker
 
+/**
+ * The ring a `circle` marker draws around a box, with `pad` clearance: an ellipse through points past
+ * the box's corners (never through the content), or, around a long row, a capsule with round ends.
+ */
+export type Enclosure =
+  | { kind: "ellipse"; cx: number; cy: number; rx: number; ry: number }
+  | { kind: "capsule"; x: number; y: number; w: number; h: number; r: number };
+
+export function enclosure(b: Rect, pad: number): Enclosure {
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  if (b.w <= 2.2 * b.h) {
+    // The box's corners lie on an ellipse sqrt(2) times its half-sizes; add the padding outside it.
+    return { kind: "ellipse", cx, cy, rx: (b.w / 2) * Math.SQRT2 + pad, ry: (b.h / 2) * Math.SQRT2 + pad };
+  }
+  // Round ends of radius h/2 + pad centered on the box's ends clear its corners by exactly `pad`.
+  const r = b.h / 2 + pad;
+  return { kind: "capsule", x: b.x - r, y: cy - r, w: b.w + 2 * r, h: 2 * r, r };
+}
+
+export function enclosureBox(e: Enclosure): Rect {
+  return e.kind === "ellipse" ? { x: e.cx - e.rx, y: e.cy - e.ry, w: 2 * e.rx, h: 2 * e.ry } : e;
+}
+
 export const marker = defineComponentSpec({
   type: "marker",
   category: "annotation",
@@ -654,6 +678,7 @@ export const marker = defineComponentSpec({
     const ref = objectRefOf(p, "target");
     const pad = pNum(p, "padding", 14);
     const b = ref?.box ?? { x: 0, y: 0, w: 0, h: 0 };
+    if (pStr(p, "shape") === "circle") return { bbox: enclosureBox(enclosure(b, pad)) };
     return { bbox: { x: b.x - pad, y: b.y - pad, w: b.w + 2 * pad, h: b.h + 2 * pad } };
   },
   entrance: "draw",

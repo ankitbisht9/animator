@@ -4,6 +4,7 @@ import {
   bracketLayout,
   calloutLayout,
   dimensionLayout,
+  enclosure,
   labelLayout,
   layoutText,
   noteLayout,
@@ -408,12 +409,26 @@ export function MarkerR({ o, theme }: RenderProps) {
     );
   }
   if (shape === "circle") {
-    return (
+    // A ring that clears the content (engine `enclosure`): an ellipse, or a capsule around a long row.
+    const e = enclosure(b, pad);
+    return e.kind === "ellipse" ? (
       <ellipse
-        cx={fmt(b.x + b.w / 2)}
-        cy={fmt(b.y + b.h / 2)}
-        rx={fmt(b.w / 2 + pad * 1.6)}
-        ry={fmt(b.h / 2 + pad * 1.2)}
+        cx={fmt(e.cx)}
+        cy={fmt(e.cy)}
+        rx={fmt(e.rx)}
+        ry={fmt(e.ry)}
+        fill="none"
+        stroke={color}
+        strokeWidth={5}
+        {...dash}
+      />
+    ) : (
+      <rect
+        x={fmt(e.x)}
+        y={fmt(e.y)}
+        width={fmt(e.w)}
+        height={fmt(e.h)}
+        rx={fmt(e.r)}
         fill="none"
         stroke={color}
         strokeWidth={5}

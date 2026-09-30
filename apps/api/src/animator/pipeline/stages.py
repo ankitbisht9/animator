@@ -71,10 +71,25 @@ def _validated[M: BaseModel](model: type[M], result: LLMResult) -> M:
         raise LLMBadOutput(f"{model.__name__} failed validation at {where}: {first['msg']}") from e
 
 
-def format_issues(issues: list[dict[str, Any]], limit: int = 25) -> str:
+def _hint(fix: dict[str, Any] | None) -> str:
+    """The engine's measured fix, in words (how far to move, what to set)."""
+    if not fix:
+        return ""
+    parts = []
+    if fix.get("dx") or fix.get("dy"):
+        parts.append(f"move it by about ({fix.get('dx') or 0}, {fix.get('dy') or 0}) px")
+    if fix.get("scale"):
+        parts.append(f"scale it to {fix['scale']}x")
+    for k, v in (fix.get("params") or {}).items():
+        parts.append(f"set {k} to {v}")
+    return f" [engine: {', '.join(parts)}]" if parts else ""
+
+
+def format_issues(issues: list[dict[str, Any]], limit: int = 25, hints: bool = False) -> str:
     lines = []
     for i in issues[:limit]:
         tip = f" -> {i['suggestion']}" if i.get("suggestion") else ""
+        tip += _hint(i.get("fix")) if hints else ""
         where = i.get("path") or "/"
         lines.append(f"- [{i.get('severity', 'error')}] {i.get('code')} at {where}: {i.get('message')}{tip}")
     if len(issues) > limit:
@@ -339,10 +354,12 @@ class Stages:
         issues: list[dict[str, Any]] | None = None,
         llm_error: str | None = None,
         critic_notes: str | None = None,
+        glitches: list[dict[str, Any]] | None = None,
     ) -> LLMResult:
         """Attempt 1 drafts the scene; later attempts correct it (issues from the engine or the
-        critic) or repair it (the previous reply was unusable). A correction replies with only
-        what changes (a patch, merged here), unless `animator_patch_corrections` is off."""
+        critic), repair it (the previous reply was unusable), or clean up the visual glitches of a
+        valid scene (`glitches`, ADR-040). A correction replies with only what changes (a patch,
+        merged here), unless `animator_patch_corrections` is off."""
         parts = [self.scene_context(gen, rec, prev_summary)]
         patch = (
             attempt > 1
@@ -370,6 +387,12 @@ class Stages:
                 parts.append(
                     f"The engine rejected it with these issues. Fix every error, keep what works, and "
                     f"{reply}:\n" + format_issues(issues)
+                )
+            if glitches:
+                parts.append(
+                    "The scene works, but a viewer would see these visual glitches. Fix every one of them "
+                    "(the engine says how far to move things), keep everything else exactly as it is, and "
+                    f"{reply}:\n" + format_issues(glitches, hints=True)
                 )
             if critic_notes:
                 parts.append(f"A reviewer asked for these changes. Apply them and {reply}:\n" + critic_notes)

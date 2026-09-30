@@ -354,3 +354,13 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - Spoken language (ADR-039): Hinglish changes only the voice and captions; every text in the visuals stays English.
   Hinglish lessons speak with Microsoft's native Hindi female voice `hi-IN-SwaraNeural` (edge, free), while English
   lessons stay on Kokoro (`ANIMATOR_TTS_PROVIDER_HINGLISH`). Kokoro reads Roman-script Hindi with English sounds.
+
+## Visual glitch cleanup (ADR-040)
+
+- New engine checks: text hidden under something, content out of the stage or against the frame edge, a row of
+  items wrapping, containers drawn into each other, things sticking out of a container, wires through labels.
+- Engine fixes: arrows and lines rotate in place; circle markers never cut through what they circle.
+- The polish applies the engine's measured fixes. A scene still showing a glitch gets one model patch round
+  with those measurements (`ANIMATOR_GLITCH_REPAIR`), kept only if it helps. The prompt is now `animation.v6`.
+- On 50 reviewed scenes: 35 glitch-free as written, 44 after the polish, 49 after one repair.
+- Model research: GPT-6.1 Sol is cleaner on first drafts but 2.3x slower and 21x the price per scene; Luna stays.

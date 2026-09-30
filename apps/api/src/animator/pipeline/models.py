@@ -247,6 +247,9 @@ class Metrics(BaseModel):
     tts_audio_s: float = 0.0
     tts_failures: int = 0
     tts_error: str | None = None  # why the last failure happened (shown on the lesson page)
+    # Visual glitch repair (ADR-040): patch rounds run, and glitches the finished scenes still show.
+    glitch_repairs: int = 0
+    glitches_left: int = 0
 
 
 class Generation(BaseModel):

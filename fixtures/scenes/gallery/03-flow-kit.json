@@ -197,8 +197,8 @@
       "place": {
         "slot": "stage.top_right",
         "offset": {
-          "x": 150,
-          "y": -70
+          "x": 100,
+          "y": -20
         }
       }
     }
