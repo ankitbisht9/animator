@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from animator.config import Settings
-from animator.export.exporter import ExportError
+from animator.export.exporter import AudioSource, ExportError
 from animator.export.ffmpeg import FfmpegError
 from animator.export.plan import ExportSettings
 from animator.export.render import BrowserPool, Viewport, build_id
@@ -50,7 +50,9 @@ class ExportJobs:
     def get(self, gen_id: str) -> ExportJob | None:
         return self.jobs.get(gen_id)
 
-    def start(self, gen_id: str, lesson: dict[str, Any], settings: ExportSettings) -> ExportJob:
+    def start(
+        self, gen_id: str, lesson: dict[str, Any], settings: ExportSettings, audio: AudioSource | None = None
+    ) -> ExportJob:
         running = self.jobs.get(gen_id)
         if running is not None and running.state == "running":
             return running
@@ -60,7 +62,9 @@ class ExportJobs:
         async def run() -> None:
             try:
                 out = self.settings.resolve(self.settings.export_output_dir)
-                res = await export_lesson(lesson, gen_id, settings, out_dir=out, log=job.log.append)
+                res = await export_lesson(
+                    lesson, gen_id, settings, out_dir=out, audio=audio, log=job.log.append
+                )
                 job.video = res.outputs.get("mp4")
                 job.state = "done"
             except (ExportError, FfmpegError, FileNotFoundError, ValueError) as e:

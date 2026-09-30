@@ -17,6 +17,7 @@ import { Background } from "./Background";
 import { CaptionBar } from "./Caption";
 import { EmphasisBehind, EmphasisFront } from "./Emphasis";
 import { FRONT_RENDERERS, RENDERERS } from "./renderers";
+import type { SceneNarration } from "./types";
 import { fmt, matrixAttr, withAlpha } from "./util";
 
 export interface SceneViewProps {
@@ -31,6 +32,8 @@ export interface SceneViewProps {
   hoverId?: string | null;
   onHover?: (id: string | null) => void;
   className?: string;
+  /** Spoken narration (TTS on): caption words light up exactly when the voice says them. */
+  narration?: SceneNarration | null;
 }
 
 function SceneDefs({ theme }: { theme: Theme }) {
@@ -153,6 +156,19 @@ function Overlay({ overlay }: { overlay: NonNullable<FrameState["overlay"]> }) {
   );
 }
 
+/** The caption's word timings and the time into the current beat, when the beat is spoken. */
+function spokenWords(
+  compiled: CompiledScene,
+  frame: FrameState,
+  narration: SceneNarration | null | undefined,
+): { words?: [number, number][]; elapsed?: number } {
+  const id = frame.caption?.beatId;
+  const speech = id ? narration?.beats.find((b) => b.id === id) : undefined;
+  const beat = id ? compiled.beats.find((b) => b.id === id) : undefined;
+  if (!speech || !beat) return {};
+  return { words: speech.words, elapsed: frame.t - beat.start };
+}
+
 export function SceneView({
   compiled,
   frame,
@@ -163,6 +179,7 @@ export function SceneView({
   hoverId,
   onHover,
   className,
+  narration,
 }: SceneViewProps) {
   const theme = getTheme(compiled.themeId);
   const prepById = useMemo(() => new Map(compiled.objects.map((o) => [o.id, o.prep])), [compiled]);
@@ -217,7 +234,12 @@ export function SceneView({
       {overlay.map(view)}
       {overlay.map(front)}
       {showCaptions && frame.caption && (
-        <CaptionBar text={frame.caption.text} progress={frame.caption.progress} theme={theme} />
+        <CaptionBar
+          text={frame.caption.text}
+          progress={frame.caption.progress}
+          theme={theme}
+          {...spokenWords(compiled, frame, narration)}
+        />
       )}
       {frame.overlay && <Overlay overlay={frame.overlay} />}
     </svg>

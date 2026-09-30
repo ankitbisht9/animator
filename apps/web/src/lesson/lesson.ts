@@ -3,6 +3,7 @@
  * worker runs. Each scene starts from the previous scene's engine-computed end
  * state (continuity), and playback maps a global time onto (scene, local time).
  */
+import type { SceneNarration } from "@animator/components";
 import {
   type CompiledScene,
   compileScene,
@@ -24,6 +25,8 @@ export interface LessonScene {
   issues: ValidationIssue[];
   /** Hover descriptions/values need the compiled object's bound param names. */
   endState: SceneState | null;
+  /** Spoken narration (TTS on); null: captions only. */
+  narration: SceneNarration | null;
 }
 
 export interface Lesson {
@@ -47,14 +50,20 @@ export interface LessonCache {
   scenes: LessonScene[];
 }
 
-export function buildLesson(title: string, rawScenes: unknown[], cache?: LessonCache): Lesson {
+export function buildLesson(
+  title: string,
+  rawScenes: unknown[],
+  cache?: LessonCache,
+  narration?: (SceneNarration | null | undefined)[],
+): Lesson {
   const scenes: LessonScene[] = [];
   let prev: SceneState | null = null;
   let start = 0;
   let reusing = cache !== undefined;
   const keys: string[] = [];
   rawScenes.forEach((raw, index) => {
-    const key = JSON.stringify(raw);
+    const spoken = narration?.[index] ?? null;
+    const key = spoken ? JSON.stringify([raw, spoken]) : JSON.stringify(raw);
     keys.push(key);
     const cached = cache?.scenes[index];
     if (reusing && cached && cache?.keys[index] === key) {
@@ -82,7 +91,7 @@ export function buildLesson(title: string, rawScenes: unknown[], cache?: LessonC
     const duration = compiled?.duration ?? degradedDuration(raw);
     const id = compiled?.id ?? String((raw as { id?: unknown })?.id ?? `scene_${index + 1}`);
     const sceneTitle = compiled?.title ?? String((raw as { title?: unknown })?.title ?? `Scene ${index + 1}`);
-    scenes.push({ index, id, title: sceneTitle, start, duration, ok, compiled, issues, endState });
+    scenes.push({ index, id, title: sceneTitle, start, duration, ok, compiled, issues, endState, narration: spoken });
     start += duration;
   });
   if (cache) {

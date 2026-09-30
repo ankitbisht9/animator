@@ -89,7 +89,8 @@ uv run python -m animator.export --bundle var/exports/archimedes/archimedes.anim
 
 Output goes to `var/exports/<name>/`: the MP4 (plus WebM with `--formats mp4,webm`), per-scene segments,
 an `.animation.json` bundle that can be re-rendered, and an `.export.json` report with versions, timings
-and frame hashes. `--audio track.wav` muxes an audio track, padded or trimmed to the video. The same lesson always gives
+and frame hashes. `--audio track.wav` muxes an audio track, padded or trimmed to the video. Lessons exported from
+the web app with the narration voice on carry the voice automatically. The same lesson always gives
 identical frames and a byte-identical MP4 on the same machine. The pinned Docker image
 (`docker/export.Dockerfile`), which will make this hold across machines, is not verified yet (ADR-026).
 
@@ -131,6 +132,10 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   `high`.
   `LLM_BUDGET_USD_PER_GENERATION` is a hard stop per lesson, and the "Save cost" option on the form only
   generates a little ahead of what you watch.
+- Narration voice: `ANIMATOR_TTS_ENABLED=1` speaks every caption, word-synced, in the player and in exported
+  MP4s; `0` turns the voice off everywhere. The default provider (`edge`, Microsoft neural voices) is free and
+  needs no key. Azure, Google, ElevenLabs, OpenAI and a free local Kokoro server are one setting away. Setup,
+  keys and voices: [docs/TTS.md](docs/TTS.md).
 - `ANIMATOR_LLM_PROVIDER`: `openai` (live), `record` (live, and also saves every call under
   `ANIMATOR_LLM_FIXTURES_DIR` for offline replay), `replay` (offline from those recordings).
 - Optional quality passes: `ANIMATOR_ENABLE_LLM_CRITIC`, `ANIMATOR_ENABLE_VISUAL_CRITIC` (reviews rendered

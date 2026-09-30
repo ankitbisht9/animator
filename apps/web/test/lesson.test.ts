@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildLesson, type LessonCache, locate } from "../src/lesson/lesson";
+import { voiceAt } from "../src/player/voice";
 
 const scene = (id: string, duration: number, extra: Record<string, unknown> = {}) => ({
   dsl_version: "1.0",
@@ -49,5 +50,47 @@ describe("lesson building", () => {
     const c = buildLesson("L", [scene("a", 5), scene("b", 6)], cache);
     expect(c.scenes[0]).not.toBe(b.scenes[0]);
     expect(c.scenes[1]?.start).toBe(5);
+  });
+});
+
+describe("narration audio", () => {
+  const twoBeats = scene("a", 6, {
+    narration: {
+      beats: [
+        { id: "b1", text: "One two." },
+        { id: "b2", text: "Three." },
+      ],
+    },
+  });
+  const narration = {
+    provider: "fake",
+    beats: [
+      { id: "b1", start: 0, audio: "a.mp3", duration: 1.5, words: [] as [number, number][] },
+      { id: "b2", start: 3, audio: "b.mp3", duration: 2, words: [] as [number, number][] },
+    ],
+  };
+
+  it("finds the speech playing at a time, and silence between beats", () => {
+    const lesson = buildLesson("L", [twoBeats], undefined, [narration]);
+    const s = lesson.scenes[0];
+    expect(s?.narration).toBe(narration);
+    expect(voiceAt(s, 1)).toEqual({ url: "/api/tts/a.mp3", offset: 1 });
+    expect(voiceAt(s, 2)).toBeNull();
+    expect(voiceAt(s, 4)).toEqual({ url: "/api/tts/b.mp3", offset: 1 });
+    expect(voiceAt(s, 5.5)).toBeNull();
+  });
+
+  it("stays silent without narration", () => {
+    const lesson = buildLesson("L", [twoBeats]);
+    expect(lesson.scenes[0]?.narration).toBeNull();
+    expect(voiceAt(lesson.scenes[0], 1)).toBeNull();
+  });
+
+  it("rebuilds a cached scene when its narration arrives", () => {
+    const cache: LessonCache = { keys: [], scenes: [] };
+    const silent = buildLesson("L", [twoBeats], cache);
+    const spoken = buildLesson("L", [twoBeats], cache, [narration]);
+    expect(silent.scenes[0]?.narration).toBeNull();
+    expect(spoken.scenes[0]?.narration).toBe(narration);
   });
 });

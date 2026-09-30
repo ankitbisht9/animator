@@ -327,3 +327,18 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   - 1.7 icons per scene (was 0.4);
   - 10 of 12 drafts valid first time (was 7 of 12).
 - Speed and cost are unchanged.
+
+## Narration voice (ADR-037)
+
+- Every caption is spoken, and each word lights up when the voice says it, in the player and in exported MP4s.
+- One switch: `ANIMATOR_TTS_ENABLED` (1/0). With 0, nothing changes anywhere.
+- Swappable providers:
+  - `edge` (default): free, no key;
+  - `azure`, `google`, `elevenlabs`: free tiers, keys in `.env`;
+  - `openai`: OpenAI, or a free local Kokoro server.
+- Speech is synthesized while the scene is written, and cached by content. Beats stretch to fit the speech, and
+  the engine validates the retimed scene. Speech failures leave captions only.
+- Live results:
+  - 30-second lesson ready in 25 s, 1-minute lesson in 29 s;
+  - LLM cost unchanged; speech is free;
+  - the voice step adds under 0.1 s per scene.

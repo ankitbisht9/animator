@@ -15,6 +15,7 @@ Auth, outage and budget errors propagate: the generation stops and can be resume
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
@@ -32,12 +33,16 @@ from animator.pipeline.models import (
     StoryboardChapter,
     StoryboardScene,
 )
+from animator.pipeline.narration import narration_record, needs, retime, speak_beats
 from animator.pipeline.prompts import PromptPack, slug
 from animator.pipeline.stages import Stages, format_issues
 from animator.pipeline.tidy import autofix, tidy
+from animator.tts import SpeechCache
 from animator_contracts.protocol import CompileResult, SceneState
 
 Changed = Callable[[], Awaitable[None]]
+
+log = logging.getLogger("animator.pipeline")
 
 
 class KeyframeSource(Protocol):
@@ -244,11 +249,14 @@ class Pipeline:
         llm: LLMClient,
         settings: Settings,
         keyframes: KeyframeSource | None = None,
+        speech: SpeechCache | None = None,
     ) -> None:
         self.engine = engine
         self.llm = llm
         self.settings = settings
         self.keyframes = keyframes
+        # Narration audio; None when ANIMATOR_TTS_ENABLED is off (then nothing here speaks).
+        self.speech = speech
         self._stages: Stages | None = None
         # Losing scene drafts still running, per generation (see `_drafts`).
         self._background: dict[str, set[asyncio.Task[Any]]] = {}
@@ -277,12 +285,48 @@ class Pipeline:
         rec.attempts = []
         rec.started_at = rec.started_at or time.time()
         rivals: set[asyncio.Task[Draft]] = set()  # drafts still running, racing the corrections
+        if self.speech is not None:
+            # The storyboard's sentences are what the scene will say: synthesize them while the scene
+            # is being written, so the voice adds no waiting.
+            self.speech.prefetch(b.narration for b in rec.brief.beats)
         try:
             await self._attempts(
                 gen, rec, prev_summary, prev_state, ctx, changed, previous_scenes, max_attempts, rivals
             )
         finally:
             self._park(gen.id, rivals)
+        if self.speech is not None and rec.playable:
+            await self._narrate(gen, rec, prev_state)
+
+    async def _narrate(self, gen: Generation, rec: SceneRecord, prev_state: SceneState | None) -> None:
+        """Give a finished scene its voice (pipeline/narration.py). Any failure leaves the scene as it
+        was, with captions only: speech never fails or delays a lesson beyond its own synthesis."""
+        assert self.speech is not None and rec.dsl is not None
+        try:
+            res = await self.engine.compile(rec.dsl, prev_state)
+            beats = list(res.beats or [])
+            if not res.ok or not beats:
+                return
+            spoken = await speak_beats(self.speech, beats)
+            if not spoken:
+                return
+            retimed = retime(rec.dsl, beats, needs(spoken, beats, self.settings.animator_tts_pause_s))
+            if retimed is not None:
+                again = await self.engine.compile(retimed, prev_state)
+                if again.ok and again.endState is not None and again.beats:
+                    warnings = [i.model_dump() for i in again.issues if i.severity == "warning"]
+                    self._accept(rec, retimed, again, warnings, rec.status)
+                    beats = list(again.beats)
+                else:
+                    log.warning("scene %s: the retimed scene failed validation; timing kept", rec.id)
+            rec.narration = narration_record(self.speech, beats, spoken)
+            gen.metrics.tts_chars += sum(len(b.text) for b in beats if b.id in spoken)
+            gen.metrics.tts_audio_s = round(
+                gen.metrics.tts_audio_s + sum(s.duration_s for s in spoken.values()), 2
+            )
+        except Exception as e:
+            gen.metrics.tts_failures += 1
+            log.warning("scene %s: no narration audio (%s)", rec.id, e)
 
     async def _attempts(
         self,

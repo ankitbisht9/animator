@@ -16,6 +16,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from animator.api.generations import router as generations_router
+from animator.api.tts import router as tts_router
 from animator.config import STAGES, Settings, get_settings
 from animator.engine_client import EngineClient, EngineWorkerPool, pool_from_settings
 from animator.export.jobs import BrowserKeyframes, ExportJobs
@@ -25,6 +26,7 @@ from animator.jobs.store import FileStore, GenerationStore, MemoryStore
 from animator.llm import LLMClient, build_llm
 from animator.observability import setup_logging
 from animator.pipeline.generator import KeyframeSource, Pipeline
+from animator.tts import TTSProvider, build_speech, tts_problem
 
 log = logging.getLogger("animator.api")
 
@@ -35,6 +37,7 @@ def create_app(
     store: GenerationStore | None = None,
     keyframes: KeyframeSource | None = None,
     resume_on_start: bool = True,
+    tts: TTSProvider | None = None,
 ) -> FastAPI:
     s = settings or get_settings()
     setup_logging(s.log_level, s.log_format)
@@ -55,9 +58,12 @@ def create_app(
         if frames is None and s.animator_enable_visual_critic and (WEB_DIST / "index.html").exists():
             owned_frames = BrowserKeyframes()
             frames = owned_frames
-        pipeline = Pipeline(engine, llm or build_llm(), s, frames)
+        # Narration audio: None unless ANIMATOR_TTS_ENABLED (then nothing speaks anywhere).
+        speech = build_speech(s, tts)
+        pipeline = Pipeline(engine, llm or build_llm(), s, frames, speech)
         runner = GenerationRunner(the_store, pipeline, s)
         app.state.settings = s
+        app.state.speech = speech
         app.state.runner = runner
         app.state.exports = ExportJobs(s)
         if resume_on_start:
@@ -71,6 +77,8 @@ def create_app(
             await app.state.exports.close()
             if owned_frames is not None:
                 await owned_frames.close()
+            if speech is not None:
+                await speech.close()
             await pool.close()
 
     app = FastAPI(title="Animator API", version="0.1.0", lifespan=lifespan)
@@ -81,6 +89,7 @@ def create_app(
         allow_headers=["*"],
     )
     app.include_router(generations_router)
+    app.include_router(tts_router)
 
     @app.get("/api/health")
     async def health(request: Request) -> dict[str, Any]:
@@ -112,6 +121,12 @@ def create_app(
             "llm_critic": st.animator_enable_llm_critic,
             "visual_critic": st.animator_enable_visual_critic,
             "storage": st.animator_storage_backend,
+            "tts": {
+                "enabled": request.app.state.speech is not None,
+                "provider": st.animator_tts_provider if st.animator_tts_enabled else None,
+                "voice": request.app.state.speech.provider.voice if request.app.state.speech else None,
+                "problem": tts_problem(st),
+            },
         }
 
     return app

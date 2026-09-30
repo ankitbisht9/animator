@@ -5,7 +5,9 @@ description = "AI-directed 2D educational animation: API, LLM pipeline, export o
 requires-python = ">=3.13"
 dependencies = [
     "animator-contracts",
+    "edge-tts==7.2.8",
     "fastapi==0.141.1",
+    "httpx2==2.13.1",
     "openai==3.19.2",
     "playwright==1.63.0",
     "pydantic==2.13.5",

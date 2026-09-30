@@ -1,0 +1,373 @@
+"""Text-to-speech providers. Each one takes plain text and returns `Speech`; nothing else in the
+project knows which provider is in use (ADR-037).
+
+- `edge`: Microsoft's neural voices through the Edge "read aloud" service (edge-tts). Free, no key
+  or account; word timings included. Unofficial: Microsoft may change or limit it.
+- `azure`: the same voices through the official Azure Speech service (free F0 tier: 500,000
+  characters a month). Needs AZURE_SPEECH_KEY and AZURE_SPEECH_REGION. Word timings estimated.
+- `google`: Google Cloud Text-to-Speech (free tier: 1M characters a month for Neural2 voices, 4M
+  for Standard). Needs GOOGLE_TTS_API_KEY. Word timings from SSML marks.
+- `elevenlabs`: the most expressive voices (free tier: 10,000 credits a month, non-commercial).
+  Needs ELEVENLABS_API_KEY. Word timings from character alignment.
+- `openai`: any OpenAI-compatible `/audio/speech` server: OpenAI itself (paid, uses
+  OPENAI_API_KEY) or a free local one such as Kokoro-FastAPI (ANIMATOR_TTS_BASE_URL). Word
+  timings estimated.
+
+Keys are read from settings and sent only to their provider; no error message contains them.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import base64
+from typing import Any
+from xml.sax.saxutils import escape
+
+import edge_tts
+import httpx2
+
+from animator.tts.audio import mp3_duration, silent_wav
+from animator.tts.types import Speech, TTSError, WordMark
+
+
+def _percent(speed: float) -> str:
+    return f"{round((speed - 1.0) * 100):+d}%"
+
+
+def _language(voice: str, default: str = "en-US") -> str:
+    """ "en-US-AvaMultilingualNeural" -> "en-US"."""
+    parts = voice.split("-")
+    return "-".join(parts[:2]) if len(parts) >= 3 else default
+
+
+def _detail(r: httpx2.Response) -> str:
+    try:
+        body = r.json()
+    except ValueError:
+        return r.text[:200]
+    if isinstance(body, dict):
+        err = body.get("error") or body.get("detail") or body
+        if isinstance(err, dict):
+            err = err.get("message") or err.get("status") or err
+        return str(err)[:200]
+    return str(body)[:200]
+
+
+class _Http:
+    """A provider that talks to an HTTP API (one shared connection pool)."""
+
+    name = "http"
+
+    def __init__(self, timeout_s: float, transport: httpx2.AsyncBaseTransport | None = None) -> None:
+        self._client = httpx2.AsyncClient(timeout=timeout_s, transport=transport)
+
+    async def _post(self, url: str, **kw: Any) -> httpx2.Response:
+        try:
+            r = await self._client.post(url, **kw)
+        except httpx2.HTTPError as e:
+            raise TTSError(f"{self.name}: {type(e).__name__}") from e
+        if r.status_code != 200:
+            raise TTSError(f"{self.name}: HTTP {r.status_code}: {_detail(r)}")
+        return r
+
+    async def close(self) -> None:
+        await self._client.aclose()
+
+
+class EdgeTTS:
+    name = "edge"
+    DEFAULT_VOICE = "en-US-AvaMultilingualNeural"
+
+    def __init__(self, voice: str = "", speed: float = 1.0, timeout_s: float = 30.0) -> None:
+        self.voice = voice or self.DEFAULT_VOICE
+        self.model = ""
+        self.rate = _percent(speed)
+        self.timeout_s = timeout_s
+
+    @property
+    def key(self) -> str:
+        return f"edge|{self.voice}|{self.rate}"
+
+    async def synthesize(self, text: str) -> Speech:
+        audio = bytearray()
+        marks: list[WordMark] = []
+        try:
+            async with asyncio.timeout(self.timeout_s):
+                comm = edge_tts.Communicate(text, self.voice, rate=self.rate, boundary="WordBoundary")
+                async for chunk in comm.stream():
+                    if chunk["type"] == "audio":
+                        audio += chunk["data"]
+                    elif chunk["type"] == "WordBoundary":
+                        start = chunk["offset"] / 1e7
+                        marks.append(WordMark(chunk["text"], start, start + chunk["duration"] / 1e7))
+        except TimeoutError as e:
+            raise TTSError(f"edge: no answer within {self.timeout_s:.0f} s") from e
+        except TTSError:
+            raise
+        except Exception as e:  # the library raises its own and aiohttp's errors
+            raise TTSError(f"edge: {type(e).__name__}: {e}") from e
+        if not audio:
+            raise TTSError("edge: no audio received")
+        data = bytes(audio)
+        return Speech(data, "mp3", mp3_duration(data), tuple(marks))
+
+    async def close(self) -> None:
+        return None
+
+
+class AzureTTS(_Http):
+    name = "azure"
+    DEFAULT_VOICE = "en-US-AvaMultilingualNeural"
+
+    def __init__(
+        self,
+        api_key: str,
+        region: str,
+        voice: str = "",
+        speed: float = 1.0,
+        timeout_s: float = 30.0,
+        transport: httpx2.AsyncBaseTransport | None = None,
+    ) -> None:
+        if not api_key or not region:
+            raise TTSError("azure: set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION")
+        super().__init__(timeout_s, transport)
+        self._api_key = api_key
+        self.region = region
+        self.voice = voice or self.DEFAULT_VOICE
+        self.model = ""
+        self.rate = _percent(speed)
+
+    @property
+    def key(self) -> str:
+        return f"azure|{self.voice}|{self.rate}"
+
+    async def synthesize(self, text: str) -> Speech:
+        ssml = (
+            f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
+            f'xml:lang="{_language(self.voice)}"><voice name="{escape(self.voice)}">'
+            f'<prosody rate="{self.rate}">{escape(text)}</prosody></voice></speak>'
+        )
+        r = await self._post(
+            f"https://{self.region}.tts.speech.microsoft.com/cognitiveservices/v1",
+            content=ssml.encode("utf-8"),
+            headers={
+                "Ocp-Apim-Subscription-Key": self._api_key,
+                "Content-Type": "application/ssml+xml",
+                "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+                "User-Agent": "animator",
+            },
+        )
+        return Speech(r.content, "mp3", mp3_duration(r.content), None)
+
+
+class GoogleTTS(_Http):
+    name = "google"
+    DEFAULT_VOICE = "en-US-Neural2-F"
+    URL = "https://texttospeech.googleapis.com/v1beta1/text:synthesize"
+
+    def __init__(
+        self,
+        api_key: str,
+        voice: str = "",
+        speed: float = 1.0,
+        timeout_s: float = 30.0,
+        transport: httpx2.AsyncBaseTransport | None = None,
+    ) -> None:
+        if not api_key:
+            raise TTSError("google: set GOOGLE_TTS_API_KEY")
+        super().__init__(timeout_s, transport)
+        self._api_key = api_key
+        self.voice = voice or self.DEFAULT_VOICE
+        self.model = ""
+        self.speed = speed
+
+    @property
+    def key(self) -> str:
+        return f"google|{self.voice}|{self.speed}"
+
+    async def synthesize(self, text: str) -> Speech:
+        words = text.split()
+        # A mark before every word: the reply says when each one starts.
+        ssml = (
+            "<speak>" + " ".join(f'<mark name="w{i}"/>{escape(w)}' for i, w in enumerate(words)) + "</speak>"
+        )
+        r = await self._post(
+            self.URL,
+            headers={"X-Goog-Api-Key": self._api_key},
+            json={
+                "input": {"ssml": ssml},
+                "voice": {"languageCode": _language(self.voice), "name": self.voice},
+                "audioConfig": {"audioEncoding": "MP3", "speakingRate": self.speed, "sampleRateHertz": 24000},
+                "enableTimePointing": ["SSML_MARK"],
+            },
+        )
+        data = r.json()
+        audio = base64.b64decode(data.get("audioContent", ""))
+        if not audio:
+            raise TTSError("google: no audio received")
+        duration = mp3_duration(audio)
+        starts: dict[int, float] = {}
+        for tp in data.get("timepoints") or []:
+            name = str(tp.get("markName", ""))
+            if name.startswith("w") and name[1:].isdigit():
+                starts[int(name[1:])] = float(tp.get("timeSeconds", 0.0))
+        marks = []
+        order = sorted(starts)
+        for k, i in enumerate(order):
+            end = starts[order[k + 1]] if k + 1 < len(order) else duration
+            if i < len(words):
+                marks.append(WordMark(words[i], starts[i], max(starts[i], end)))
+        return Speech(audio, "mp3", duration, tuple(marks) if marks else None)
+
+
+class ElevenLabsTTS(_Http):
+    name = "elevenlabs"
+    DEFAULT_VOICE = "JBFqnCBsd6RMkjVDRZzb"  # "George", a premade voice every account has
+    DEFAULT_MODEL = "eleven_multilingual_v2"
+
+    def __init__(
+        self,
+        api_key: str,
+        voice: str = "",
+        model: str = "",
+        speed: float = 1.0,
+        timeout_s: float = 30.0,
+        transport: httpx2.AsyncBaseTransport | None = None,
+    ) -> None:
+        if not api_key:
+            raise TTSError("elevenlabs: set ELEVENLABS_API_KEY")
+        super().__init__(timeout_s, transport)
+        self._api_key = api_key
+        self.voice = voice or self.DEFAULT_VOICE
+        self.model = model or self.DEFAULT_MODEL
+        self.speed = min(1.2, max(0.7, speed))  # the range the API accepts
+
+    @property
+    def key(self) -> str:
+        return f"elevenlabs|{self.model}|{self.voice}|{self.speed}"
+
+    async def synthesize(self, text: str) -> Speech:
+        r = await self._post(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice}/with-timestamps",
+            params={"output_format": "mp3_44100_128"},
+            headers={"xi-api-key": self._api_key},
+            json={
+                "text": text,
+                "model_id": self.model,
+                "voice_settings": {
+                    "stability": 0.45,
+                    "similarity_boost": 0.75,
+                    "style": 0.2,
+                    "use_speaker_boost": True,
+                    "speed": self.speed,
+                },
+            },
+        )
+        data = r.json()
+        audio = base64.b64decode(data.get("audio_base64", ""))
+        if not audio:
+            raise TTSError("elevenlabs: no audio received")
+        al = data.get("alignment") or {}
+        chars = al.get("characters") or []
+        t0 = al.get("character_start_times_seconds") or []
+        t1 = al.get("character_end_times_seconds") or []
+        marks: list[WordMark] = []
+        word, ws, we = "", 0.0, 0.0
+        for ch, s, e in zip(chars, t0, t1, strict=False):
+            if ch.isspace():
+                if word:
+                    marks.append(WordMark(word, ws, we))
+                word = ""
+                continue
+            if not word:
+                ws = float(s)
+            word += ch
+            we = float(e)
+        if word:
+            marks.append(WordMark(word, ws, we))
+        return Speech(audio, "mp3", mp3_duration(audio), tuple(marks) if marks else None)
+
+
+class OpenAICompatibleTTS(_Http):
+    """POST {base}/audio/speech: OpenAI, or a local server with the same API (Kokoro-FastAPI)."""
+
+    name = "openai"
+    DEFAULT_BASE = "https://api.openai.com/v1"
+    DEFAULT_MODEL = "gpt-4o-mini-tts"
+    DEFAULT_VOICE = "coral"
+
+    def __init__(
+        self,
+        api_key: str = "",
+        base_url: str = "",
+        voice: str = "",
+        model: str = "",
+        speed: float = 1.0,
+        instructions: str = "",
+        timeout_s: float = 30.0,
+        transport: httpx2.AsyncBaseTransport | None = None,
+    ) -> None:
+        self.base_url = (base_url or self.DEFAULT_BASE).rstrip("/")
+        if not api_key and self.base_url == self.DEFAULT_BASE:
+            raise TTSError("openai: set OPENAI_API_KEY (or ANIMATOR_TTS_API_KEY)")
+        super().__init__(timeout_s, transport)
+        self._api_key = api_key
+        self.voice = voice or self.DEFAULT_VOICE
+        self.model = model or self.DEFAULT_MODEL
+        self.speed = speed
+        self.instructions = instructions
+
+    @property
+    def key(self) -> str:
+        return f"openai|{self.base_url}|{self.model}|{self.voice}|{self.speed}|{self.instructions}"
+
+    async def synthesize(self, text: str) -> Speech:
+        body: dict[str, Any] = {
+            "model": self.model,
+            "voice": self.voice,
+            "input": text,
+            "response_format": "mp3",
+            "speed": self.speed,
+        }
+        if self.instructions and self.model.startswith("gpt-"):
+            body["instructions"] = self.instructions  # tone of voice (gpt-4o-mini-tts)
+        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
+        r = await self._post(f"{self.base_url}/audio/speech", json=body, headers=headers)
+        if not r.content:
+            raise TTSError("openai: no audio received")
+        return Speech(r.content, "mp3", mp3_duration(r.content), None)
+
+
+class FakeTTS:
+    """Deterministic offline speech for tests: silence, `seconds_per_word` per word, with marks."""
+
+    name = "fake"
+
+    def __init__(self, seconds_per_word: float = 0.3, fail: bool = False, delay_s: float = 0.0) -> None:
+        self.voice = "fake"
+        self.model = ""
+        self.seconds_per_word = seconds_per_word
+        self.fail = fail
+        self.delay_s = delay_s
+        self.calls: list[str] = []
+
+    @property
+    def key(self) -> str:
+        return f"fake|{self.seconds_per_word}"
+
+    async def synthesize(self, text: str) -> Speech:
+        self.calls.append(text)
+        if self.delay_s:
+            await asyncio.sleep(self.delay_s)
+        if self.fail:
+            raise TTSError("fake: failing on purpose")
+        words = text.split()
+        spw = self.seconds_per_word
+        duration = round(0.1 + spw * len(words) + 0.1, 3)
+        marks = tuple(
+            WordMark(w, round(0.1 + spw * i, 3), round(0.1 + spw * (i + 0.8), 3)) for i, w in enumerate(words)
+        )
+        return Speech(silent_wav(duration), "wav", duration, marks)
+
+    async def close(self) -> None:
+        return None

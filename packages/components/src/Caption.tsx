@@ -1,13 +1,30 @@
 /**
- * The caption bar: the narration beat as on-screen text (the MVP substitute for
- * audio). Words light up as they are "read" (timing proportional to word length,
- * finishing at ~88% of the beat), which helps struggling readers follow along.
+ * The caption bar: the narration beat as on-screen text. Words light up as they are
+ * read, which helps struggling readers follow along. With a voice (TTS), each word
+ * lights up when it is said (`words`: [start, end] per word, seconds into the beat's
+ * audio); without one, timing is proportional to word length, finishing at ~88% of
+ * the beat.
  */
 import { CAPTION_BAR, layoutText, type Theme } from "@animator/engine";
 import { GlyphText } from "./GlyphText";
 import { fmt, mixHex, withAlpha } from "./util";
 
-export function CaptionBar({ text, progress, theme }: { text: string; progress: number; theme: Theme }) {
+/** After the last word is said, its highlight fades out this many seconds later. */
+const HOLD_S = 0.3;
+
+export function CaptionBar({
+  text,
+  progress,
+  theme,
+  words,
+  elapsed,
+}: {
+  text: string;
+  progress: number;
+  theme: Theme;
+  words?: [number, number][];
+  elapsed?: number;
+}) {
   const pad = 30;
   const size = theme.typography.sizes.caption;
   const layout = layoutText(text, { size, maxWidth: CAPTION_BAR.w - 2 * pad, align: "center", lineHeight: 1.32 });
@@ -21,15 +38,27 @@ export function CaptionBar({ text, progress, theme }: { text: string; progress: 
   for (const line of layout.lines)
     for (const g of line.glyphs) if (g.word >= 0) lengths[g.word] = (lengths[g.word] ?? 0) + 1;
   const total = lengths.reduce((a, b) => a + (b ?? 0), 0) || 1;
-  const spoken = Math.min(1, progress / 0.88) * total;
-  const starts: number[] = [];
-  let acc = 0;
-  for (let i = 0; i < lengths.length; i++) {
-    starts[i] = acc;
-    acc += lengths[i] ?? 0;
-  }
   const upcoming = mixHex(theme.colors.text, theme.colors.surface, theme.mode === "dark" ? 0.45 : 0.55);
-  const current = lengths.findIndex((len, i) => spoken >= (starts[i] ?? 0) && spoken < (starts[i] ?? 0) + (len ?? 0));
+  // Word i is still to come when `ahead(i)`; `current` is the word being read (-1: none).
+  let ahead: (i: number) => boolean;
+  let current: number;
+  if (words && elapsed !== undefined && words.length === lengths.length && words.length > 0) {
+    ahead = (i) => (words[i]?.[0] ?? 0) > elapsed;
+    current = -1;
+    for (let i = 0; i < words.length; i++) if ((words[i]?.[0] ?? 0) <= elapsed) current = i;
+    const last = words[words.length - 1] as [number, number];
+    if (current === words.length - 1 && elapsed > last[1] + HOLD_S) current = -1;
+  } else {
+    const spoken = Math.min(1, progress / 0.88) * total;
+    const starts: number[] = [];
+    let acc = 0;
+    for (let i = 0; i < lengths.length; i++) {
+      starts[i] = acc;
+      acc += lengths[i] ?? 0;
+    }
+    ahead = (i) => (starts[i] ?? 0) >= spoken;
+    current = lengths.findIndex((len, i) => spoken >= (starts[i] ?? 0) && spoken < (starts[i] ?? 0) + (len ?? 0));
+  }
 
   // Highlight pill behind the word being read.
   let marker = null;
@@ -90,7 +119,7 @@ export function CaptionBar({ text, progress, theme }: { text: string; progress: 
         emphColor={theme.colors.accent}
         x={x + (w - layout.width) / 2}
         y={y + (h - layout.height) / 2}
-        wordColor={(word) => ((starts[word] ?? 0) >= spoken ? upcoming : undefined)}
+        wordColor={(word) => (ahead(word) ? upcoming : undefined)}
       />
     </g>
   );

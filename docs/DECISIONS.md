@@ -866,3 +866,55 @@ are not the cause: no effort level makes the model check this, and higher effort
 
 **Rollback.** Git tag `backup/before-overlap-and-tts`. Deleting `animation.v5.md` returns the prompt to v4.
 `ANIMATOR_LAYOUT_POLISH=false` disables all polish moves.
+
+## ADR-037 Narration voice: swappable text to speech behind one switch (2026-09-30)
+
+**Problem.** Lessons had captions only. The caption highlights words as if someone were reading aloud, but no
+one spoke. The voice has to follow the captions word by word, with natural pauses at punctuation. It must cost
+nothing to run, keep up with generation, and be removable with a single setting.
+
+**Decision.**
+1. **One switch, `ANIMATOR_TTS_ENABLED` (default off in code).** Off means:
+   - no provider is built;
+   - the pipeline, API, player and export run exactly as before;
+   - the API also withholds narration of lessons made earlier with a voice.
+2. **A provider interface** (`animator/tts`):
+   - `synthesize(text) -> Speech(audio, format, duration, word marks | None)`;
+   - providers: `edge` (default: free, no key, exact word timings), `azure`, `google`, `elevenlabs`, `openai`
+     (also any local OpenAI-compatible server, such as Kokoro-FastAPI), and `fake` for tests;
+   - keys live in `.env` and are sent only to their provider; errors never contain them;
+   - a missing key turns narration off with a logged reason (`/api/config` shows it); it never stops the API.
+3. **Speech is prepared while the scene is written.** The storyboard's sentences are synthesized as soon as the
+   scene starts. They are cached by content (provider, voice, speed, text), and concurrent requests share one
+   synthesis.
+4. **Beats stretch to fit the speech, never shrink.** This is a DSL transform in Python (`pipeline/narration.py`),
+   like the other deterministic fixes:
+   - numeric times inside a stretched beat move proportionally, and later times shift;
+   - beat references, chains, delays and motion durations are unchanged, so every action still ends inside the
+     scene;
+   - the engine validates the result, and the original timing is kept if that fails.
+   docs/TTS.md had planned this as an engine `retime` exposed by the worker. The Python transform needs no
+   protocol change, and the engine still has the last word through validation.
+5. **Word timings are computed once, on the server.** Provider marks are matched to the caption's words (the
+   engine's word splitting). Unmatched words are estimated from length and punctuation, inside the real audio
+   duration. The caption uses these times when their count matches its words, and its old timing otherwise.
+6. **Playback follows the player clock** (pause, seek, speed, checkpoints, buffering), re-syncing when the audio
+   drifts by more than 0.25 s. **Export** places each beat's audio at its time and muxes it as AAC; the captions
+   in the video follow the voice. Segment cache keys include the narration.
+7. **Speech never fails a lesson.** On any error the scene keeps captions only, and `tts_failures` counts it.
+
+**Measured (edge, voice en-US-AvaMultilingualNeural, live).**
+- 30-second lesson:
+  - ready in 25.4 s, first scene playable at 21.4 s;
+  - $0.048 including one correction and the losing drafts, inside the usual $0.020-0.054; speech adds no model
+    call and is free;
+  - the lesson grew from 30 s to 32.6 s, because one beat's sentence was longer than the model's timing.
+- 1-minute lesson: ready in 29.1 s, first playable at 13.7 s, $0.045 (usual: $0.035-0.051).
+- Every beat voiced, with every word timed by the provider (none estimated).
+- The voice step adds 0.02-0.07 s per scene, because the prefetch had the speech ready.
+- Export: an AAC track exactly as long as the video. In a checked frame, the caption highlights "imaginary" at the
+  moment the voice says it.
+- edge-tts latency varies (1-9 s for 16 sentences at once), which the prefetch hides.
+
+**Rollback.** `ANIMATOR_TTS_ENABLED=0`, or git tag `backup/before-overlap-and-tts` together with
+`.env.backup-before-tts`.

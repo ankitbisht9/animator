@@ -8,11 +8,18 @@
  * Every captured frame mounts a fresh <SceneView> subtree (key = frame) so paint
  * output never depends on the previously painted frame (ADR-006).
  */
-import { SceneView } from "@animator/components";
+import { type SceneNarration, SceneView } from "@animator/components";
 import { DSL_VERSION, ENGINE_VERSION, evaluate } from "@animator/engine";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { fixtureLesson } from "../lesson/fixtures";
 import { buildLesson, type Lesson, locate } from "../lesson/lesson";
+
+/** `narration` (TTS on): per scene, the speech the captions follow in the exported video. */
+interface LessonPayload {
+  title?: string;
+  scenes: unknown[];
+  narration?: (SceneNarration | null)[];
+}
 
 interface RenderState {
   lesson: Lesson;
@@ -25,7 +32,7 @@ interface RenderState {
 
 declare global {
   interface Window {
-    __loadLesson?: (payload: { title?: string; scenes: unknown[] }) => unknown;
+    __loadLesson?: (payload: LessonPayload) => unknown;
     __renderFrame?: (frame: number, fps?: number) => Promise<void>;
     __renderAt?: (sceneIndex: number, localT: number) => Promise<void>;
     __ready?: boolean;
@@ -56,8 +63,8 @@ export function RenderPage() {
   const pending = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const load = (payload: { title?: string; scenes: unknown[] }) => {
-      const lesson = buildLesson(payload.title ?? "Lesson", payload.scenes);
+    const load = (payload: LessonPayload) => {
+      const lesson = buildLesson(payload.title ?? "Lesson", payload.scenes, undefined, payload.narration);
       setState({ lesson, t: 0, key: "0" });
       return summary(lesson);
     };
@@ -98,6 +105,7 @@ export function RenderPage() {
           key={state.key}
           compiled={compiled}
           frame={evaluate(compiled, loc.local)}
+          narration={loc.scene.narration}
           width="100%"
           height="100%"
         />

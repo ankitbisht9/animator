@@ -464,10 +464,6 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
       if (inner.w <= 0 || inner.h <= 0 || ends.some((p) => inRect(p, expand(r, 4)))) return false;
       return pts.filter((p) => inRect(p, inner)).length >= 3;
     };
-    const problems = (c: FrameObject, pts: Vec2[], others: typeof connectors) =>
-      labels.filter((b) => unrelated(c, b) && crossesLabel(pts, b)).length +
-      obstacles.filter((o) => unrelated(c, o) && throughObject(pts, o)).length +
-      others.filter((k) => k.c !== c && polylinesCross(pts, k.pts)).length;
     const bendFix = (k: (typeof connectors)[number]): IssueFix | undefined => {
       const c0 = k.c.params.curve;
       if (typeof c0 !== "number") return undefined;

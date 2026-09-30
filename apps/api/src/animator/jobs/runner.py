@@ -80,7 +80,7 @@ class Hub:
             self._subs.get(gen_id, set()).discard(q)
 
 
-def scene_event(gen: Generation, index: int) -> dict[str, Any]:
+def scene_event(gen: Generation, index: int, speaks: bool = False) -> dict[str, Any]:
     s = gen.scenes[index]
     return {
         "type": "scene",
@@ -89,6 +89,7 @@ def scene_event(gen: Generation, index: int) -> dict[str, Any]:
         "status": s.status,
         "duration": s.duration,
         "dsl": s.dsl,
+        "narration": s.narration if speaks else None,
     }
 
 
@@ -325,7 +326,7 @@ class GenerationRunner:
             gen.metrics.first_play_s = round(time.time() - gen.created_at, 1)
         if rec.duration and took > rec.duration:
             gen.metrics.slow_scenes.append(f"{rec.id}: {took:.0f}s to generate {rec.duration:.0f}s")
-        self.hub.publish(gen.id, scene_event(gen, rec.index))
+        self.hub.publish(gen.id, scene_event(gen, rec.index, self.pipeline.speech is not None))
         await self._save(gen)
 
     async def _generate_parallel(

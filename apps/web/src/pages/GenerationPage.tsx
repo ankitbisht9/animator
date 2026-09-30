@@ -3,6 +3,7 @@
  * ready (progressive playback). Each scene's DSL is compiled here by the same engine the
  * worker ran; nothing is pre-rendered.
  */
+import type { SceneNarration } from "@animator/components";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api, type ExportJob, type GenerationSummary, subscribe, TERMINAL } from "../api";
 import { buildLesson, type LessonCache } from "../lesson/lesson";
@@ -53,6 +54,7 @@ function explain(error: string): string | null {
 export function GenerationPage({ id }: { id: string }) {
   const [summary, setSummary] = useState<GenerationSummary | null>(null);
   const [scenes, setScenes] = useState<Map<number, unknown>>(new Map());
+  const [voices, setVoices] = useState<Map<number, SceneNarration | null>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [exportJob, setExportJob] = useState<ExportJob | null>(null);
@@ -66,10 +68,12 @@ export function GenerationPage({ id }: { id: string }) {
         if (e.type === "snapshot") {
           setSummary(e.generation);
           setScenes(new Map(e.scenes.map((s) => [s.index, s.dsl])));
+          setVoices(new Map(e.scenes.map((s) => [s.index, s.narration ?? null])));
         } else if (e.type === "update") {
           setSummary(e.generation);
         } else if (e.type === "scene" && e.dsl) {
           setScenes((prev) => new Map(prev).set(e.index, e.dsl));
+          setVoices((prev) => new Map(prev).set(e.index, e.narration ?? null));
         }
       },
       () => {
@@ -81,9 +85,13 @@ export function GenerationPage({ id }: { id: string }) {
   const title = summary?.title ?? summary?.request.topic ?? "Lesson";
   const lesson = useMemo(() => {
     const ready: unknown[] = [];
-    for (let i = 0; scenes.has(i); i++) ready.push(scenes.get(i));
-    return buildLesson(title, ready, cache.current);
-  }, [scenes, title]);
+    const spoken: (SceneNarration | null)[] = [];
+    for (let i = 0; scenes.has(i); i++) {
+      ready.push(scenes.get(i));
+      spoken.push(voices.get(i) ?? null);
+    }
+    return buildLesson(title, ready, cache.current, spoken);
+  }, [scenes, voices, title]);
 
   const pending: PendingScene[] = useMemo(() => {
     if (!summary) return [];

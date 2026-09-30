@@ -83,6 +83,19 @@ class FileAudio:
         return self.path
 
 
+def _keyed(lesson: dict[str, Any]) -> list[Any]:
+    """What each segment's frames depend on: its scene, and its narration when there is a voice
+    (the captions then follow the speech word by word)."""
+    scenes: list[Any] = lesson["scenes"]
+    narration = lesson.get("narration")
+    if not narration:
+        return scenes
+    return [
+        {"scene": sc, "narration": narration[i] if i < len(narration) else None}
+        for i, sc in enumerate(scenes)
+    ]
+
+
 class ExportError(RuntimeError):
     def __init__(self, message: str, scene_index: int | None = None, scene_id: str | None = None) -> None:
         super().__init__(message)
@@ -267,7 +280,7 @@ class Exporter:
 
         results: list[SegmentResult] = []
         for seg in segments:
-            key = segment_key(lesson["scenes"], seg.index, s, pool.build_id, str(summary["engineVersion"]))
+            key = segment_key(_keyed(lesson), seg.index, s, pool.build_id, str(summary["engineVersion"]))
             hit = self._cached(seg_dir, seg, key)
             if hit is not None:
                 self.log(f"  scene {seg.index + 1:>2} {seg.scene_id}: cached ({seg.frame_count} frames)")

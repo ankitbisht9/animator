@@ -12,6 +12,7 @@ import { CANVAS, cameraMatrix, evaluate, type FrameObject, stripMarkup } from "@
 import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Lesson, locate } from "../lesson/lesson";
 import { formatTime, PlaybackClock } from "./clock";
+import { VoicePlayer, voiceAt, voiceUrl } from "./voice";
 
 export interface PendingScene {
   /** Stable identity (scene id, or chapter id before it is storyboarded). */
@@ -74,6 +75,7 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
   const [captions, setCaptions] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(true);
   const [hover, setHover] = useState<string | null>(null);
   const [question, setQuestion] = useState<{ sceneIndex: number; id: string } | null>(null);
   const [answered, setAnswered] = useState<Record<string, number>>({});
@@ -152,6 +154,27 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
 
   const loc = locate(lesson, t);
   const scene = loc?.scene;
+
+  // Narration audio (only lessons with a voice): the beat on screen speaks, from the same clock.
+  const hasVoice = useMemo(() => lesson.scenes.some((s) => (s.narration?.beats.length ?? 0) > 0), [lesson]);
+  const voiceRef = useRef<VoicePlayer | null>(null);
+  useEffect(() => () => voiceRef.current?.dispose(), []);
+  const voice = hasVoice && voiceOn ? voiceAt(scene, loc?.local ?? 0) : null;
+  useEffect(() => {
+    if (!hasVoice && !voiceRef.current) return;
+    if (!voiceRef.current) voiceRef.current = new VoicePlayer();
+    voiceRef.current.sync(voice, playing, rate);
+  }, [hasVoice, voice, playing, rate]);
+  useEffect(() => {
+    // Fetch this scene's speech and the start of the next scene's ahead of time.
+    if (!hasVoice || !scene) return;
+    const next = lesson.scenes[scene.index + 1];
+    const urls = [...(scene.narration?.beats ?? []), ...(next?.narration?.beats.slice(0, 1) ?? [])].map((b) =>
+      voiceUrl(b.audio),
+    );
+    if (!voiceRef.current) voiceRef.current = new VoicePlayer();
+    voiceRef.current.preload(urls);
+  }, [hasVoice, scene, lesson]);
   const frame = useMemo(
     () => (scene?.compiled ? evaluate(scene.compiled, loc?.local ?? 0) : null),
     [scene, loc?.local],
@@ -171,6 +194,7 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
       } else if (e.code === "ArrowRight") clock.seek(clock.t + 5);
       else if (e.code === "ArrowLeft") clock.seek(clock.t - 5);
       else if (e.key === "c") setCaptions((c) => !c);
+      else if (e.key === "m") setVoiceOn((v) => !v);
       else if (e.key === "f") void stageRef.current?.requestFullscreen?.();
     },
     [clock],
@@ -216,6 +240,7 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
                       compiled={lastGood.current.compiled}
                       frame={lastGood.current.frame}
                       captions={captions}
+                      narration={scene.narration}
                     />
                     <div className="render-warning">This part could not be drawn; showing the last good frame.</div>
                   </>
@@ -228,6 +253,7 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
                 compiled={scene.compiled}
                 frame={frame}
                 captions={captions}
+                narration={scene.narration}
                 interactive={!playing}
                 hoverId={playing ? null : hover}
                 onHover={setHover}
@@ -315,6 +341,8 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
           playing={playing}
           rate={rate}
           captions={captions}
+          voice={hasVoice ? voiceOn : undefined}
+          onVoice={() => setVoiceOn((v) => !v)}
           onToggle={() => !question && !empty && clock.toggle()}
           onSeek={(x) => {
             setBuffering(false);
@@ -411,6 +439,9 @@ function Controls(props: {
   playing: boolean;
   rate: number;
   captions: boolean;
+  /** Narration audio on/off; undefined when the lesson has no voice (no button). */
+  voice?: boolean;
+  onVoice: () => void;
   onToggle: () => void;
   onSeek: (t: number) => void;
   onRate: (r: number) => void;
@@ -491,6 +522,30 @@ function Controls(props: {
           </option>
         ))}
       </select>
+      {props.voice !== undefined && (
+        <button
+          type="button"
+          className={`icon-btn ${props.voice ? "on" : ""}`}
+          onClick={props.onVoice}
+          aria-label={props.voice ? "Mute voice" : "Unmute voice"}
+          title="Voice (m)"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor" />
+            {props.voice ? (
+              <path
+                d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+              />
+            ) : (
+              <path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            )}
+          </svg>
+        </button>
+      )}
       <button
         type="button"
         className={`icon-btn ${props.captions ? "on" : ""}`}

@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from animator.export.jobs import ExportJobs
+from animator.export.narration import NarrationAudio
 from animator.export.plan import ExportSettings
 from animator.jobs.runner import GenerationRunner
 from animator.pipeline.models import TERMINAL, Generation, GenerationRequest
@@ -32,9 +33,22 @@ async def _gen(request: Request, gen_id: str) -> Generation:
     return gen
 
 
-def _playable(gen: Generation) -> list[dict[str, Any]]:
+def _speaks(request: Request) -> bool:
+    """Narration audio is on (ANIMATOR_TTS_ENABLED). When off, no narration leaves the API, so
+    lessons made with a voice play and export exactly as before, captions only."""
+    return request.app.state.speech is not None
+
+
+def _playable(gen: Generation, speaks: bool) -> list[dict[str, Any]]:
     return [
-        {"index": s.index, "id": s.id, "status": s.status, "duration": s.duration, "dsl": s.dsl}
+        {
+            "index": s.index,
+            "id": s.id,
+            "status": s.status,
+            "duration": s.duration,
+            "dsl": s.dsl,
+            "narration": s.narration if speaks else None,
+        }
         for s in gen.scenes
         if s.playable
     ]
@@ -56,6 +70,9 @@ async def list_generations(request: Request, limit: int = 30) -> list[dict[str, 
 async def get_generation(gen_id: str, request: Request) -> dict[str, Any]:
     gen = await _gen(request, gen_id)
     data = gen.model_dump(mode="json")
+    if not _speaks(request):
+        for s in data["scenes"]:
+            s["narration"] = None
     data["summary"] = gen.summary()
     data["running"] = _runner(request).running(gen_id)
     return data
@@ -74,7 +91,7 @@ async def events(gen_id: str, request: Request) -> StreamingResponse:
             snapshot = {
                 "type": "snapshot",
                 "generation": current.summary(),
-                "scenes": _playable(current),
+                "scenes": _playable(current, _speaks(request)),
                 "final": final,
             }
             yield f"data: {json.dumps(snapshot)}\n\n"
@@ -158,11 +175,17 @@ async def start_export(gen_id: str, request: Request, body: ExportBody | None = 
     settings = ExportSettings.from_settings(
         request.app.state.settings, width=b.width, height=b.height, fps=b.fps
     )
-    lesson = {
+    lesson: dict[str, Any] = {
         "title": gen.plan.title if gen.plan else gen.request.topic,
         "scenes": [s.dsl for s in gen.scenes],
     }
-    return jobs.start(gen_id, lesson, settings).to_json()
+    audio = None
+    speech = request.app.state.speech
+    if speech is not None and any(s.narration for s in gen.scenes):
+        # The voice goes into the video, and the captions follow it word by word.
+        lesson["narration"] = [s.narration for s in gen.scenes]
+        audio = NarrationAudio(speech.directory, request.app.state.settings.ffmpeg_path)
+    return jobs.start(gen_id, lesson, settings, audio).to_json()
 
 
 @router.get("/{gen_id}/export")

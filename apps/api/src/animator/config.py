@@ -106,6 +106,28 @@ class Settings(BaseSettings):
     animator_scene_max_output_tokens: int = 48_000
     animator_visual_critic_keyframes: int = Field(default=3, ge=1, le=8)
 
+    # --- Narration audio (text to speech, ADR-037) ---
+    # The one switch: 0 = no speech anywhere (pipeline, API, player, export behave as before).
+    animator_tts_enabled: bool = False
+    # edge: free Microsoft neural voices, no key | azure | google | elevenlabs | openai (OpenAI or
+    # any OpenAI-compatible server, e.g. a local Kokoro) | fake (tests). See docs/TTS.md.
+    animator_tts_provider: Literal["edge", "azure", "google", "elevenlabs", "openai", "fake"] = "edge"
+    animator_tts_voice: str = ""  # empty = the provider's default voice
+    animator_tts_speed: float = Field(default=1.0, ge=0.5, le=2.0)
+    animator_tts_model: str = ""  # elevenlabs / openai model; empty = the provider's default
+    animator_tts_instructions: str = ""  # tone of voice for OpenAI gpt-4o-mini-tts
+    animator_tts_base_url: str = ""  # openai provider: empty = api.openai.com
+    animator_tts_api_key: SecretStr | None = None  # openai provider: empty = OPENAI_API_KEY
+    azure_speech_key: SecretStr | None = None
+    azure_speech_region: str = ""
+    google_tts_api_key: SecretStr | None = None
+    elevenlabs_api_key: SecretStr | None = None
+    # Silence after each spoken beat before the next one starts.
+    animator_tts_pause_s: float = Field(default=0.35, ge=0.0, le=3.0)
+    animator_tts_concurrency: int = Field(default=8, ge=1, le=32)
+    animator_tts_timeout_s: float = 30.0
+    animator_tts_cache_dir: Path = Path("var/tts")
+
     # --- Storage: no database for now (see ADR-003) ---
     animator_storage_backend: Literal["memory", "files"] = "files"
     animator_data_dir: Path = Path("var")

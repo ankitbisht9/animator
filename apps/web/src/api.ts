@@ -2,6 +2,7 @@
  * Client for the Python API (proxied at /api by Vite in dev). Scene DSL arrives as data and is
  * validated and compiled in the browser by the same engine the worker runs (P2, P4).
  */
+import type { SceneNarration } from "@animator/components";
 
 export type GenerationStatus = "queued" | "planning" | "generating" | "complete" | "failed" | "cancelled" | "paused";
 export const TERMINAL: GenerationStatus[] = ["complete", "failed", "cancelled"];
@@ -59,6 +60,8 @@ export interface PlayableScene {
   status: SceneStatus;
   duration: number | null;
   dsl: unknown;
+  /** Spoken narration; null or absent when narration audio is off. */
+  narration?: SceneNarration | null;
 }
 
 /** `final`: the last event of the stream (the run is over and every cost is counted). */
@@ -75,6 +78,7 @@ export interface ApiConfig {
   llm_critic: boolean;
   visual_critic: boolean;
   storage: string;
+  tts?: { enabled: boolean; provider: string | null; voice: string | null; problem: string | null };
 }
 
 export class ApiError extends Error {

@@ -214,6 +214,8 @@ class SceneRecord(BaseModel):
     attempts: list[Attempt] = Field(default_factory=list)
     warnings: list[dict[str, Any]] = Field(default_factory=list)
     degraded_reason: str | None = None
+    # Spoken narration (TTS on): per beat, its audio file and when each caption word is said.
+    narration: dict[str, Any] | None = None
     started_at: float | None = None
     finished_at: float | None = None
 
@@ -239,6 +241,11 @@ class Metrics(BaseModel):
     generation_s: float | None = None
     slow_scenes: list[str] = Field(default_factory=list)
     storyboard_fallbacks: int = 0
+    # Narration audio (TTS on): characters sent to the provider (free tiers count them), seconds
+    # of speech, and scenes left without a voice because synthesis failed.
+    tts_chars: int = 0
+    tts_audio_s: float = 0.0
+    tts_failures: int = 0
 
 
 class Generation(BaseModel):
