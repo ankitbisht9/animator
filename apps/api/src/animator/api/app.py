@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from animator import REPO_ROOT
 from animator.api.generations import router as generations_router
 from animator.api.tts import router as tts_router
 from animator.config import STAGES, Settings, get_settings
@@ -26,7 +27,7 @@ from animator.jobs.store import FileStore, GenerationStore, MemoryStore
 from animator.llm import LLMClient, build_llm
 from animator.observability import setup_logging
 from animator.pipeline.generator import KeyframeSource, Pipeline
-from animator.tts import TTSProvider, build_speech, tts_problem
+from animator.tts import TTSProvider, build_speech, env_duplicates, tts_problem
 
 log = logging.getLogger("animator.api")
 
@@ -41,6 +42,9 @@ def create_app(
 ) -> FastAPI:
     s = settings or get_settings()
     setup_logging(s.log_level, s.log_format)
+    # The .env the settings came from (checked for narration settings written twice); none when the
+    # caller passes its own settings (tests).
+    env_file = REPO_ROOT / ".env" if settings is None else None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -59,7 +63,7 @@ def create_app(
             owned_frames = BrowserKeyframes()
             frames = owned_frames
         # Narration audio: None unless ANIMATOR_TTS_ENABLED (then nothing speaks anywhere).
-        speech = build_speech(s, tts)
+        speech = build_speech(s, tts, env_file)
         pipeline = Pipeline(engine, llm or build_llm(), s, frames, speech)
         runner = GenerationRunner(the_store, pipeline, s)
         app.state.settings = s
@@ -106,6 +110,7 @@ def create_app(
     async def config(request: Request) -> dict[str, Any]:
         """What the pipeline will use (never the key itself)."""
         st: Settings = request.app.state.settings
+        speech = request.app.state.speech
         stages = {}
         for stage in STAGES:
             try:
@@ -122,10 +127,15 @@ def create_app(
             "visual_critic": st.animator_enable_visual_critic,
             "storage": st.animator_storage_backend,
             "tts": {
-                "enabled": request.app.state.speech is not None,
+                "enabled": speech is not None,
                 "provider": st.animator_tts_provider if st.animator_tts_enabled else None,
-                "voice": request.app.state.speech.provider.voice if request.app.state.speech else None,
+                "voice": speech.provider.voice if speech else None,
+                "voices": {"Hinglish": speech.voice_for("Hinglish")} if speech else {},
                 "problem": tts_problem(st),
+                "warnings": [
+                    f"{name} is set more than once in .env: only the last one counts"
+                    for name in (env_duplicates(env_file) if st.animator_tts_enabled else [])
+                ],
             },
         }
 

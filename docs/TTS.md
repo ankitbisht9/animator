@@ -61,9 +61,13 @@ sentences are not sent again), `tts_audio_s`, `tts_failures`.
 | `azure` | free tier: 500,000 characters/month (F0) | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | estimated | The same voices as `edge`, officially. The fallback if `edge` stops working. |
 | `google` | free tier: 1M characters/month on Neural2 voices, 4M on Standard | `GOOGLE_TTS_API_KEY` | exact (SSML marks) | Needs a Google Cloud billing account (not charged within the free tier). |
 | `elevenlabs` | free tier: 10,000 credits/month, non-commercial | `ELEVENLABS_API_KEY` | exact | The most expressive, human-sounding voices. |
-| `openai` | OpenAI: paid (about $0.015 per minute); local server: free | `OPENAI_API_KEY` (already set) or none | estimated | Any server with OpenAI's `/audio/speech` API, e.g. a local Kokoro. |
+| `kokoro` | free, local, offline | none | exact | Kokoro-82M on your own Kokoro-FastAPI server (see below). About real-time speed on a laptop CPU. |
+| `openai` | OpenAI: paid (about $0.015 per minute); local server: free | `OPENAI_API_KEY` (already set) or none | estimated | Any server with OpenAI's `/audio/speech` API. |
 
-Voice and speed: `ANIMATOR_TTS_VOICE` (empty = the provider's default) and `ANIMATOR_TTS_SPEED` (1.0 = normal).
+Voice and speed: `ANIMATOR_TTS_VOICE` (English lessons; empty = the provider's default),
+`ANIMATOR_TTS_VOICE_HINGLISH` (Hinglish lessons, see below) and `ANIMATOR_TTS_SPEED` (1.0 = normal).
+Write each setting once in `.env`: when a name appears twice, only the last one counts. The API log and the home
+page warn about that.
 The default `edge` voice, `en-US-AvaMultilingualNeural`, also reads other lesson languages (Spanish, French,
 Hindi, ...) in the same voice. Other good `edge`/`azure` voices:
 - `en-US-AndrewMultilingualNeural`: warm, male;
@@ -112,31 +116,79 @@ is set with `ANIMATOR_TTS_INSTRUCTIONS`, for example "Speak like a warm, enthusi
 
 ## Free local voice: Kokoro-82M
 
-Kokoro-82M is an open-weight model (Apache-2.0) with 82M parameters. It sounds close to the best cloud voices, runs
-faster than real time on a CPU, and needs no account or internet once installed. Kokoro-FastAPI serves it with
-OpenAI's speech API:
+Kokoro-82M is an open-weight model (Apache-2.0) with 82M parameters. It sounds close to the best cloud voices and
+needs no account or internet once installed. Kokoro-FastAPI serves it; the `kokoro` provider uses its captioned
+endpoint, which also returns when every word is said (exact caption sync).
 
 1. Install uv (already installed here) and optionally espeak-ng.
-2. `git clone https://github.com/remsky/Kokoro-FastAPI` somewhere outside this project, then in that folder run
-   `.\start-cpu.ps1` (Windows) or `./start-cpu.sh` (Linux/macOS). The first start downloads the model (about
-   330 MB). It listens on http://localhost:8880.
+2. `git clone https://github.com/remsky/Kokoro-FastAPI` **outside this project** (for example `D:\Kokoro-FastAPI`),
+   then in that folder run `.\start-cpu.ps1` (Windows) or `./start-cpu.sh` (Linux/macOS). The first start
+   downloads the model (about 330 MB). It listens on http://localhost:8880.
 3. In `.env`:
    ```
-   ANIMATOR_TTS_PROVIDER=openai
-   ANIMATOR_TTS_BASE_URL=http://localhost:8880/v1
-   ANIMATOR_TTS_MODEL=kokoro
+   ANIMATOR_TTS_PROVIDER=kokoro
+   ANIMATOR_TTS_BASE_URL=http://localhost:8880
    ANIMATOR_TTS_VOICE=af_heart
+   ANIMATOR_TTS_VOICE_HINGLISH=hm_omega
+   ANIMATOR_TTS_CONCURRENCY=1
+   ANIMATOR_TTS_TIMEOUT_S=60
    ```
-   Other voices: `af_bella`, `af_sky`, `am_michael`, `bf_emma`, `bm_george`.
-4. Restart `make dev`. Word timings are estimated for this provider.
+4. Restart `make dev`, with Kokoro running.
 
-Other local options: Piper (very fast, lighter, less natural) and Coqui XTTS-v2 (voice cloning, needs a GPU,
-non-commercial licence).
+**Speed.** Without an NVIDIA GPU, Kokoro speaks at about real time: a 5-second sentence takes about 5 seconds, and
+several at once are no faster. With `ANIMATOR_TTS_CONCURRENCY=1`, the sentences are spoken in scene order, so the
+first scene's voice is ready first and the rest stays ahead of playback. The whole lesson finishes later than with
+`edge` (see ADR-038 for measurements). With an NVIDIA GPU, `.\start-gpu.ps1` is many times faster.
+
+**Voices.** 72 voices; the name says the language and gender: `af_` American English female, `am_` American
+male, `bf_`/`bm_` British, `hf_`/`hm_` Hindi, and also Spanish (`e`), French (`f`), Italian (`i`), Japanese
+(`j`), Brazilian Portuguese (`p`) and Mandarin (`z`). Kokoro's own quality grades: `af_heart` A, `af_bella` A-,
+`af_nicole` and `bf_emma` B-; `am_michael`, `am_fenrir`, `am_puck` C+ (the best male voices); the Hindi voices C.
+Voices can be blended: `af_bella+af_sky`, or weighted `af_bella(2)+af_sky(1)`.
+
+## Choosing a voice by listening
+
+- **Kokoro's own page**: http://localhost:8880/web/ while Kokoro runs. Type any text, pick a voice, play it.
+- **Samples of this project's sentences**: `uv run python scripts/tts_samples.py` speaks one English and one
+  Hinglish sentence in each recommended voice of the provider set in `.env` (`--provider edge` for another,
+  `--all` for every voice) and writes `var/voice-samples/<provider>/index.html`. Open it and click play; each row
+  shows the `.env` line for that voice.
+
+## Lesson language: English or Hinglish
+
+The create form has a **Language** choice.
+- **English**: unchanged; the model receives exactly the same instructions as before.
+- **Hinglish**: the everyday Hindi-English mix, written in Roman letters, with technical terms in English
+  ("Socho, agar hum ball ko upar phenkein, toh gravity use wapas neeche kheenchti hai."). Narration, questions
+  and checkpoint choices are in Hinglish; titles and labels are short, in simple English or Hinglish. Devanagari
+  is never used, because the fonts cannot draw it.
+
+A Hinglish lesson speaks with `ANIMATOR_TTS_VOICE_HINGLISH`. When that is empty, each provider's Hinglish
+default is used:
+
+| Provider | Hinglish voice | |
+|---|---|---|
+| `kokoro` | `hm_omega` (male) | the clearest Kokoro voice for Hinglish; `hf_beta` is the female option |
+| `edge`, `azure` | `en-IN-NeerjaExpressiveNeural` (female) | also good: `en-IN-PrabhatNeural` (male), `hi-IN-SwaraNeural`, `hi-IN-MadhurNeural` |
+| `google` | `en-IN-Neural2-A` | Indian English |
+| `elevenlabs`, `openai` | the English voice | their multilingual models speak Hindi |
+
+Chosen by a listening test: the same Hinglish sentences in every candidate voice, transcribed back by a speech
+recognizer (ADR-038).
+
+## No voice?
+
+- The lesson page says "Voice: N scene(s) have captions only" with the reason, and the home page shows a
+  configuration problem (a missing key, a duplicated setting) before you create a lesson.
+- `ANIMATOR_TTS_ENABLED=1`, and the API was restarted after changing `.env`.
+- With `kokoro`, the Kokoro server must be running (http://localhost:8880/web/ opens).
+- Lessons made while the voice was failing keep captions only; create the lesson again.
 
 ## Adding a provider
 
-A provider is a class with `name`, `voice`, `model`, a `key` property (everything that changes the audio besides
-the text), `async synthesize(text) -> Speech` and `async close()`. `Speech` holds the audio bytes, their format
+A provider is a class with `name`, `voice` (its default voice), `hinglish_voice`, `model`, a `cache_key(voice)`
+method (everything that changes the audio besides the text), `async synthesize(text, voice=None) -> Speech` and
+`async close()`. `Speech` holds the audio bytes, their format
 (`mp3`/`wav`), the duration, and optional word marks. Add it to `animator/tts/providers.py`, to `build_provider` in
 `animator/tts/__init__.py`, and to the `ANIMATOR_TTS_PROVIDER` choices in `config.py`. Test it over a mocked HTTP
 transport (see `apps/api/tests/test_tts.py`). Nothing else changes.

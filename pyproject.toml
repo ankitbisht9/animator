@@ -17,7 +17,7 @@ dev = [
 [tool.ruff]
 line-length = 110
 target-version = "py313"
-extend-exclude = ["contracts/python/src/animator_contracts/protocol.py"]
+extend-exclude = ["contracts/python/src/animator_contracts/protocol.py", "Kokoro-FastAPI"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "ASYNC", "S", "RUF", "SIM", "PTH"]

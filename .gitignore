@@ -27,3 +27,6 @@ scripts/spikes/out/
 .DS_Store
 Thumbs.db
 .idea/
+
+# A local Kokoro-FastAPI checkout (the free local voice, docs/TTS.md) is not part of this project.
+/Kokoro-FastAPI/

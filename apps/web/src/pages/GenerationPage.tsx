@@ -157,7 +157,9 @@ export function GenerationPage({ id }: { id: string }) {
       <div className="lesson-head">
         <div>
           <div className="kicker">
-            {summary.request.audience} · {summary.request.duration_min} min · AI-generated
+            {summary.request.audience} · {summary.request.duration_min} min
+            {summary.request.language && summary.request.language !== "English" && ` · ${summary.request.language}`} ·
+            AI-generated
           </div>
           <h1>{title}</h1>
           {summary.subtitle && <p className="lead">{summary.subtitle}</p>}
@@ -209,6 +211,12 @@ export function GenerationPage({ id }: { id: string }) {
           </div>
         )}
         {error && <div className="gen-error">{error}</div>}
+        {(summary.metrics.tts_failures ?? 0) > 0 && (
+          <div className="gen-error">
+            Voice: {summary.metrics.tts_failures} scene(s) have captions only.
+            {summary.metrics.tts_error && <div className="gen-hint">{summary.metrics.tts_error}</div>}
+          </div>
+        )}
         {exportJob && (
           <div className="gen-export">
             {exportJob.state === "running" && <>Rendering video… {exportJob.log.at(-1)}</>}

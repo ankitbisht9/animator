@@ -50,6 +50,9 @@ export interface GenerationSummary {
     first_play_s: number | null;
     generation_s: number | null;
     slow_scenes: string[];
+    /** Narration voice (TTS on): scenes left with captions only, and why. */
+    tts_failures?: number;
+    tts_error?: string | null;
   };
   version: number;
 }
@@ -78,7 +81,14 @@ export interface ApiConfig {
   llm_critic: boolean;
   visual_critic: boolean;
   storage: string;
-  tts?: { enabled: boolean; provider: string | null; voice: string | null; problem: string | null };
+  tts?: {
+    enabled: boolean;
+    provider: string | null;
+    voice: string | null;
+    voices?: Record<string, string>;
+    problem: string | null;
+    warnings?: string[];
+  };
 }
 
 export class ApiError extends Error {
@@ -115,8 +125,14 @@ export const api = {
   config: () => call<ApiConfig>("/api/config"),
   list: () => call<GenerationSummary[]>("/api/generations"),
   get: (id: string) => call<Record<string, unknown> & { summary: GenerationSummary }>(`/api/generations/${id}`),
-  create: (body: { topic: string; audience?: string; duration_min?: number; style?: string | null; paced?: boolean }) =>
-    call<GenerationSummary>("/api/generations", { method: "POST", body: JSON.stringify(body) }),
+  create: (body: {
+    topic: string;
+    audience?: string;
+    duration_min?: number;
+    style?: string | null;
+    paced?: boolean;
+    language?: string;
+  }) => call<GenerationSummary>("/api/generations", { method: "POST", body: JSON.stringify(body) }),
   cancel: (id: string) => call<GenerationSummary>(`/api/generations/${id}/cancel`, { method: "POST" }),
   resume: (id: string) => call<GenerationSummary>(`/api/generations/${id}/resume`, { method: "POST" }),
   playhead: (id: string, t: number) =>

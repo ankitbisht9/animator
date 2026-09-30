@@ -246,6 +246,7 @@ class Metrics(BaseModel):
     tts_chars: int = 0
     tts_audio_s: float = 0.0
     tts_failures: int = 0
+    tts_error: str | None = None  # why the last failure happened (shown on the lesson page)
 
 
 class Generation(BaseModel):

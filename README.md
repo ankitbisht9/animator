@@ -97,8 +97,8 @@ identical frames and a byte-identical MP4 on the same machine. The pinned Docker
 ## Creating a lesson
 
 1. Put a working `OPENAI_API_KEY` in `.env` (see below), then run `make dev`.
-2. Open the web app, type a topic ("Explain Archimedes' principle"), choose the audience and length, and click
-   **Create lesson**.
+2. Open the web app, type a topic ("Explain Archimedes' principle"), choose the audience, length and language
+   (English, or Hinglish: the everyday Hindi-English mix in Roman letters), and click **Create lesson**.
 3. The lesson page shows live progress: planning, storyboarding each chapter, then writing, checking and fixing
    each scene. Scenes start playing as soon as the first one is ready; if playback catches up with generation, a
    "Preparing the next scene" overlay waits and playback resumes by itself.
@@ -134,8 +134,9 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   generates a little ahead of what you watch.
 - Narration voice: `ANIMATOR_TTS_ENABLED=1` speaks every caption, word-synced, in the player and in exported
   MP4s; `0` turns the voice off everywhere. The default provider (`edge`, Microsoft neural voices) is free and
-  needs no key. Azure, Google, ElevenLabs, OpenAI and a free local Kokoro server are one setting away. Setup,
-  keys and voices: [docs/TTS.md](docs/TTS.md).
+  needs no key. A free local Kokoro server (`kokoro`), Azure, Google, ElevenLabs and OpenAI are one setting away.
+  Hinglish lessons use their own voice (`ANIMATOR_TTS_VOICE_HINGLISH`). To hear the voices before choosing, run
+  `uv run python scripts/tts_samples.py`. Setup, keys and voices: [docs/TTS.md](docs/TTS.md).
 - `ANIMATOR_LLM_PROVIDER`: `openai` (live), `record` (live, and also saves every call under
   `ANIMATOR_LLM_FIXTURES_DIR` for offline replay), `replay` (offline from those recordings).
 - Optional quality passes: `ANIMATOR_ENABLE_LLM_CRITIC`, `ANIMATOR_ENABLE_VISUAL_CRITIC` (reviews rendered

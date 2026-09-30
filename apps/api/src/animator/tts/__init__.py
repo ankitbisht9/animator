@@ -8,6 +8,8 @@ nothing in the pipeline, the API, the player or the export speaks or changes.
 from __future__ import annotations
 
 import logging
+import re
+from pathlib import Path
 
 from animator.config import Settings
 from animator.tts.cache import SpeechCache, Spoken
@@ -17,6 +19,7 @@ from animator.tts.providers import (
     ElevenLabsTTS,
     FakeTTS,
     GoogleTTS,
+    KokoroTTS,
     OpenAICompatibleTTS,
 )
 from animator.tts.text import caption_words, speech_text, strip_markup, word_times
@@ -28,6 +31,7 @@ __all__ = [
     "ElevenLabsTTS",
     "FakeTTS",
     "GoogleTTS",
+    "KokoroTTS",
     "OpenAICompatibleTTS",
     "Speech",
     "SpeechCache",
@@ -38,6 +42,7 @@ __all__ = [
     "build_provider",
     "build_speech",
     "caption_words",
+    "env_duplicates",
     "speech_text",
     "strip_markup",
     "tts_problem",
@@ -66,6 +71,8 @@ def build_provider(s: Settings) -> TTSProvider:
         return ElevenLabsTTS(
             _secret(s.elevenlabs_api_key), voice, s.animator_tts_model.strip(), speed, timeout
         )
+    if p == "kokoro":
+        return KokoroTTS(s.animator_tts_base_url.strip(), voice, speed, timeout)
     if p == "openai":
         base = s.animator_tts_base_url.strip()
         key = _secret(s.animator_tts_api_key) or ("" if base else _secret(s.openai_api_key))
@@ -94,14 +101,43 @@ def tts_problem(s: Settings) -> str | None:
     return None
 
 
-def build_speech(s: Settings, provider: TTSProvider | None = None) -> SpeechCache | None:
+_TTS_KEYS = re.compile(
+    r"^\s*(ANIMATOR_TTS_\w+|AZURE_SPEECH_\w+|GOOGLE_TTS_\w+|ELEVENLABS_\w+)\s*=", re.MULTILINE
+)
+
+
+def env_duplicates(env_file: Path | None) -> list[str]:
+    """Narration settings written more than once in `.env`: the LAST one wins, which silently undoes
+    the first (an empty `ANIMATOR_TTS_BASE_URL=` below a filled one, for example)."""
+    try:
+        text = env_file.read_text(encoding="utf-8") if env_file is not None else ""
+    except OSError:
+        return []
+    names = [m.group(1) for m in _TTS_KEYS.finditer(text)]
+    return sorted({n for n in names if names.count(n) > 1})
+
+
+def build_speech(
+    s: Settings, provider: TTSProvider | None = None, env_file: Path | None = None
+) -> SpeechCache | None:
     if not s.animator_tts_enabled:
         return None
+    for name in env_duplicates(env_file):
+        log.warning("%s is set more than once in .env: only the last one counts", name)
     if provider is None:
         try:
             provider = build_provider(s)
         except TTSError as e:
             log.warning("narration audio is off: %s", e)
             return None
-    log.info("narration audio: %s, voice %s", provider.name, provider.voice)
-    return SpeechCache(provider, s.resolve(s.animator_tts_cache_dir), s.animator_tts_concurrency)
+    voices = {"hinglish": s.animator_tts_voice_hinglish.strip()}
+    speech = SpeechCache(
+        provider, s.resolve(s.animator_tts_cache_dir), s.animator_tts_concurrency, voices=voices
+    )
+    log.info(
+        "narration audio: %s, voice %s (Hinglish: %s)",
+        provider.name,
+        provider.voice,
+        speech.voice_for("Hinglish"),
+    )
+    return speech

@@ -26,6 +26,7 @@ from animator.jobs.runner import GenerationRunner
 from animator.jobs.store import MemoryStore
 from animator.llm import FakeLLM, Usage
 from animator.pipeline.generator import Pipeline
+from animator.pipeline.language import language_line
 from animator.pipeline.models import Generation, GenerationRequest
 from animator.pipeline.narration import narration_record, retime
 from animator.tts import (
@@ -34,12 +35,14 @@ from animator.tts import (
     ElevenLabsTTS,
     FakeTTS,
     GoogleTTS,
+    KokoroTTS,
     OpenAICompatibleTTS,
     SpeechCache,
     TTSError,
     WordMark,
     build_speech,
     caption_words,
+    env_duplicates,
     speech_text,
     strip_markup,
     tts_problem,
@@ -239,6 +242,33 @@ async def test_provider_errors_never_contain_the_key() -> None:
     OpenAICompatibleTTS("", "http://localhost:8880/v1")  # a local server needs no key
 
 
+async def test_kokoro_reads_word_times_from_captioned_speech() -> None:
+    seen: list[tuple[str, dict[str, Any]]] = []
+
+    def handler(req: httpx2.Request) -> httpx2.Response:
+        seen.append((str(req.url), json.loads(req.content)))
+        stamps = [
+            {"word": "Socho", "start_time": 0.03, "end_time": 0.5},
+            {"word": ",", "start_time": 0.5, "end_time": 0.6},
+            {"word": "gravity", "start_time": 0.6, "end_time": 1.1},
+        ]
+        audio = base64.b64encode(mp3_frames(60)).decode()
+        return httpx2.Response(200, json={"audio": audio, "timestamps": stamps})
+
+    tts = KokoroTTS("http://192.168.0.140:8880/v1/", transport=mock(handler))  # the OpenAI-style URL works
+    speech = await tts.synthesize("Socho, gravity", "hm_omega")
+    url, body = seen[0]
+    assert url == "http://192.168.0.140:8880/dev/captioned_speech"
+    assert body["voice"] == "hm_omega" and body["return_timestamps"] is True and body["stream"] is False
+    assert speech.duration_s == pytest.approx(60 * 576 / 24000)
+    assert speech.marks is not None and speech.marks[0] == WordMark("Socho", 0.03, 0.5)
+    # Punctuation entries are ignored when the times are matched to the caption's words.
+    times = word_times(caption_words("Socho, gravity"), speech.marks, speech.duration_s)
+    assert times == [(0.03, 0.5), (0.6, 1.1)]
+    await KokoroTTS(transport=mock(handler)).synthesize("Hi")
+    assert seen[1][0] == "http://localhost:8880/dev/captioned_speech" and seen[1][1]["voice"] == "af_heart"
+
+
 async def test_edge_collects_audio_and_word_boundaries(monkeypatch: pytest.MonkeyPatch) -> None:
     made: dict[str, Any] = {}
 
@@ -288,8 +318,48 @@ async def test_the_cache_synthesizes_each_sentence_once(tmp_path: Path) -> None:
     again = await SpeechCache(FakeTTS(), tmp_path).speak("Look at the tank.")  # from disk
     assert again == a
     assert cache.audio_path("../secret.mp3") is None and cache.audio_path("0" * 32 + ".mp3") is None
-    other = SpeechCache(FakeTTS(seconds_per_word=0.5), tmp_path)  # another voice: another file
+    other = SpeechCache(FakeTTS(seconds_per_word=0.5), tmp_path)  # other settings: another file
     assert (await other.speak("Look at the tank.")).file != a.file
+    hinglish = await cache.speak("Look at the tank.", "fake_hinglish")  # another voice: another file
+    assert hinglish.file != a.file and fake.voices[-1] == "fake_hinglish"
+
+
+def test_each_lesson_language_has_a_voice(tmp_path: Path) -> None:
+    cache = SpeechCache(FakeTTS(), tmp_path)
+    assert cache.voice_for("English") == "fake" and cache.voice_for("Spanish") == "fake"
+    assert cache.voice_for("Hinglish") == cache.voice_for(" hinglish ") == "fake_hinglish"
+    chosen = SpeechCache(FakeTTS(), tmp_path, voices={"Hinglish": "hf_beta"})
+    assert chosen.voice_for("Hinglish") == "hf_beta"
+    assert SpeechCache(FakeTTS(), tmp_path, voices={"Hinglish": ""}).voice_for("Hinglish") == "fake_hinglish"
+    on = settings(
+        animator_tts_enabled=True, animator_tts_provider="kokoro", animator_tts_voice_hinglish="hf_beta"
+    )
+    speech = build_speech(on)
+    assert speech is not None and speech.provider.voice == "af_heart"
+    assert speech.voice_for("Hinglish") == "hf_beta"
+    default = build_speech(settings(animator_tts_enabled=True, animator_tts_provider="kokoro"))
+    assert default is not None and default.voice_for("Hinglish") == "hm_omega"
+    edge = build_speech(settings(animator_tts_enabled=True))
+    assert edge is not None and edge.voice_for("Hinglish") == "en-IN-NeerjaExpressiveNeural"
+
+
+def test_a_setting_written_twice_in_env_is_reported(tmp_path: Path) -> None:
+    env = tmp_path / ".env"
+    env.write_text(
+        "ANIMATOR_TTS_PROVIDER=openai\nANIMATOR_TTS_BASE_URL=http://localhost:8880/v1\n"
+        "OTHER=1\nOTHER=2\n# ANIMATOR_TTS_VOICE=x\nANIMATOR_TTS_BASE_URL=\n",
+        encoding="utf-8",
+    )
+    assert env_duplicates(env) == ["ANIMATOR_TTS_BASE_URL"]  # only narration settings, not comments
+    assert env_duplicates(None) == [] and env_duplicates(tmp_path / "missing") == []
+    # The mistake that made lessons silent: Kokoro's model sent to OpenAI.
+    wrong = settings(
+        animator_tts_enabled=True,
+        animator_tts_provider="openai",
+        animator_tts_model="kokoro",
+        openai_api_key="k",
+    )
+    assert "ANIMATOR_TTS_BASE_URL" in (tts_problem(wrong) or "")
 
 
 async def test_prefetch_starts_early_and_failures_surface_when_speech_is_needed(tmp_path: Path) -> None:
@@ -381,12 +451,14 @@ def test_the_narration_record_times_every_caption_word(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------- pipeline
 
 
-async def spoken_lesson(pool: EngineWorkerPool, tmp_path: Path, tts: FakeTTS) -> Generation:
+async def spoken_lesson(
+    pool: EngineWorkerPool, tmp_path: Path, tts: FakeTTS, language: str = "English"
+) -> Generation:
     s = settings(animator_tts_enabled=True, animator_tts_cache_dir=tmp_path)
     speech = SpeechCache(tts, tmp_path)
     fake = FakeLLM(Script(), usage=Usage(1000, 0, 500), cost=0.01)
     runner = GenerationRunner(MemoryStore(), Pipeline(EngineClient(pool), fake, s, None, speech), s)
-    gen = await runner.start(GenerationRequest(topic="Archimedes' principle"))
+    gen = await runner.start(GenerationRequest(topic="Archimedes' principle", language=language))
     await asyncio.wait_for(runner._tasks[gen.id], timeout=120)
     got = await runner.get(gen.id)
     assert got is not None
@@ -407,6 +479,17 @@ async def test_scenes_get_a_voice_and_stretch_to_fit_it(pool: EngineWorkerPool, 
         assert all(starts[i + 1] - starts[i] >= voiced[i]["duration"] for i in range(len(voiced)))
         assert rec.duration is not None and rec.duration > original["duration"]  # slow speech: longer
     assert gen.metrics.tts_chars > 0 and gen.metrics.tts_audio_s > 0 and gen.metrics.tts_failures == 0
+    assert all(s.narration and s.narration["voice"] == "fake" for s in gen.scenes)
+
+
+async def test_a_hinglish_lesson_speaks_with_the_hinglish_voice(
+    pool: EngineWorkerPool, tmp_path: Path
+) -> None:
+    tts = FakeTTS()
+    gen = await spoken_lesson(pool, tmp_path, tts, language="Hinglish")
+    assert gen.status == "complete" and all(s.narration for s in gen.scenes)
+    assert set(tts.voices) == {"fake_hinglish"}  # the prefetch too
+    assert all(s.narration and s.narration["voice"] == "fake_hinglish" for s in gen.scenes)
 
 
 async def test_failing_speech_never_fails_the_lesson(pool: EngineWorkerPool, tmp_path: Path) -> None:
@@ -415,6 +498,7 @@ async def test_failing_speech_never_fails_the_lesson(pool: EngineWorkerPool, tmp
     assert all(s.narration is None for s in gen.scenes)
     assert [s.duration for s in gen.scenes] == [d["duration"] for d in SCENES[:4]]  # timing untouched
     assert gen.metrics.tts_failures == 4
+    assert gen.metrics.tts_error == "fake: failing on purpose"  # shown on the lesson page
 
 
 # ---------------------------------------------------------------------- API
@@ -434,7 +518,14 @@ def app_with(tmp_path: Path, enabled: bool, tts: FakeTTS | None = None) -> TestC
 def test_the_api_serves_narration_only_when_the_switch_is_on(worker_script: Path, tmp_path: Path) -> None:
     with app_with(tmp_path, True, FakeTTS()) as client:
         cfg = client.get("/api/config").json()["tts"]
-        assert cfg == {"enabled": True, "provider": "edge", "voice": "fake", "problem": None}
+        assert cfg == {
+            "enabled": True,
+            "provider": "edge",
+            "voice": "fake",
+            "voices": {"Hinglish": "fake_hinglish"},
+            "problem": None,
+            "warnings": [],  # tests pass their own settings: no .env is read
+        }
         gen_id = client.post("/api/generations", json={"topic": "Archimedes' principle"}).json()["id"]
         events = read_events(client, gen_id)
         scenes = [e for e in events if e["type"] == "scene"]
@@ -507,3 +598,13 @@ async def test_the_export_track_places_each_beat_at_its_time(tmp_path: Path) -> 
     broken["narration"][0]["beats"][0]["audio"] = "d" * 32 + ".wav"
     with pytest.raises(ExportError, match="ANIMATOR_TTS_ENABLED=0"):
         await NarrationAudio(tmp_path).track(broken, 9.0, tmp_path)
+
+
+# ---------------------------------------------------------------------- lesson language
+
+
+def test_english_prompts_are_unchanged_and_hinglish_is_spelled_out() -> None:
+    assert language_line("English") == "English"  # English lessons send exactly what they did before
+    assert language_line("Spanish") == "Spanish"
+    line = language_line("Hinglish")
+    assert line == language_line("hinglish") and "Roman" in line and "never in Devanagari" in line

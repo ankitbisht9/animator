@@ -342,3 +342,12 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   - 30-second lesson ready in 25 s, 1-minute lesson in 29 s;
   - LLM cost unchanged; speech is free;
   - the voice step adds under 0.1 s per scene.
+
+## Kokoro voice and Hinglish lessons (ADR-038)
+
+- `kokoro` provider: a free local voice with exact word timings. Defaults: `af_heart` for English and `hm_omega`
+  for Hinglish.
+- A Language choice on the create form: English (prompts unchanged) or Hinglish (Roman script, English technical
+  terms), each with its own voice (`ANIMATOR_TTS_VOICE_HINGLISH`).
+- Voice failures and `.env` mistakes are shown in the app instead of silently leaving captions only.
+- `scripts/tts_samples.py`: listen to the voices before choosing.

@@ -34,16 +34,30 @@ class Spoken:
 
 class SpeechCache:
     def __init__(
-        self, provider: TTSProvider, directory: Path, concurrency: int = 6, retries: int = 1
+        self,
+        provider: TTSProvider,
+        directory: Path,
+        concurrency: int = 6,
+        retries: int = 1,
+        voices: dict[str, str] | None = None,
     ) -> None:
         self.provider = provider
         self.directory = directory
         self.retries = retries
+        # Lesson language -> voice, where it differs from the provider's default voice (ADR-038).
+        self.voices = {"hinglish": provider.hinglish_voice}
+        self.voices.update({k.lower(): v for k, v in (voices or {}).items() if v})
+        # With concurrency 1, a local server (Kokoro on a CPU) works through the sentences in scene
+        # order, so the first scene's speech is ready first.
         self._sem = asyncio.Semaphore(max(1, concurrency))
         self._inflight: dict[str, asyncio.Task[Spoken]] = {}
 
-    def _id(self, text: str) -> str:
-        return hashlib.sha256(f"{self.provider.key}\n{text}".encode()).hexdigest()[:32]
+    def voice_for(self, language: str) -> str:
+        """The voice a lesson in `language` speaks with."""
+        return self.voices.get(language.strip().lower()) or self.provider.voice
+
+    def _id(self, text: str, voice: str) -> str:
+        return hashlib.sha256(f"{self.provider.cache_key(voice)}\n{text}".encode()).hexdigest()[:32]
 
     def audio_path(self, name: str) -> Path | None:
         """The cached audio file `name`, if the name is well-formed and the file exists."""
@@ -69,18 +83,20 @@ class SpeechCache:
             else None,
         )
 
-    async def speak(self, text: str) -> Spoken:
-        """The narration beat `text` (caption markup allowed) as cached speech."""
+    async def speak(self, text: str, voice: str | None = None) -> Spoken:
+        """The narration beat `text` (caption markup allowed) as cached speech, in `voice` (default:
+        the provider's voice)."""
         plain = speech_text(text)
         if not plain:
             raise TTSError("nothing to say")
-        sid = self._id(plain)
+        v = voice or self.provider.voice
+        sid = self._id(plain, v)
         hit = self._load(sid)
         if hit is not None:
             return hit
         task = self._inflight.get(sid)
         if task is None:
-            task = asyncio.create_task(self._synthesize(sid, plain), name=f"tts-{sid[:8]}")
+            task = asyncio.create_task(self._synthesize(sid, plain, v), name=f"tts-{sid[:8]}")
             self._inflight[sid] = task
             task.add_done_callback(self._done(sid))
         return await asyncio.shield(task)
@@ -91,21 +107,21 @@ class SpeechCache:
 
         return forget
 
-    def prefetch(self, texts: Iterable[str]) -> None:
+    def prefetch(self, texts: Iterable[str], voice: str | None = None) -> None:
         """Start synthesizing now (while the scene is still being written); failures are ignored
         here and retried when the speech is needed."""
         for text in texts:
             if not speech_text(text):
                 continue
-            task = asyncio.ensure_future(self.speak(text))
+            task = asyncio.ensure_future(self.speak(text, voice))
             task.add_done_callback(_consume)
 
-    async def _synthesize(self, sid: str, text: str) -> Spoken:
+    async def _synthesize(self, sid: str, text: str, voice: str) -> Spoken:
         last: Exception | None = None
         async with self._sem:
             for attempt in range(1 + max(0, self.retries)):
                 try:
-                    speech = await self.provider.synthesize(text)
+                    speech = await self.provider.synthesize(text, voice)
                     break
                 except Exception as e:
                     last = e
@@ -124,7 +140,7 @@ class SpeechCache:
             "duration_s": round(speech.duration_s, 4),
             "marks": marks,
             "provider": self.provider.name,
-            "voice": self.provider.voice,
+            "voice": voice,
             "text": text,
         }
         _write(self.directory / f"{sid}.json", json.dumps(meta, ensure_ascii=False).encode("utf-8"))

@@ -13,7 +13,8 @@
       "!packages/engine/src/text/fonts/*.json",
       "!**/test/__snapshots__",
       "!.venv",
-      "!var"
+      "!var",
+      "!Kokoro-FastAPI"
     ]
   },
   "formatter": {

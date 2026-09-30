@@ -109,14 +109,19 @@ class Settings(BaseSettings):
     # --- Narration audio (text to speech, ADR-037) ---
     # The one switch: 0 = no speech anywhere (pipeline, API, player, export behave as before).
     animator_tts_enabled: bool = False
-    # edge: free Microsoft neural voices, no key | azure | google | elevenlabs | openai (OpenAI or
-    # any OpenAI-compatible server, e.g. a local Kokoro) | fake (tests). See docs/TTS.md.
-    animator_tts_provider: Literal["edge", "azure", "google", "elevenlabs", "openai", "fake"] = "edge"
+    # edge: free Microsoft neural voices, no key | azure | google | elevenlabs | kokoro (a local
+    # Kokoro-FastAPI server, free) | openai (OpenAI or any OpenAI-compatible server) | fake (tests).
+    animator_tts_provider: Literal["edge", "azure", "google", "elevenlabs", "kokoro", "openai", "fake"] = (
+        "edge"
+    )
     animator_tts_voice: str = ""  # empty = the provider's default voice
+    # The voice of Hinglish lessons; empty = the provider's Hinglish default (ADR-038).
+    animator_tts_voice_hinglish: str = ""
     animator_tts_speed: float = Field(default=1.0, ge=0.5, le=2.0)
     animator_tts_model: str = ""  # elevenlabs / openai model; empty = the provider's default
     animator_tts_instructions: str = ""  # tone of voice for OpenAI gpt-4o-mini-tts
-    animator_tts_base_url: str = ""  # openai provider: empty = api.openai.com
+    # kokoro: the Kokoro server (empty = http://localhost:8880); openai: empty = api.openai.com.
+    animator_tts_base_url: str = ""
     animator_tts_api_key: SecretStr | None = None  # openai provider: empty = OPENAI_API_KEY
     azure_speech_key: SecretStr | None = None
     azure_speech_region: str = ""

@@ -13,6 +13,8 @@ const AUDIENCES = [
   "curious adult",
 ];
 const DURATIONS = [1, 2, 3, 5, 8, 10, 15];
+/** Hinglish: the everyday Hindi-English mix, written in Roman letters (ADR-038). */
+const LANGUAGES = ["English", "Hinglish"];
 const EXAMPLES = [
   "Explain Archimedes' principle",
   "How does photosynthesis work?",
@@ -50,6 +52,7 @@ export function Home() {
   const [topic, setTopic] = useState("");
   const [audience, setAudience] = useState("high-school student");
   const [minutes, setMinutes] = useState(3);
+  const [language, setLanguage] = useState("English");
   const [style, setStyle] = useState("");
   const [paced, setPaced] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -78,6 +81,7 @@ export function Home() {
         duration_min: minutes,
         style: style || null,
         paced,
+        language,
       });
       navigate(`/g/${gen.id}`);
     } catch (err) {
@@ -125,6 +129,14 @@ export function Home() {
                 ))}
               </select>
             </label>
+            <label>
+              Language
+              <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                {LANGUAGES.map((l) => (
+                  <option key={l}>{l}</option>
+                ))}
+              </select>
+            </label>
             <label className="grow">
               Style notes
               <input
@@ -160,6 +172,14 @@ export function Home() {
             OPENAI_API_KEY is not set in .env: lesson generation needs it. Restart the API after adding it.
           </p>
         )}
+        {config?.tts?.problem && (
+          <p className="note bad">Narration voice is off: {config.tts.problem}. Fix it in .env and restart.</p>
+        )}
+        {config?.tts?.warnings?.map((w) => (
+          <p key={w} className="note bad">
+            Narration voice: {w}.
+          </p>
+        ))}
         {config?.openai_key_configured && (
           <p className="note">
             Scenes appear as soon as they are ready; the first one takes a minute or two. Planner model:{" "}

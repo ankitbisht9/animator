@@ -86,10 +86,12 @@ def retime(
     return out
 
 
-async def speak_beats(speech: SpeechCache, beats: Sequence[Beat]) -> dict[str, Spoken]:
+async def speak_beats(
+    speech: SpeechCache, beats: Sequence[Beat], voice: str | None = None
+) -> dict[str, Spoken]:
     """Speech for every beat that has words (all at once; most are cached by the prefetch)."""
     todo = [b for b in beats if caption_words(b.text)]
-    results = await asyncio.gather(*(speech.speak(b.text) for b in todo))
+    results = await asyncio.gather(*(speech.speak(b.text, voice) for b in todo))
     return {b.id: s for b, s in zip(todo, results, strict=True)}
 
 
@@ -102,7 +104,7 @@ def needs(spoken: Mapping[str, Spoken], beats: Sequence[Beat], pause_s: float) -
 
 
 def narration_record(
-    speech: SpeechCache, beats: Sequence[Beat], spoken: Mapping[str, Spoken]
+    speech: SpeechCache, beats: Sequence[Beat], spoken: Mapping[str, Spoken], voice: str | None = None
 ) -> dict[str, Any]:
     """What the player and the export need: per beat, its audio, start and caption word times."""
     out = []
@@ -122,4 +124,4 @@ def narration_record(
                 "timed": s.marks is not None,
             }
         )
-    return {"provider": speech.provider.name, "voice": speech.provider.voice, "beats": out}
+    return {"provider": speech.provider.name, "voice": voice or speech.provider.voice, "beats": out}

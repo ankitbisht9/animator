@@ -918,3 +918,66 @@ nothing to run, keep up with generation, and be removable with a single setting.
 
 **Rollback.** `ANIMATOR_TTS_ENABLED=0`, or git tag `backup/before-overlap-and-tts` together with
 `.env.backup-before-tts`.
+
+## ADR-038 Local Kokoro voice, a voice per lesson language, and Hinglish lessons (2026-09-30)
+
+**Problem.**
+- The user started Kokoro-FastAPI and switched `.env` to it, but lessons stayed silent. `ANIMATOR_TTS_BASE_URL`
+  was written twice; the later, empty line won. Every sentence went to OpenAI with the model name `kokoro`
+  (HTTP 404), and every scene fell back to captions only. That fallback is by design, but nothing on screen
+  said so.
+- The user also wanted Kokoro's best voice as the default, a way to hear voices before choosing, and lessons in
+  Hinglish as well as English.
+
+**Decision.**
+1. **`kokoro` provider.** It uses Kokoro-FastAPI's `/dev/captioned_speech`, which returns the time of every word,
+   so captions follow the voice exactly. The OpenAI route only gave estimated timings.
+   - Defaults: `af_heart` (Kokoro's only A-grade voice) for English and `hm_omega` for Hinglish.
+   - The OpenAI-style `/v1` URL is accepted too.
+2. **Failures are visible.**
+   - A lesson records why its voice failed (`tts_error`), and the lesson page shows "Voice: N scene(s) have
+     captions only" with the reason.
+   - The home page shows a configuration problem, and any narration setting written twice in `.env` (also
+     logged).
+   - The `openai` provider refuses model `kokoro` without a base URL, with a message that names the fix.
+3. **A voice per lesson language.**
+   - `synthesize(text, voice)`: the speech cache keys by voice, and the pipeline asks for the voice of the
+     lesson's language.
+   - `ANIMATOR_TTS_VOICE_HINGLISH`, empty by default, picks each provider's Hinglish default: kokoro `hm_omega`,
+     edge/azure `en-IN-NeerjaExpressiveNeural`, google `en-IN-Neural2-A`, and elevenlabs/openai their English
+     voice.
+4. **Hinglish lessons.**
+   - A Language choice on the create form: English or Hinglish.
+   - English prompts are byte-for-byte unchanged (`Language: English`), so English lessons and prompt caching
+     are unaffected.
+   - For Hinglish, the language line spells out the everyday Hindi-English mix in Roman letters, with technical
+     terms in English. It forbids Devanagari, which the fonts cannot draw.
+5. **Choosing Hinglish voices.** The same two Hinglish sentences were spoken in 11 candidate voices and
+   transcribed back with gpt-4o-transcribe (about $0.01).
+   - All six Microsoft voices and Kokoro `hm_omega` were perfect on both.
+   - Kokoro `hf_beta` slipped once; `hf_alpha` and `hm_psi` more often.
+   - Kokoro's American `af_heart` garbled the Hindi words.
+6. **Kokoro's speed on this laptop** (i7-1265U, no NVIDIA GPU):
+   - about real time (5.1 s for 5.4 s of speech), and parallel requests are no faster;
+   - `ANIMATOR_TTS_CONCURRENCY=1` therefore synthesizes in scene order, so the first scene's voice is ready
+     first and the rest stays ahead of playback.
+7. **Listening before choosing.** `scripts/tts_samples.py` writes a page with an English and a Hinglish sample for
+   each recommended voice of the configured provider. Kokoro's own page, http://localhost:8880/web/, also plays
+   any text in any voice.
+8. **Repository.** The user's Kokoro-FastAPI checkout inside the project is ignored by git, Biome and Ruff.
+
+**Measured (live, Kokoro on the CPU).**
+- English 30-second lesson:
+  - ready in 48.1 s, first scene playable at 25.3 s;
+  - the total was set by one scene's three layout corrections (38 s of model time);
+  - the voice added 0-2.3 s per scene.
+- Hinglish 30-second lesson:
+  - ready in 36.8 s, first scene playable at 13.7 s, $0.02;
+  - every scene voiced by `hm_omega`, with exact word timings;
+  - titles and captions in Roman-script Hinglish, no Devanagari anywhere.
+- In the player, the voice plays in step with the highlighted words, with no errors.
+
+**Rollback.**
+- `ANIMATOR_TTS_PROVIDER=edge`: the fastest provider; Hinglish lessons then use Neerja.
+- `ANIMATOR_TTS_ENABLED=0`: no voice anywhere.
+- Git tag `backup/before-kokoro-hinglish` with `.env.backup-before-kokoro-hinglish`.

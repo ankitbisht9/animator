@@ -24,6 +24,7 @@ from animator.llm import (
     LLMResult,
     Message,
 )
+from animator.pipeline.language import language_line
 from animator.pipeline.models import (
     Chapter,
     EducationalPlan,
@@ -155,7 +156,7 @@ class Stages:
                     f"Topic: {r.topic}",
                     f"Audience: {r.audience}",
                     f"Duration: {round(r.duration_min * 60)} seconds",
-                    f"Language: {r.language}",
+                    f"Language: {language_line(r.language)}",
                     f"Style notes: {r.style}" if r.style else "Style notes: none",
                 ]
             )
@@ -212,7 +213,7 @@ class Stages:
                     f"Storyboard this chapter now: {chapter.id} ({chapter.title}), "
                     f"about {round(chapter.target_duration_s)} seconds.",
                     *context,
-                    f"Audience: {gen.request.audience}. Language: {gen.request.language}.",
+                    f"Audience: {gen.request.audience}. Language: {language_line(gen.request.language)}.",
                 ]
             )
         )
@@ -261,7 +262,7 @@ class Stages:
                     f"Topic: {r.topic}",
                     f"Audience: {r.audience}",
                     f"Duration: {duration} seconds",
-                    f"Language: {r.language}",
+                    f"Language: {language_line(r.language)}",
                     f"Style notes: {r.style}" if r.style else "Style notes: none",
                 ]
             )
@@ -317,7 +318,7 @@ class Stages:
             [
                 f'Scene {n}{total}: id "{rec.id}", title "{rec.title}". Title object id: "title_s{n:02d}".',
                 f"Lesson: {gen.plan.title}. Audience: {gen.request.audience}. "
-                f"Language: {gen.request.language}.",
+                f"Language: {language_line(gen.request.language)}.",
                 f"Storyboard brief:\n{compact(rec.brief.model_dump())}",
                 f"Target duration: about {round(rec.brief.duration_s)} seconds.",
                 self._stage_start(prev_summary),

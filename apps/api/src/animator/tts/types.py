@@ -36,14 +36,14 @@ class TTSError(RuntimeError):
 
 class TTSProvider(Protocol):
     name: str
-    voice: str
+    voice: str  # the default voice
+    hinglish_voice: str  # the voice for Hinglish lessons (ADR-038)
     model: str
 
-    @property
-    def key(self) -> str:
+    def cache_key(self, voice: str) -> str:
         """Everything that changes the audio besides the text (cache identity)."""
         ...
 
-    async def synthesize(self, text: str) -> Speech: ...
+    async def synthesize(self, text: str, voice: str | None = None) -> Speech: ...
 
     async def close(self) -> None: ...
