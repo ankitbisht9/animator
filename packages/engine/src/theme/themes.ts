@@ -64,6 +64,16 @@ export const EDUCATIONAL_CLEAN: Theme = ThemeSchema.parse({
     pressure: "#b24bd6",
     positive: "#0b9b6c",
     negative: "#d9541a",
+    red: "#e0453a",
+    orange: "#f08a24",
+    yellow: "#f5c518",
+    green: "#2fa84f",
+    blue: "#2f6fdb",
+    sky: "#8fd0f5",
+    purple: "#7c5ce0",
+    pink: "#e0609c",
+    brown: "#9a6534",
+    gray: "#8a94a6",
   },
 });
 
@@ -96,6 +106,16 @@ export const EDUCATIONAL_CLEAN_DARK: Theme = ThemeSchema.parse({
     pressure: "#d17bef",
     positive: "#2fd39a",
     negative: "#ff7a45",
+    red: "#ff6b5e",
+    orange: "#f7a24f",
+    yellow: "#ffd84d",
+    green: "#4fd17a",
+    blue: "#5e9bff",
+    sky: "#7cc8f2",
+    purple: "#a690f5",
+    pink: "#f088bd",
+    brown: "#c08a52",
+    gray: "#9eabc6",
   },
 });
 

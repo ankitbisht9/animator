@@ -31,6 +31,17 @@ export const COLOR_ROLES = [
   "pressure",
   "positive",
   "negative",
+  // Named colours, for things whose real colour carries meaning (a blue sky, a green leaf).
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "blue",
+  "sky",
+  "purple",
+  "pink",
+  "brown",
+  "gray",
 ] as const;
 export type ColorRole = (typeof COLOR_ROLES)[number];
 

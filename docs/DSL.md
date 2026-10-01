@@ -620,7 +620,7 @@ Type: `"regular"` \| `"semibold"` \| `"bold"`
 
 ## Vocabularies
 
-**Color roles** (add `.light`, `.dark` or `.soft`): `background`, `surface`, `surface_alt`, `text`, `muted`, `accent`, `highlight`, `object_a`, `object_b`, `object_c`, `fluid`, `glass`, `grid`, `shadow`, `force_gravity`, `force_buoyant`, `force_normal`, `force_applied`, `velocity`, `pressure`, `positive`, `negative`.
+**Color roles** (add `.light`, `.dark` or `.soft`): `background`, `surface`, `surface_alt`, `text`, `muted`, `accent`, `highlight`, `object_a`, `object_b`, `object_c`, `fluid`, `glass`, `grid`, `shadow`, `force_gravity`, `force_buoyant`, `force_normal`, `force_applied`, `velocity`, `pressure`, `positive`, `negative`, `red`, `orange`, `yellow`, `green`, `blue`, `sky`, `purple`, `pink`, `brown`, `gray`.
 
 **Easings**: `linear`, `ease_in`, `ease_out`, `ease_in_out`, `ease_in_quad`, `ease_out_quad`, `ease_in_out_quad`, `ease_in_expo`, `ease_out_expo`, `ease_in_out_sine`, `back_in`, `back_out`, `back_in_out`, `bounce_out`, `elastic_out`, `spring`, `smooth`, `step`, or `{ "cubic_bezier": [x1, y1, x2, y2] }`.
 
