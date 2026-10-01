@@ -383,3 +383,12 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - Scenes use prompt `animation.v5` again, there is no model repair round for glitches, and the Hinglish language
   line is back to ADR-039's. No model was ever switched (gpt-6-luna throughout).
 - The engine checks, the polish and the voice layer stay.
+
+## One take per scene (ADR-043)
+
+- Each scene's narration is spoken in one recording: no break or restart between its sentences, only the
+  voice's own pauses at commas and full stops, then 1 s of quiet before the next scene
+  (`ANIMATOR_TTS_SCENE_PAUSE_S`).
+- Beats play their part of the scene's recording (`offset` in the narration record). Captions stay word-synced,
+  and the player and the export play it continuously.
+- `ANIMATOR_TTS_ONE_TAKE=0` goes back to sentence by sentence.

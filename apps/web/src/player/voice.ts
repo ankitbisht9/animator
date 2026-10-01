@@ -14,13 +14,17 @@ export interface VoiceTarget {
 
 export const voiceUrl = (audio: string) => `/api/tts/${encodeURIComponent(audio)}`;
 
-/** The speech playing at scene-local time `local`, or null between (and after) spoken beats. */
+/** The speech playing at scene-local time `local`, or null between (and after) spoken beats. A scene
+ * spoken in one take has one audio for all its beats: consecutive beats continue the same audio, so
+ * it plays through without being restarted. */
 export function voiceAt(scene: LessonScene | undefined, local: number): VoiceTarget | null {
   const beats = scene?.narration?.beats;
   if (!scene?.compiled || !beats?.length) return null;
   for (const b of beats) {
     const start = scene.compiled.beats.find((x) => x.id === b.id)?.start ?? b.start;
-    if (local >= start && local < start + b.duration) return { url: voiceUrl(b.audio), offset: local - start };
+    if (local >= start && local < start + b.duration) {
+      return { url: voiceUrl(b.audio), offset: (b.offset ?? 0) + local - start };
+    }
   }
   return null;
 }

@@ -7,12 +7,14 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import itertools
 import json
 import re
 from pathlib import Path
 from typing import Any
 
 import httpx2
+import pytest
 
 from animator.engine_client import EngineClient, EngineWorkerPool
 from animator.jobs.runner import GenerationRunner
@@ -20,7 +22,15 @@ from animator.jobs.store import MemoryStore
 from animator.llm import FakeLLM, LLMRequest, Usage
 from animator.pipeline.generator import Pipeline
 from animator.pipeline.models import Generation, GenerationRequest
-from animator.pipeline.narration import floors, needs, retime
+from animator.pipeline.narration import (
+    floors,
+    needs,
+    retime,
+    speak_scene,
+    split_take,
+    take_needs,
+    take_record,
+)
 from animator.tts import ElevenLabsTTS, FakeTTS, SpeechCache, Spoken, WordMark, caption_words, speech_text
 from animator.tts.script import Script, SpeechScripter, wants_script
 from animator.tts.types import SpeechContext
@@ -190,9 +200,10 @@ def test_fitting_shortens_long_silences_but_keeps_what_each_beat_starts() -> Non
 # ---------------------------------------------------------------------- a Hinglish lesson end to end
 
 
-async def test_a_hinglish_lesson_is_scripted_fitted_and_still_valid(
-    pool: EngineWorkerPool, tmp_path: Path
-) -> None:
+async def hinglish_lesson(
+    pool: EngineWorkerPool, tmp_path: Path, tts: FakeTTS, **overrides: Any
+) -> tuple[Generation, list[str]]:
+    """A Hinglish lesson through the whole pipeline with a voice; returns it and its model calls."""
     lesson = LessonScript()
     labels: list[str] = []
 
@@ -200,9 +211,11 @@ async def test_a_hinglish_lesson_is_scripted_fitted_and_still_valid(
         labels.append(req.label)
         return script_reply(req) if req.label == "speech script" else lesson(req)
 
-    tts = FakeTTS(seconds_per_word=0.25)
     s = settings(
-        animator_tts_enabled=True, animator_tts_cache_dir=tmp_path, animator_model_lightweight="m-light"
+        animator_tts_enabled=True,
+        animator_tts_cache_dir=tmp_path,
+        animator_model_lightweight="m-light",
+        **overrides,
     )
     speech = SpeechCache(tts, tmp_path)
     fake = FakeLLM(handler, usage=Usage(1000, 0, 500), cost=0.01)
@@ -211,6 +224,14 @@ async def test_a_hinglish_lesson_is_scripted_fitted_and_still_valid(
     await asyncio.wait_for(runner._tasks[gen.id], timeout=120)
     got: Generation | None = await runner.get(gen.id)
     assert got is not None and got.status == "complete"
+    return got, labels
+
+
+async def test_a_hinglish_lesson_sentence_by_sentence_is_scripted_fitted_and_still_valid(
+    pool: EngineWorkerPool, tmp_path: Path
+) -> None:
+    tts = FakeTTS(seconds_per_word=0.25)
+    got, labels = await hinglish_lesson(pool, tmp_path, tts, animator_tts_one_take=False)
     assert all(t == t.upper() for t in tts.calls)  # the voice read the scripts
     assert any(c is not None and c.following for c in tts.contexts)  # and knew the next sentence
     for rec, original in zip(got.scenes, SCENES, strict=False):
@@ -221,3 +242,56 @@ async def test_a_hinglish_lesson_is_scripted_fitted_and_still_valid(
         assert rec.duration is not None and rec.duration < original["duration"]  # short speech: no dead air
     assert "speech script" in labels  # a lesson call like any other: its cost is counted
     assert got.metrics.llm_calls == len(labels)
+
+
+# ---------------------------------------------------------------------- one take per scene (ADR-043)
+
+
+async def test_a_scene_is_spoken_in_one_take_and_each_beat_plays_its_part(tmp_path: Path) -> None:
+    tts = FakeTTS(seconds_per_word=0.5)  # word k said from 0.1 + 0.5k to 0.1 + 0.5k + 0.4
+    cache = SpeechCache(tts, tmp_path)
+    texts = ["One **two.**", "Three four five?"]
+    script = Script(("ONE", "TWO."), "curious")
+    take = await speak_scene(cache, texts, scripts={texts[0]: script})
+    assert take is not None
+    assert tts.calls == ["ONE TWO. Three four five?"]  # one request for the whole scene
+    assert tts.contexts[0] == SpeechContext(tone="curious")  # the first sentence's tone
+    beats = [Beat(id="b1", text=texts[0], start=0, end=3), Beat(id="b2", text=texts[1], start=3, end=8)]
+    parts = split_take(beats, take)
+    b1, b2 = parts["b1"], parts["b2"]
+    assert b1.offset == 0 and b1.length == pytest.approx(1.05)  # cut in the middle of the pause
+    assert b2.offset == pytest.approx(1.05) and b2.length == pytest.approx(1.65)  # to the end (2.7 s)
+    assert b1.words == ((0.1, 0.5), (0.6, 1.0))
+    assert b2.words == ((0.05, 0.45), (0.55, 0.95), (1.05, 1.45))
+    need = take_needs(parts, beats, 1.0)
+    assert need["b1"] == pytest.approx(1.05)  # exactly its part: the next sentence follows at once
+    assert need["b2"] == pytest.approx(1.45 + 1.0)  # the last word, then a second before the next scene
+    record = take_record(beats, parts, take, "fake", "v")
+    assert [b["audio"] for b in record["beats"]] == [take.file, take.file]
+    assert [b["offset"] for b in record["beats"]] == [0, pytest.approx(1.05)]
+    assert await speak_scene(cache, ["", "  "]) is None
+
+
+async def test_a_hinglish_lesson_in_one_take_flows_without_breaks_and_pauses_between_scenes(
+    pool: EngineWorkerPool, tmp_path: Path
+) -> None:
+    tts = FakeTTS(seconds_per_word=0.25)
+    got, _ = await hinglish_lesson(pool, tmp_path, tts)
+    assert all(t == t.upper() for t in tts.calls)  # the voice read the scripts
+    contiguous = 0
+    for rec in got.scenes:
+        assert rec.status == "ready" and rec.narration and rec.dsl is not None
+        texts = [b["text"] for b in rec.dsl["narration"]["beats"]]
+        assert " ".join(caption_words(" ".join(texts))).upper() in tts.calls  # all its sentences, one request
+        beats = rec.narration["beats"]
+        assert len({b["audio"] for b in beats}) == 1  # one recording for the scene
+        for b, text in zip(beats, texts, strict=True):
+            assert len(b["words"]) == len(caption_words(text))  # captions still light up word by word
+        for a, b in itertools.pairwise(beats):
+            assert b["offset"] == pytest.approx(a["offset"] + a["duration"], abs=1e-3)  # nothing skipped
+            assert b["start"] >= a["start"] + a["duration"] - 1e-3  # nothing cut off
+            contiguous += abs(b["start"] - (a["start"] + a["duration"])) < 0.01
+        last = beats[-1]
+        said = last["start"] + last["words"][-1][1]
+        assert rec.duration is not None and rec.duration >= said + 1.0 - 1e-3  # a pause before the next scene
+    assert contiguous > 0  # the voice runs on from one sentence into the next

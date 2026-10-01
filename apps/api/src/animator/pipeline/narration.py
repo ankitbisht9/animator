@@ -1,11 +1,17 @@
-"""Spoken narration for a finished scene (ADR-037): every beat is synthesized, the scene is
-stretched where a beat's speech is longer than the beat, and the scene gets a narration record
-(audio file per beat, when each caption word is said) that the player and the export use.
+"""Spoken narration for a finished scene (ADR-037): the scene's sentences are synthesized, the scene
+is fitted to the speech, and the scene gets a narration record (per beat: its audio, where its part
+starts, when each caption word is said) that the player and the export use.
 
-Retiming only ever lengthens beats. Times inside a stretched beat move proportionally, so an action
-keeps its place in the sentence; beat references (`beat:b2`), `after` / `with` chains, delays and
-action durations are unchanged, so motion keeps its speed and every action still ends inside the
-scene. The retimed scene is compiled and validated again; if it fails, the original is kept.
+One take (ADR-043, the default): the whole scene is spoken in one recording, so the voice flows from
+sentence to sentence with only the pauses its own punctuation makes. Each beat plays its part of that
+recording (cut in the middle of the pause between two sentences), and the scene ends a moment
+(`ANIMATOR_TTS_SCENE_PAUSE_S`) after its last word. Sentence by sentence (ADR-041) synthesizes each
+beat on its own.
+
+Fitting moves beats, not actions. Times inside a beat move proportionally, so an action keeps its place
+in the sentence; beat references (`beat:b2`), `after` / `with` chains, delays and action durations are
+unchanged, so motion keeps its speed. The fitted scene is compiled and validated again; if it fails, the
+original is kept.
 """
 
 from __future__ import annotations
@@ -13,9 +19,11 @@ from __future__ import annotations
 import asyncio
 import bisect
 import copy
+import itertools
 import logging
 import math
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from animator.tts import SpeechCache, Spoken, TTSProvider, caption_words, speech_text, word_times
@@ -27,6 +35,7 @@ log = logging.getLogger("animator.narration")
 
 MAX_SCENE_DURATION = 120.0
 LAST_BEAT_PAD_S = 0.6  # a moment after the last sentence before the next scene starts
+TAKE_TAIL_S = 0.25  # the fade of a scene's last word, kept in its part of the recording
 
 
 def _num(v: Any) -> bool:
@@ -166,6 +175,110 @@ def floors(dsl: dict[str, Any], beats: Sequence[Beat]) -> dict[str, float]:
             d = float(delay) if isinstance(delay, (int, float)) and not isinstance(delay, bool) else 0.0
             out[at[5:]] = max(out[at[5:]], d + 0.3)
     return out
+
+
+# ---------------------------------------------------------------------- one take per scene (ADR-043)
+
+
+def take_script(texts: Sequence[str], scripts: Mapping[str, Script]) -> Script | None:
+    """The speech script of a whole scene: its sentences' scripts one after another (a sentence
+    without one is read as written). None when no sentence has a script. The tone is the first
+    sentence's (only `eleven_v3` uses it, as one tag at the start)."""
+    if not any(t in scripts for t in texts):
+        return None
+    spoken: list[str] = []
+    for t in texts:
+        script = scripts.get(t)
+        spoken += script.spoken if script is not None else speech_text(t).split(" ")
+    return Script(tuple(spoken), scripts[texts[0]].tone if texts[0] in scripts else "neutral")
+
+
+async def speak_scene(
+    speech: SpeechCache,
+    texts: Sequence[str],
+    voice: str | None = None,
+    provider: TTSProvider | None = None,
+    scripts: Mapping[str, Script] | None = None,
+) -> Spoken | None:
+    """The whole scene's narration as one recording (ADR-043): the voice reads every sentence in one
+    go, so it does not start afresh at each sentence. None when the scene has nothing to say."""
+    said = [t for t in texts if caption_words(t)]
+    if not said:
+        return None
+    return await speech.speak(" ".join(said), voice, provider, take_script(said, scripts or {}))
+
+
+@dataclass(frozen=True)
+class Part:
+    """A beat's part of its scene's recording."""
+
+    offset: float  # where it starts in the recording (seconds)
+    length: float  # how much of the recording it plays
+    words: tuple[tuple[float, float], ...]  # when each caption word is said, from the part's start
+    said: float  # when its last word ends, from the part's start
+
+
+def split_take(beats: Sequence[Beat], take: Spoken, tail_s: float = TAKE_TAIL_S) -> dict[str, Part]:
+    """Each spoken beat's part of the scene's recording. Two sentences are cut in the middle of the
+    pause the voice made between them; the last part ends `tail_s` after the last word."""
+    spoken = [b for b in beats if caption_words(b.text)]
+    counts = [len(caption_words(b.text)) for b in spoken]
+    times = word_times([w for b in spoken for w in caption_words(b.text)], take.marks, take.duration_s)
+    groups: list[list[tuple[float, float]]] = []
+    i = 0
+    for n in counts:
+        groups.append(times[i : i + n])
+        i += n
+    cuts = [0.0]
+    for before, after in itertools.pairwise(groups):
+        end, start = before[-1][1], after[0][0]
+        cuts.append(max(cuts[-1], (end + start) / 2 if start > end else start))
+    out: dict[str, Part] = {}
+    for k, (b, words) in enumerate(zip(spoken, groups, strict=True)):
+        c = cuts[k]
+        e = cuts[k + 1] if k + 1 < len(cuts) else min(take.duration_s, words[-1][1] + tail_s)
+        out[b.id] = Part(
+            offset=round(c, 3),
+            length=round(max(0.0, e - c), 3),
+            words=tuple((round(a - c, 3), round(z - c, 3)) for a, z in words),
+            said=round(words[-1][1] - c, 3),
+        )
+    return out
+
+
+def take_needs(parts: Mapping[str, Part], beats: Sequence[Beat], scene_pause_s: float) -> dict[str, float]:
+    """Time each beat needs: exactly its part of the recording, so the next sentence follows without
+    a break; the scene's last sentence is followed by `scene_pause_s` of quiet before the next scene."""
+    order = [b.id for b in beats if b.id in parts]
+    last = order[-1] if order else None
+    return {bid: parts[bid].said + scene_pause_s if bid == last else parts[bid].length for bid in order}
+
+
+def take_record(
+    beats: Sequence[Beat], parts: Mapping[str, Part], take: Spoken, provider: str, voice: str
+) -> dict[str, Any]:
+    """The narration record of a scene spoken in one take: every beat plays the same recording, from
+    its `offset`, for `duration` seconds."""
+    out = []
+    for b in beats:
+        p = parts.get(b.id)
+        if p is None:
+            continue
+        out.append(
+            {
+                "id": b.id,
+                "start": round(b.start, 3),
+                "audio": take.file,
+                "offset": p.offset,
+                "duration": p.length,
+                "words": [[a, e] for a, e in p.words],
+                "timed": take.marks is not None,
+            }
+        )
+    return {"provider": provider, "voice": voice, "beats": out}
+
+
+# ---------------------------------------------------------------------- sentence by sentence (ADR-041)
 
 
 def narration_record(

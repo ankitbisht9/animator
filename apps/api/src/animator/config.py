@@ -131,7 +131,12 @@ class Settings(BaseSettings):
     azure_speech_region: str = ""
     google_tts_api_key: SecretStr | None = None
     elevenlabs_api_key: SecretStr | None = None
-    # Pause between two sentences: from the last word of one to the start of the next (ADR-041).
+    # One take (ADR-043): each scene's narration is spoken in one recording, so the voice flows from
+    # sentence to sentence with only the pauses its punctuation makes. Off: sentence by sentence.
+    animator_tts_one_take: bool = True
+    # Quiet between two scenes: from the last word of a scene to the next scene (one take).
+    animator_tts_scene_pause_s: float = Field(default=1.0, ge=0.0, le=3.0)
+    # Sentence by sentence only: pause from the last word of one sentence to the next (ADR-041).
     animator_tts_pause_s: float = Field(default=0.35, ge=0.0, le=3.0)
     # Fit each sentence's time to its speech (shorten long silences as well as lengthen short beats),
     # when the engine confirms the animation still works; otherwise beats only grow (ADR-041).

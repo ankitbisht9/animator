@@ -646,6 +646,29 @@ async def test_the_export_track_places_each_beat_at_its_time(tmp_path: Path) -> 
         3000,
         0,
     ]
+    # A scene spoken in one take (ADR-043): both beats play their own part of one recording.
+    take = "e" * 32 + ".wav"
+    with wave.open(str(tmp_path / take), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(RATE)
+        w.writeframes(struct.pack("<h", 1000) * RATE + struct.pack("<h", 2000) * RATE)
+    one_take: dict[str, Any] = {
+        "scenes": [{"duration": 4}],
+        "narration": [
+            {
+                "beats": [
+                    {"id": "b1", "start": 0.0, "audio": take, "offset": 0.0, "duration": 1.0},
+                    {"id": "b2", "start": 1.5, "audio": take, "offset": 1.0, "duration": 0.5},
+                ]
+            }
+        ],
+    }
+    out = await NarrationAudio(tmp_path).track(one_take, 4.0, tmp_path / "take")
+    assert out is not None
+    with wave.open(str(out)) as w:
+        pcm = w.readframes(w.getnframes())
+    assert [at(0.5), at(1.25), at(1.75), at(2.25)] == [1000, 0, 2000, 0]  # b2's part only, from its offset
     assert await NarrationAudio(tmp_path).track({"scenes": [{"duration": 1}]}, 1.0, tmp_path) is None
     broken = copy.deepcopy(lesson)
     broken["narration"][0]["beats"][0]["audio"] = "d" * 32 + ".wav"

@@ -23,16 +23,24 @@ This also holds for lessons that were made with a voice. Restart the API (`make 
 
 ## How it works
 
-1. **While a scene is being written**, the pipeline already synthesizes the storyboard's sentences
-   (`SpeechCache.prefetch`). The model copies those sentences into the scene, so the speech is usually ready before
-   the scene is. Measured cost of the voice step: 0.02-0.07 s per scene.
-2. **When a scene is valid**, every beat is spoken (cached by content: the same sentence in the same voice is
-   synthesized only once, across drafts, scenes and lessons). Files go to `var/tts/<id>.mp3`, plus
-   `<id>.json` holding the duration and word timings.
-3. **Retiming (fitting, ADR-041).** Each beat lasts until its last word is said, then a 0.35 s pause
-   (`ANIMATOR_TTS_PAUSE_S`; the scene's last beat rests 0.6 s). The time is measured to the last word, not to
-   the end of the audio file: voices add up to 0.9 s of silence after a sentence, which used to be heard as a
-   1-2 s cut between sentences.
+1. **While a scene is being written**, the pipeline already synthesizes the storyboard's sentences. The model
+   copies those sentences into the scene, so the speech is usually ready before the scene is. Measured cost of
+   the voice step: 0.02-0.07 s per scene.
+2. **One take per scene (ADR-043, `ANIMATOR_TTS_ONE_TAKE=1`).** The voice reads the whole scene's narration in
+   one recording. It flows from one sentence into the next, with only the pauses its own commas and full stops
+   make; nothing restarts between sentences.
+   - Each beat plays its part of that recording. Parts are cut in the middle of the pause between two sentences.
+   - The next scene follows after `ANIMATOR_TTS_SCENE_PAUSE_S` (1.0 s) of quiet.
+   - Recordings are cached by content: the same narration in the same voice is synthesized only once, across
+     drafts, scenes and lessons. Files go to `var/tts/<id>.mp3`, plus `<id>.json` holding the duration and word
+     timings.
+   - `ANIMATOR_TTS_ONE_TAKE=0` speaks each sentence on its own (ADR-041). The voice then starts afresh at each
+     sentence, with a pause of `ANIMATOR_TTS_PAUSE_S` (0.35 s) between them.
+3. **Fitting the scene to the voice (ADR-041).** In one take, each beat lasts exactly its part of the recording,
+   and the last one until its last word plus the pause before the next scene. Sentence by sentence, each beat
+   lasts until its last word is said, then 0.35 s (the scene's last beat rests 0.6 s). Either way the time is
+   measured to the last word, not to the end of the audio file: voices add up to 0.9 s of silence after the
+   last word.
    - A beat whose speech is longer is stretched; a beat with a long silence after its sentence is shortened, but
      never below what its own actions need (an action starting at `beat:b2` with a 2 s delay keeps its 2 s).
    - Times inside a beat move proportionally; later beats and the scene end move with it. Beat references,
@@ -44,11 +52,12 @@ This also holds for lessons that were made with a voice. Restart the API (`make 
    A mark that covers several words ("9.8 m/s²" said as one unit) is shared between them. Words said differently
    ("twelve" for "12"), and every word from providers without marks, are estimated from word length and
    punctuation pauses within the real audio duration.
-5. **Player.** The beat on screen plays its audio from the player's clock. Pause, seek, speed (0.5x-2x),
-   checkpoints and "preparing the next scene" all follow that clock, and the audio is re-synced if it drifts
-   by more than 0.25 s. The speaker button (or the `m` key) turns the voice off and on for the viewer.
-6. **Export.** Each beat's audio is placed at its time in the lesson, muxed as AAC, and padded to the exact video
-   length. The captions in the video follow the voice word by word.
+5. **Player.** The beat on screen plays its audio from the player's clock, from the beat's `offset` into it. In one
+   take, consecutive beats continue the same audio, so it plays through without a restart. Pause, seek, speed
+   (0.5x-2x), checkpoints and "preparing the next scene" all follow that clock, and the audio is re-synced if it
+   drifts by more than 0.25 s. The speaker button (or the `m` key) turns the voice off and on for the viewer.
+6. **Export.** Each beat's part of its audio is placed at its time in the lesson, muxed as AAC, and padded to the
+   exact video length. The captions in the video follow the voice word by word.
 7. **Failures never break a lesson.** If speech fails (network, quota, bad key), that scene keeps captions only,
    and the lesson's `tts_failures` metric counts it. A provider with a missing key is reported in `/api/config` and
    in the API log; lessons are still made, without a voice.
@@ -220,13 +229,18 @@ scripts are cached in `var/tts/scripts/`. If the call fails, or a reply does not
 that caption is read as written. `ANIMATOR_TTS_SCRIPT=all` scripts English lessons too (for tone and
 punctuation); `off` turns it off. Without a script, `:` and `;` are still read as commas.
 
-**Flow between sentences.** ElevenLabs (except `eleven_v3`) gets the previous and the next sentence with each
-request, so the intonation carries across sentences instead of every sentence starting fresh.
+**Flow between sentences.** In one take (the default), the scene is a single recording, so the voice never
+restarts between sentences. A scene's script is its sentences' scripts one after another, and `eleven_v3` gets the
+first sentence's tone. Sentence by sentence, ElevenLabs (except `eleven_v3`) gets the previous and the next
+sentence with each request, so the intonation carries across.
 
 Measured on live lessons (ElevenLabs `eleven_flash_v2_5`):
-- the silence between sentences went from about 1.3 s to 0.35 s;
-- the speech script added 3 calls and $0.001 to a 30-second Hinglish lesson, and no waiting (it runs while
-  the scenes are drawn).
+- Sentence by sentence (ADR-041): the silence between sentences went from about 1.3 s to 0.35 s, but each
+  sentence still started afresh.
+- One take (ADR-043): one recording per scene. Between sentences you hear only the voice's own pause at the full
+  stop (0.0-0.95 s, 0.4 s on average), and about 1.0-1.1 s between scenes.
+- The speech script adds 3-5 calls and about $0.001 to a lesson, with no waiting: it runs while the scenes are
+  drawn.
 
 ## No voice?
 

@@ -80,6 +80,21 @@ describe("narration audio", () => {
     expect(voiceAt(s, 5.5)).toBeNull();
   });
 
+  it("plays a scene spoken in one take from each beat's offset, as one continuous audio", () => {
+    const take = {
+      provider: "fake",
+      beats: [
+        { id: "b1", start: 0, audio: "t.mp3", offset: 0, duration: 3, words: [] as [number, number][] },
+        { id: "b2", start: 3, audio: "t.mp3", offset: 3, duration: 2, words: [] as [number, number][] },
+      ],
+    };
+    const s = buildLesson("L", [twoBeats], undefined, [take]).scenes[0];
+    expect(voiceAt(s, 2.9)).toEqual({ url: "/api/tts/t.mp3", offset: 2.9 });
+    expect(voiceAt(s, 3.1)?.url).toBe("/api/tts/t.mp3");
+    expect(voiceAt(s, 3.1)?.offset).toBeCloseTo(3.1); // the same audio keeps playing: no restart
+    expect(voiceAt(s, 5.5)).toBeNull();
+  });
+
   it("stays silent without narration", () => {
     const lesson = buildLesson("L", [twoBeats]);
     expect(lesson.scenes[0]?.narration).toBeNull();

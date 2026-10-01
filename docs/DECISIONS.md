@@ -1242,3 +1242,46 @@ The inert `gpt-6.1-sol` entries in `config/models.json` and `config/pricing.json
 
 **Rollback.** Git tag `backup/before-scene-voice-and-llm-revert` with
 `.env.backup-before-scene-voice-and-llm-revert`.
+
+---
+
+## ADR-043 One take per scene: the voice reads the whole scene in one go (2026-10-01)
+
+**Problem.** After ADR-041 the silences were gone, but each sentence was still its own recording. At every
+sentence the voice ended, then started again with fresh intonation, which sounded like a cut. The user asked for
+each scene's explanation to be spoken at once, with only the natural pauses of commas, full stops and
+exclamations, and a pause of about 1 s between scenes.
+
+**Decision** (`ANIMATOR_TTS_ONE_TAKE`, on; the voice layer only, no model change):
+- **One recording per scene.** The scene's sentences are joined and sent to the voice as one request; with a
+  speech script, the sentences' scripts are joined. The voice reads the whole explanation in one go.
+- **Each beat plays its part.** The recording's word times give each sentence's first and last word. Two sentences
+  are cut in the middle of the pause the voice made between them, so each beat's part holds exactly its own
+  words, and its captions light up word by word as before.
+- **Fitting.**
+  - Each beat lasts exactly its part, so the next sentence starts as the previous part ends. The player keeps
+    playing the same audio without a restart.
+  - The last beat lasts until its last word, plus `ANIMATOR_TTS_SCENE_PAUSE_S` (1.0 s) of quiet before the next
+    scene.
+  - The same validation as ADR-041 applies: fitted, then halfway, then stretch-only. The first timing the engine
+    accepts without a new visual glitch is kept.
+- **Narration record.** Every beat of a scene names the same audio, with an `offset` into it and the `duration`
+  it plays.
+  - The player plays from `offset`; a missing offset means 0, so older lessons play as before.
+  - The export decodes each recording once and places each beat's slice at its time.
+- **Fewer requests:** one per scene instead of one per sentence. A sentence the scene changed after the
+  prefetch means the whole scene is synthesized again (a few hundred characters).
+
+**Measured** (live, ElevenLabs `eleven_flash_v2_5`; a 1-minute Hinglish lesson and a 30-second English one):
+- One recording per scene, 8 of 8 scenes. Every scene's beats are back to back (offsets and starts contiguous),
+  so the audio never restarts within a scene.
+- Between sentences: only the voice's own pause at the full stop, 0.0-0.95 s (0.4 s on average).
+- Between scenes: 1.0-1.1 s of quiet.
+- An exported MP4 has the voice during the speech and true silence in the pause after each scene's last word.
+- Speech adds no wait. One lesson's first scene was ready only after 52 s, because the model failed that scene
+  four times (`GROUP_PARENTED`) and it was replaced by the simplified scene. That is scene drawing, unchanged
+  here.
+
+**Rollback.**
+- `ANIMATOR_TTS_ONE_TAKE=0` speaks sentence by sentence (ADR-041).
+- Git tag `backup/before-scene-voice-and-llm-revert` with `.env.backup-before-scene-voice-and-llm-revert`.
