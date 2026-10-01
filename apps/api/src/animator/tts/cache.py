@@ -17,6 +17,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from animator.tts.prosody import Shaping, render, shape, tags_supported
 from animator.tts.script import Script
 from animator.tts.text import caption_words, speech_text, word_times
 from animator.tts.types import Speech, SpeechContext, TTSError, TTSProvider, WordMark
@@ -42,8 +43,14 @@ class SpeechCache:
         retries: int = 1,
         voices: dict[str, str] | None = None,
         providers: dict[str, TTSProvider] | None = None,
+        prosody: Shaping | None = None,
+        ffmpeg: str = "ffmpeg",
     ) -> None:
         self.provider = provider
+        # Voice modulation (ADR-045): the delivery rendered for the voice model, and a teacher's
+        # timing applied to the audio. None: speech as the provider makes it.
+        self.prosody = prosody
+        self.ffmpeg = ffmpeg
         self.directory = directory
         self.retries = retries
         self.concurrency = max(1, concurrency)
@@ -114,18 +121,32 @@ class SpeechCache:
         reads the script (Hindi in Devanagari, spoken punctuation, a tone) and the word times are
         mapped back onto the caption's words. `context` (the sentences around it) helps voices that
         can use it and is not part of the cache key."""
-        plain = script.text if script is not None else speech_text(text)
+        prov = provider or self.provider
+        directed = self.prosody is not None and script is not None and script.directed
+        if directed:
+            assert script is not None
+            plain = render(
+                script.spoken,
+                script.stress,
+                script.deliveries,
+                tags=tags_supported(getattr(prov, "model", "")),
+            )
+        else:
+            plain = script.text if script is not None else speech_text(text)
         if not plain:
             raise TTSError("nothing to say")
-        prov = provider or self.provider
         v = voice or prov.voice
         tone = script.tone if script is not None and script.tone != "neutral" else None
+        if directed:
+            tone = None  # the tones are in the text, where each sentence's starts
         ctx = SpeechContext(
             previous=context.previous if context else None,
             following=context.following if context else None,
             tone=tone,
         )
         keyed = plain if script is None else f"{plain}\n#caption:{text}\n#tone:{tone or ''}"
+        if self.prosody is not None:
+            keyed += f"\n#delivery:{script.delivery_key if script else ''}\n#timing:{self.prosody.key}"
         sid = self._id(keyed, v, prov)
         hit = self._load(sid)
         if hit is not None:
@@ -133,7 +154,15 @@ class SpeechCache:
         task = self._inflight.get(sid)
         if task is None:
             task = asyncio.create_task(
-                self._synthesize(sid, plain, v, prov, text if script is not None else None, script, ctx),
+                self._synthesize(
+                    sid,
+                    plain,
+                    v,
+                    prov,
+                    text if script is not None or self.prosody is not None else None,
+                    script,
+                    ctx,
+                ),
                 name=f"tts-{sid[:8]}",
             )
             self._inflight[sid] = task
@@ -187,6 +216,8 @@ class SpeechCache:
         found = speech.marks
         if script is not None and caption is not None:
             found = caption_marks(caption, script, speech)
+        if self.prosody is not None and caption is not None and speech.marks:
+            speech, found = await self._shape(speech, found, caption, script)
         marks = [[m.text, round(m.start, 4), round(m.end, 4)] for m in found] if found else None
         meta = {
             "file": file,
@@ -200,6 +231,35 @@ class SpeechCache:
         }
         _write(self.directory / f"{sid}.json", json.dumps(meta, ensure_ascii=False).encode("utf-8"))
         return Spoken(file, speech.duration_s, found)
+
+    async def _shape(
+        self, speech: Speech, found: tuple[WordMark, ...] | None, caption: str, script: Script | None
+    ) -> tuple[Speech, tuple[WordMark, ...] | None]:
+        """A teacher's timing on the audio (ADR-045): a pause at every full stop and comma and before
+        a key point, slow sentences slower. The caption words' times move with it. Unchanged speech
+        when there is nothing to do or it cannot be done."""
+        assert self.prosody is not None
+        words = caption_words(caption)
+        times = word_times(words, found, speech.duration_s)
+        marks = [WordMark(w, s, e) for w, (s, e) in zip(words, times, strict=True)]
+        directed = script is not None and script.directed
+        try:
+            shaped = await asyncio.to_thread(
+                shape,
+                speech,
+                marks,
+                words,
+                script.pause_before if directed and script else frozenset(),
+                script.deliveries if directed and script else (),
+                self.prosody,
+                self.ffmpeg,
+            )
+        except Exception as e:  # never let the timing break the voice
+            log.warning("voice timing failed (%s): speech kept as made", e)
+            return speech, found
+        if shaped is None:
+            return speech, found
+        return shaped
 
     async def close(self) -> None:
         for task in list(self._inflight.values()):

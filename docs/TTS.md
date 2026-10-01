@@ -248,6 +248,32 @@ Measured on live lessons (ElevenLabs `eleven_flash_v2_5`):
 - The speech script adds 3-5 calls and about $0.001 to a lesson, with no waiting: it runs while the scenes are
   drawn.
 
+## Voice modulation (ADR-045)
+
+`ANIMATOR_TTS_PROSODY=1` (default) makes the tutor sound like a teacher who knows what matters in what they say.
+- **Direction.** The speech script also marks, for each sentence, its tone and pace (slow for definitions,
+  equations and calculations), up to two stressed words, and a pause before a key point. It sees what the
+  picture shows while each sentence is said.
+- **What the model gets.** Eleven v3 and v4 get a delivery tag where the tone changes (`[curious]`,
+  `[excited]`, `[thoughtfully]`, `[seriously]`, ...) and the stressed English words in capitals. Other models
+  get the words as they are; they would read tags aloud.
+- **Timing on the audio, for every model.**
+  - At least `ANIMATOR_TTS_SENTENCE_PAUSE_S` (0.4 s) after a full stop, `ANIMATOR_TTS_COMMA_PAUSE_S` (0.18 s)
+    after a comma and `ANIMATOR_TTS_KEY_PAUSE_S` (0.35 s) before a key point. Voices sometimes run two
+    sentences together; this fixes that.
+  - Slow sentences at `ANIMATOR_TTS_SLOW_TEMPO` (0.9, pitch unchanged).
+  - The captions' word times move with it.
+  - Needs ffmpeg (`FFMPEG_PATH`).
+- **Voice and picture.** A highlight lands when the thing it highlights is named
+  (`ANIMATOR_TTS_SYNC_HIGHLIGHTS`).
+
+**Which ElevenLabs model.** `eleven_v4` is recommended.
+- It speaks about 130 words a minute (flash: about 200) with about 60% more pitch variation.
+- An audio judge preferred it with modulation over flash without, 12 to 4.
+- It costs about 1 credit per character after its launch discount (until 12 October 2026); flash costs 0.5.
+- `eleven_flash_v2_5` with modulation keeps the guaranteed pauses at half the credits.
+- Measurements are in ADR-045.
+
 ## No voice?
 
 - The lesson page says "Voice: N scene(s) have captions only" with the reason, and the home page shows a

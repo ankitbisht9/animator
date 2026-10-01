@@ -411,3 +411,13 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   - ready in about 1.7-2.3 minutes, for $0.10-0.18;
   - no simplified scenes in 28 scenes.
 - An audio judge rated the new scripts on ElevenLabs flash as well as on multilingual v2 and v3.
+
+## Voice modulation (ADR-045)
+
+- The speech script directs the delivery: tone and pace per sentence, stressed words, a pause before a key
+  point, aware of what the picture shows.
+- Eleven v3/v4 get tags and capitals. Every model gets a teacher's timing applied to the audio: pauses of at
+  least 0.4 s at full stops and 0.18 s at commas, slow sentences at 0.9x. Highlights land on the spoken word.
+- Default voice model `eleven_v4`:
+  - 5.1 vs 3.1 semitones of pitch variation and about 130 words a minute;
+  - an audio judge preferred it with modulation over the previous voice 12 to 4.

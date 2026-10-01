@@ -176,6 +176,18 @@ class Settings(BaseSettings):
     # pronounced right ("sunati", not "sunti"), with spoken punctuation and a tone; all = also for
     # English lessons (punctuation and tone); off = the captions are read as written.
     animator_tts_script: Literal["off", "hinglish", "all"] = "hinglish"
+    # Voice modulation (ADR-045): the speech script also directs how each sentence is said (tone,
+    # pace, stressed words, pauses before key points), for every lesson language; models that take
+    # audio tags (Eleven v3, v4) get it in the text, and a teacher's timing is applied to the audio
+    # of every model: the least pause after a full stop, a comma and before a key point, and the
+    # tempo of a slow sentence (0.9 = 10% slower, pitch unchanged). Off: speech as before.
+    animator_tts_prosody: bool = True
+    animator_tts_sentence_pause_s: float = Field(default=0.4, ge=0.0, le=2.0)
+    animator_tts_comma_pause_s: float = Field(default=0.18, ge=0.0, le=1.0)
+    animator_tts_key_pause_s: float = Field(default=0.35, ge=0.0, le=2.0)
+    animator_tts_slow_tempo: float = Field(default=0.9, ge=0.7, le=1.0)
+    # With voice modulation: a beat's highlights move to the moments its stressed words are said.
+    animator_tts_sync_highlights: bool = True
     # ElevenLabs delivery: lower stability is livelier and more human, style adds expression.
     animator_tts_stability: float = Field(default=0.4, ge=0.0, le=1.0)
     animator_tts_style: float = Field(default=0.3, ge=0.0, le=1.0)

@@ -22,11 +22,13 @@ import copy
 import itertools
 import logging
 import math
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from animator.tts import SpeechCache, Spoken, TTSProvider, caption_words, speech_text, word_times
+from animator.tts.prosody import Delivery
 from animator.tts.script import Script
 from animator.tts.types import SpeechContext
 from animator_contracts.protocol import Beat
@@ -186,11 +188,26 @@ def take_script(texts: Sequence[str], scripts: Mapping[str, Script]) -> Script |
     sentence's (only `eleven_v3` uses it, as one tag at the start)."""
     if not any(t in scripts for t in texts):
         return None
+    directed = any(s.directed for s in scripts.values())
     spoken: list[str] = []
+    stress: set[int] = set()
+    pauses: set[int] = set()
+    deliveries: list[Delivery] = []
     for t in texts:
         script = scripts.get(t)
+        offset = len(spoken)
         spoken += script.spoken if script is not None else speech_text(t).split(" ")
-    return Script(tuple(spoken), scripts[texts[0]].tone if texts[0] in scripts else "neutral")
+        if not directed:
+            continue
+        # Voice modulation (ADR-045): each sentence keeps its own delivery inside the take.
+        if script is not None and script.directed:
+            stress |= {offset + i for i in script.stress}
+            pauses |= {offset + i for i in script.pause_before}
+            deliveries += [Delivery(offset + d.start, d.tone, d.pace) for d in script.deliveries]
+        else:
+            deliveries.append(Delivery(offset))
+    tone = scripts[texts[0]].tone if texts[0] in scripts else "neutral"
+    return Script(tuple(spoken), tone, frozenset(stress), frozenset(pauses), tuple(deliveries))
 
 
 async def speak_scene(
@@ -276,6 +293,100 @@ def take_record(
             }
         )
     return {"provider": provider, "voice": voice, "beats": out}
+
+
+# ---------------------------------------------------------------------- voice and picture together (ADR-045)
+
+SYNC_LEAD_S = 0.15  # a highlight starts this much before its word is said, so they land together
+
+# Parts of object ids that do not name the thing (a "high_label" is about "high").
+_GENERIC = {
+    "label",
+    "labels",
+    "text",
+    "arrow",
+    "arrows",
+    "box",
+    "icon",
+    "highlight",
+    "glow",
+    "pulse",
+    "title",
+    "card",
+    "note",
+    "badge",
+    "readout",
+    "line",
+    "group",
+    "shape",
+    "main",
+    "example",
+    "next",
+    "new",
+    "old",
+    "left",
+    "right",
+    "top",
+    "bottom",
+    "the",
+    "and",
+    "for",
+    "with",
+    "part",
+    "item",
+    "marker",
+    "tag",
+}
+
+
+def _name_tokens(object_id: str) -> list[str]:
+    return [t for t in re.split(r"[^a-z0-9]+", object_id.lower()) if len(t) >= 3 and t not in _GENERIC]
+
+
+def _names(tokens: Sequence[str], word: str) -> bool:
+    w = "".join(c for c in word.casefold() if c.isalnum())
+    return any(w == t or (min(len(w), len(t)) >= 4 and (w.startswith(t) or t.startswith(w))) for t in tokens)
+
+
+def sync_highlights(
+    dsl: dict[str, Any],
+    words: Mapping[str, Sequence[tuple[str, float]]],
+    stressed: Mapping[str, frozenset[int]],
+) -> dict[str, Any] | None:
+    """The scene with each beat's highlights landing on the moment the thing they highlight is named
+    (Mayer's temporal contiguity, ADR-045). A `highlight` started from a beat (`beat:b2`) whose target
+    is named in that beat's sentence ("high_label" and the word "high") starts as that word is said
+    (a stressed occurrence first; several highlights of the same thing take its occurrences in turn).
+    Highlights of things not named stay as they are. `words`: per beat, each caption word and when it
+    starts (seconds from the beat's start). None when nothing moves; the engine validates the result."""
+    out = copy.deepcopy(dsl)
+    used: dict[tuple[str, int], bool] = {}
+    changed = False
+    actions = [
+        a
+        for a in out.get("timeline") or []
+        if a.get("action") == "highlight"
+        and isinstance(a.get("start"), dict)
+        and isinstance(a["start"].get("at"), str)
+        and a["start"]["at"].startswith("beat:")
+    ]
+    actions.sort(key=lambda a: float(a["start"].get("delay") or 0.0))
+    for action in actions:
+        bid = action["start"]["at"][5:]
+        beat = words.get(bid) or []
+        tokens = _name_tokens(str(action.get("target", "")))
+        found = [
+            i for i, (w, _) in enumerate(beat) if tokens and _names(tokens, w) and not used.get((bid, i))
+        ]
+        if not found:
+            continue
+        first = next((i for i in found if i in stressed.get(bid, frozenset())), found[0])
+        used[(bid, first)] = True
+        delay = round(max(0.0, beat[first][1] - SYNC_LEAD_S), 2)
+        if abs(float(action["start"].get("delay") or 0.0) - delay) > 0.05:
+            action["start"]["delay"] = delay
+            changed = True
+    return out if changed else None
 
 
 # ---------------------------------------------------------------------- sentence by sentence (ADR-041)

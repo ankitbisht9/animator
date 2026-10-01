@@ -44,13 +44,14 @@ from animator.pipeline.narration import (
     speak_scene,
     speak_texts,
     split_take,
+    sync_highlights,
     take_needs,
     take_record,
 )
 from animator.pipeline.prompts import PromptPack, slug
 from animator.pipeline.stages import CriticIssue, CriticReport, Stages, format_issues
 from animator.pipeline.tidy import autofix, salvage, tidy
-from animator.tts import SpeechCache, Spoken
+from animator.tts import SpeechCache, Spoken, caption_words
 from animator.tts.script import Script, SpeechScripter, wants_script
 from animator_contracts.protocol import CompileResult, SceneState
 
@@ -106,6 +107,12 @@ def chapter_outline(chapter: Chapter) -> StoryboardChapter:
             )
         ],
     )
+
+
+def cues_of(rec: SceneRecord) -> dict[str, str]:
+    """What the picture shows while each sentence of the scene is said (from its brief): the voice
+    stresses what is revealed (ADR-045)."""
+    return {b.narration: b.on_screen for b in rec.brief.beats if b.on_screen}
 
 
 def fallback_scene(rec: SceneRecord) -> dict[str, Any]:
@@ -311,8 +318,13 @@ class Pipeline:
         self.speech = speech
         # The speech script (what the voice reads: Hindi in Devanagari, spoken punctuation, tone).
         self.scripter = (
-            SpeechScripter(llm, settings, settings.resolve(settings.animator_tts_cache_dir) / "scripts")
-            if speech is not None and settings.animator_tts_script != "off"
+            SpeechScripter(
+                llm,
+                settings,
+                settings.resolve(settings.animator_tts_cache_dir) / "scripts",
+                directed=settings.animator_tts_prosody,
+            )
+            if speech is not None and (settings.animator_tts_script != "off" or settings.animator_tts_prosody)
             else None
         )
         self._stages: Stages | None = None
@@ -346,7 +358,9 @@ class Pipeline:
         if self.speech is not None:
             # The storyboard's sentences are what the scene will say: script and synthesize them while
             # the scene is being written, so the voice adds no waiting.
-            task = asyncio.ensure_future(self._voice(gen, [b.narration for b in rec.brief.beats], ctx))
+            task = asyncio.ensure_future(
+                self._voice(gen, [b.narration for b in rec.brief.beats], ctx, cues_of(rec))
+            )
             task.add_done_callback(_consume)
         try:
             await self._attempts(
@@ -357,18 +371,28 @@ class Pipeline:
         if self.speech is not None and rec.playable:
             await self._narrate(gen, rec, prev_state, ctx)
 
-    async def _scripts(self, gen: Generation, texts: list[str], ctx: CallContext | None) -> dict[str, Script]:
-        """The speech script of a scene's sentences, when this lesson's language gets one (ADR-041)."""
-        if self.scripter is None or not wants_script(self.settings.animator_tts_script, gen.request.language):
+    async def _scripts(
+        self, gen: Generation, texts: list[str], ctx: CallContext | None, cues: dict[str, str] | None = None
+    ) -> dict[str, Script]:
+        """The speech script of a scene's sentences, when this lesson's language gets one (ADR-041),
+        or for every lesson with voice modulation (ADR-045), which also directs the delivery and is
+        told what the picture shows while each sentence is said (`cues`)."""
+        if self.scripter is None:
             return {}
-        return await self.scripter.scripts(texts, gen.request.language, ctx, gen.id)
+        if not self.scripter.directed and not wants_script(
+            self.settings.animator_tts_script, gen.request.language
+        ):
+            return {}
+        return await self.scripter.scripts(texts, gen.request.language, ctx, gen.id, cues)
 
-    async def _voice(self, gen: Generation, texts: list[str], ctx: CallContext | None) -> Any:
+    async def _voice(
+        self, gen: Generation, texts: list[str], ctx: CallContext | None, cues: dict[str, str] | None = None
+    ) -> Any:
         """A scene's narration in this lesson's voice: in one take (ADR-043), or sentence by sentence,
         each knowing its neighbours (ADR-041)."""
         assert self.speech is not None
         language = gen.request.language
-        scripts = await self._scripts(gen, texts, ctx)
+        scripts = await self._scripts(gen, texts, ctx, cues)
         voice, provider = self.speech.voice_for(language), self.speech.provider_for(language)
         if self.settings.animator_tts_one_take:
             return await speak_scene(self.speech, texts, voice, provider, scripts)
@@ -387,7 +411,7 @@ class Pipeline:
                 return
             voice = self.speech.voice_for(gen.request.language)
             provider = self.speech.provider_for(gen.request.language)
-            scripts = await self._scripts(gen, [b.text for b in beats], ctx)
+            scripts = await self._scripts(gen, [b.text for b in beats], ctx, cues_of(rec))
             take: Spoken | None = None
             parts: dict[str, Part] = {}
             spoken: dict[str, Spoken] = {}
@@ -438,12 +462,45 @@ class Pipeline:
             else:
                 rec.narration = narration_record(beats, spoken, provider.name, voice)
                 audio_s = sum(s.duration_s for s in spoken.values())
+            if self.settings.animator_tts_prosody and self.settings.animator_tts_sync_highlights and scripts:
+                await self._sync_highlights(rec, prev_state, scripts, before)
             gen.metrics.tts_chars += sum(len(b.text) for b in beats if b.id in need)
             gen.metrics.tts_audio_s = round(gen.metrics.tts_audio_s + audio_s, 2)
         except Exception as e:
             gen.metrics.tts_failures += 1
             gen.metrics.tts_error = str(e)[:300]
             log.warning("scene %s: no narration audio (%s)", rec.id, e)
+
+    async def _sync_highlights(
+        self, rec: SceneRecord, prev_state: SceneState | None, scripts: dict[str, Script], before: int
+    ) -> None:
+        """Voice and picture together (ADR-045): a beat's highlights move to the moment the thing they
+        highlight is named (stressed by the voice where it is). Kept only when the scene stays valid,
+        shows no more visual glitches and its beats keep their times (the narration is timed to them)."""
+        if rec.dsl is None or rec.narration is None:
+            return
+        texts = {
+            str(b.get("id")): str(b.get("text", ""))
+            for b in (rec.dsl.get("narration") or {}).get("beats") or []
+        }
+        words: dict[str, list[tuple[str, float]]] = {}
+        stressed: dict[str, frozenset[int]] = {}
+        for entry in rec.narration.get("beats") or []:
+            text = texts.get(entry["id"], "")
+            times = entry.get("words") or []
+            words[entry["id"]] = [(w, float(t[0])) for w, t in zip(caption_words(text), times, strict=False)]
+            script = scripts.get(text)
+            if script is not None:
+                stressed[entry["id"]] = script.stress
+        synced = sync_highlights(rec.dsl, words, stressed)
+        if synced is None:
+            return
+        fixed, again, _ = await self._check(synced, prev_state)
+        starts = {e["id"]: float(e["start"]) for e in rec.narration.get("beats") or []}
+        kept_timing = all(abs(b.start - starts[b.id]) < 0.01 for b in again.beats or [] if b.id in starts)
+        if again.ok and again.endState is not None and kept_timing and len(glitches_of(again)) <= before:
+            warnings = [i.model_dump() for i in again.issues if i.severity == "warning"]
+            self._accept(rec, fixed, again, warnings, rec.status)
 
     async def _attempts(
         self,

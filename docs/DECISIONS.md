@@ -1406,3 +1406,98 @@ about 30 s for the fast pipeline. The user allowed 1 to 2 minutes for quality.
 - `ANIMATOR_PIPELINE=fast` (or single switches: `ANIMATOR_SCRIPT_REVIEW`, `ANIMATOR_TEACHING_VISUAL_CRITIC`,
   `ANIMATOR_AUTO_FRAME`, `ANIMATOR_EFFORT_TEACHING_SCENE`).
 - Git tag `backup/before-teaching-quality` with `.env.backup-before-teaching-quality`.
+
+
+---
+
+## ADR-045 Voice modulation: a teacher's delivery, not one flat pattern (2026-10-01)
+
+**Problem.**
+- **Flat delivery.** The tutor spoke with one pitch, pace and energy throughout. A teacher stresses key words,
+  slows down for definitions, gets livelier at a discovery, asks questions as questions, and pauses before
+  key points.
+- **Sentences ran together.** Example: "…future nahi. Timeframe batata hai…".
+
+**What the recordings showed** (ElevenLabs `eleven_flash_v2_5`):
+- 2-8% of sentence ends had under 0.12 s of silence. The reported one had 0.02 s: the voice ran on, whatever
+  the punctuation (`.` or `।`).
+- Commas in English averaged 0.03 s.
+- Flash speaks at 190-230 words a minute. Educational narration is 120-160.
+
+**Research.**
+- **Eleven v4** (released 28 September 2026) interprets tone, pacing and emotion from context. It takes audio
+  tags (`[curious]`, `[excited]`, ...), capitals for emphasis and ellipses. It works on the with-timestamps
+  endpoint (alignment included, so captions stay word-synced) and speaks Hindi.
+- SSML `<break>` is for flash and v2 only; v3 and v4 have no break tags.
+- Probed on v4:
+  - `[pause]` and `[short pause]` pause 1.6-2.4 s: too long for every sentence.
+  - Newlines and ellipses are unreliable.
+  - v4, too, sometimes runs two sentences together (0.04-0.12 s).
+- Pauses therefore cannot be left to any model. Instructable TTS (OpenAI `instructions`, Azure SSML prosody)
+  exists; ElevenLabs v4 is the most natural, and it is what the user uses.
+
+**Decision** (`ANIMATOR_TTS_PROSODY`, on). Voice layer only:
+1. **Direction** (`speech-script.v2`). The per-scene speech script also directs the delivery, for every lesson
+   language:
+   - per caption: its tone and pace (slow for a definition, an equation or a calculation);
+   - at most two stressed words;
+   - at most one pause before a key point.
+   - It is told what the picture shows while each sentence is said (the brief's on-screen notes), so what is
+     revealed is stressed.
+   - Lessons that are not Hinglish keep their words exactly. Hinglish keeps its Devanagari rewrite, now with the
+     short Hindi words that look English (`in` -> इन, `toh` -> तो).
+2. **Text** (`prosody.render`). Models that take tags (Eleven v3, v4) get:
+   - a delivery tag where the tone changes, never for a neutral stretch and never twice in a row;
+   - the stressed English words in capitals.
+   - Other models get the words as they are.
+3. **Timing** (`prosody.shape`). Applied to the audio with the provider's word timings, so it works for every
+   model:
+   - at least 0.4 s after a full stop, 0.18 s after a comma and 0.35 s before a key point; silence is inserted
+     just after the word, with 5 ms fades;
+   - slow sentences stretched to 0.9x tempo, pitch unchanged (ffmpeg `atempo`).
+   - Every caption word's time moves with the audio. It needs ffmpeg and real word marks; otherwise the speech
+     is kept as made.
+4. **Voice and picture together** (`ANIMATOR_TTS_SYNC_HIGHLIGHTS`). A `highlight` started from a beat whose target
+   is named in that beat's sentence ("high_label" and the word "high") starts as that word is said, a stressed
+   occurrence first. It is kept only if the engine finds the scene valid, with no new glitch and unchanged beat
+   times.
+5. **Model:** `ANIMATOR_TTS_MODEL=eleven_v4`.
+   - `ElevenLabsTTS` treats v4 like v3: stability 0, 0.5 or 1, no request stitching.
+   - Audio tags spanning several words never become caption words.
+
+**Measured.**
+- **Pauses.** In live lessons every full stop is now 0.40 s or more and every comma about 0.16-0.31 s; before,
+  some full stops were 0.02 s.
+- **Pitch variation** (pYIN, standard deviation over 8 real scenes):
+  - before (flash, no modulation): 3.1 semitones;
+  - v4 with modulation: 5.1 semitones;
+  - flash with timing only: 3.3 semitones.
+- **Pace:** about 130 words a minute with v4.
+- **An audio judge** (`gpt-audio-1.5`) compared the same narration side by side, both orders, 8 scenes:
+
+  | Comparison | Preferred |
+  |---|---|
+  | v4 with modulation vs before (flash, no modulation) | 12 to 4 (English 8 to 0) |
+  | v4 with modulation vs flash with timing only | 14 to 2 |
+  | v4 with modulation vs v4 reading the same text plainly | 10 to 6 |
+  | flash with timing only vs before | 8 to 8 |
+
+  - Most of the gain is v4's own expressiveness. The direction layer adds a further preference, and it is what
+    guarantees the pauses and lines highlights up with words.
+  - The judge separates Hinglish less (4 to 4 there) even though the pitch variation rose as much.
+- **Highlights.** Highlights landed on their spoken names ("open", "high", "low", "close", "wicks",
+  "refrigerant", "compressor").
+- **Lessons** were ready in 104-132 s, as before. Cost: about $0.001 more per lesson for the longer speech-script
+  reply.
+
+**Cost of v4.**
+- During ElevenLabs' launch discount (until 12 October 2026) v4 costs fewer credits than flash.
+- After it, about 1 credit per character against flash's 0.5, so about twice the credits per lesson.
+- `ANIMATOR_TTS_MODEL=eleven_flash_v2_5` keeps the timing layer (pauses, slow sentences, highlights) at flash
+  prices.
+
+**Rollback.**
+- `ANIMATOR_TTS_PROSODY=0`: speech exactly as before.
+- `ANIMATOR_TTS_MODEL=eleven_flash_v2_5`: the previous voice model.
+- `ANIMATOR_TTS_SYNC_HIGHLIGHTS=0`: highlights as the scene writer timed them.
+- Git tag `backup/before-voice-modulation` (56506ba).

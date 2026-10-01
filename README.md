@@ -149,7 +149,9 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   Hinglish lessons use their own provider and voice (`ANIMATOR_TTS_PROVIDER_HINGLISH`,
   `ANIMATOR_TTS_VOICE_HINGLISH`; default: Microsoft's native Hindi female voice `hi-IN-SwaraNeural`). To hear the voices before choosing, run
   `uv run python scripts/tts_samples.py`. Setup, keys and voices: [docs/TTS.md](docs/TTS.md).
-  Each scene is spoken in one take, with a 1 s pause between scenes (ADR-043). The voice sounds like a teacher
+  Each scene is spoken in one take, with a 1 s pause between scenes (ADR-043). The voice is directed like a teacher's (ADR-045): tone and pace per
+  sentence, stressed key words, a pause at every full stop and before key points, highlights on the spoken
+  word (`ANIMATOR_TTS_PROSODY`); Eleven v4 is the recommended voice model. The voice sounds like a teacher
   (ADR-041): no dead air between sentences (`ANIMATOR_TTS_FIT_BEATS`), and
   Hinglish captions rewritten for the voice (Hindi in Devanagari so it is pronounced right, spoken punctuation,
   a tone; `ANIMATOR_TTS_SCRIPT`), while the captions stay in Roman letters.

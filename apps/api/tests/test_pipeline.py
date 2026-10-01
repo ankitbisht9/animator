@@ -45,6 +45,8 @@ def settings(**kw: Any) -> Settings:
         "animator_correction_drafts": 1,
         # These tests cover the fast pipeline; the teaching pipeline has its own (test_teaching.py).
         "animator_pipeline": "fast",
+        # And speech as the provider makes it; voice modulation has its own tests (test_prosody.py).
+        "animator_tts_prosody": False,
     }
     base.update(kw)
     return Settings(_env_file=None, **base)

@@ -280,7 +280,8 @@ class ElevenLabsTTS(_Http):
 
     @property
     def v3(self) -> bool:
-        return self.model.startswith("eleven_v3")
+        """Eleven v3 and v4: audio tags, stability 0 / 0.5 / 1, no request stitching."""
+        return self.model.startswith(("eleven_v3", "eleven_v4"))
 
     def cache_key(self, voice: str) -> str:
         return f"elevenlabs|{self.model}|{voice}|{self.speed}|{self.stability}|{self.style}"
@@ -325,7 +326,13 @@ class ElevenLabsTTS(_Http):
         t1 = al.get("character_end_times_seconds") or []
         marks: list[WordMark] = []
         word, ws, we = "", 0.0, 0.0
+        tag = False  # inside an audio tag ("[short pause]"): not spoken words
         for ch, s, e in zip(chars, t0, t1, strict=False):
+            if ch == "[":
+                tag = True
+            if tag:
+                tag = ch != "]"
+                continue
             if ch.isspace():
                 if word:
                     marks.append(WordMark(word, ws, we))

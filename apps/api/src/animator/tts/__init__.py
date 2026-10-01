@@ -13,6 +13,7 @@ from pathlib import Path
 
 from animator.config import Settings
 from animator.tts.cache import SpeechCache, Spoken
+from animator.tts.prosody import Shaping
 from animator.tts.providers import (
     AzureTTS,
     EdgeTTS,
@@ -159,6 +160,15 @@ def build_speech(
         s.animator_tts_concurrency,
         voices=voices,
         providers=providers,
+        prosody=Shaping(
+            s.animator_tts_sentence_pause_s,
+            s.animator_tts_comma_pause_s,
+            s.animator_tts_key_pause_s,
+            s.animator_tts_slow_tempo,
+        )
+        if s.animator_tts_prosody
+        else None,
+        ffmpeg=s.ffmpeg_path,
     )
     log.info(
         "narration audio: %s, voice %s (Hinglish: %s, voice %s)",
