@@ -1285,3 +1285,124 @@ exclamations, and a pause of about 1 s between scenes.
 **Rollback.**
 - `ANIMATOR_TTS_ONE_TAKE=0` speaks sentence by sentence (ADR-041).
 - Git tag `backup/before-scene-voice-and-llm-revert` with `.env.backup-before-scene-voice-and-llm-revert`.
+
+
+---
+
+## ADR-044 The teaching pipeline: a teacher, a reviewer, a visual director, then the scenes (2026-10-01)
+
+**Problem.** The user found the teaching poor and the visuals very poor. In three recent 1-minute lessons:
+- **The teaching was thin.** About 100 words of disconnected one-line statements over 5 scenes of 6 to 10 s each.
+  There was no reasoning ("because", "so"), no worked example and no formulas: "Kinetic vs Potential Energy" never
+  mentions ½mv² or mgh.
+- **The visuals were poor.**
+  - Drawings came out of misaligned parts: course lines sticking out of the pyramid, the ball off its own arc.
+  - Diagrams were small, with half the stage empty.
+  - Text contradicted itself: the code said "Welcome!", the page showed "Hello!".
+  - A literal `\n` was shown on screen.
+- **Why:** one quick call (low effort) planned the content and the pictures together, the scenes were drafted at
+  low effort, and nothing looked at the rendered frames.
+
+**Research.**
+- Code2Video (ICML 2026) splits planner, coder and critic. Removing the planner cost 41 points of learning
+  (TeachQuiz) and aesthetics. Its critic looks at rendered frames, with a discrete layout grid and an occupancy
+  table.
+- TheoremExplainAgent found layout to be the weakest dimension: overlaps, inconsistent sizes, poor positioning.
+- Mayer's multimedia principles:
+  - signalling, temporal and spatial contiguity, coherence;
+  - modality (narration plus pictures, not on-screen sentences);
+  - personalisation (conversational style), pre-training (define terms first).
+- Effective explanations are adapted to prior knowledge and integrate with it (Wittwer and Renkl).
+- Educational narration runs at about 130 to 160 words a minute, and is written for the ear.
+
+**Decision.** `ANIMATOR_PIPELINE=teaching` (default). `fast` is the previous pipeline, unchanged: its scene and
+critic prompts are pinned (`animation.v5`, `critic.v1`) and its efforts are the configured ones.
+
+1. **Teacher** (`teacher.v1`, medium). Writes the whole lesson as a master teacher:
+   - every spoken sentence, each with what the learner sees while it is said;
+   - the core idea, the intuition, the misconception and a worked example with real numbers;
+   - the rules: explain why, concrete before abstract, keep the learner predicting, land the core idea at the end;
+   - written for the ear: complete conversational sentences, questions as questions, no `;` or `:`, symbols and
+     code said as words.
+   - A Hinglish section (natural mixing, warm "dekho, socho", Indian examples, an example paragraph) applies to
+     this stage only; the scene stage keeps ADR-039's language line.
+   - The length is given in code: duration x 2.5 words per second over `max(3, duration / 14)` scenes.
+2. **Reviewer** (`review.v1`, low). An expert and head of teaching checks correctness, real explanation, flow,
+   spoken delivery, length and show notes, then returns the improved script.
+   - It is told the script's measured word count against the target (models cannot count).
+   - A reviewed script over 1.35x the target keeps the teacher's shorter one.
+   - Low effort took 8 to 10 s instead of 24 to 27 s at medium, with equally substantive fixes. It corrected a
+     wrong claim about violet light, the source of the oxygen in photosynthesis, and the pyramid workers'
+     status.
+3. **Visual director** (`director.v1`, medium). Plans every scene together, so recurring objects keep one look:
+   - the composition: the central picture, its region and size, where everything sits;
+   - what appears, moves or is highlighted with each sentence.
+   - It streams: each scene starts drawing as soon as its plan arrives. The narration is the script's, word for
+     word.
+4. **Scenes** (`animation.v7`, medium via `ANIMATOR_EFFORT_TEACHING_SCENE`). v5's engine rules plus:
+   - teach with the picture: show it when it is said, signal the key word, build up, few words on screen,
+     everything agrees;
+   - composition checked at the end of every beat;
+   - drawings made of parts: dividing lines end on the shape's edges, `parent` must be a `group`;
+   - motion follows its path, and things rest on surfaces;
+   - real line breaks, readable code, labels centred on their shapes, real colours.
+   - The scene message carries the lesson's look and the whole lesson's narration.
+5. **Visual critic** (`critic.v2`, `ANIMATOR_TEACHING_VISUAL_CRITIC`). Rendered keyframes go to a vision model
+   with a checklist of the failures seen:
+   - picture and words disagree, broken drawings, hidden text, overlaps, poor composition.
+   - The engine measures the composition at each keyframe (where the picture sits, how much of the stage it
+     covers). The critic gets the numbers, and a clearly poor composition always gets a fix request (Code2Video's
+     occupancy feedback).
+   - If the fix comes out invalid, or adds glitches, the scene the critic saw is kept.
+6. **Framing.** When a scene's content is small or off-centre over the whole scene, the camera centres and zooms it
+   (up to 1.5x). It is kept only if the engine finds the framed scene clean (`ANIMATOR_AUTO_FRAME`). It rarely
+   applies: most scenes move their content around.
+7. **Deterministic fixes.**
+   - A line break written as a visible `\n` becomes a real one; TeX keeps its backslashes. This applies to every
+     lesson: it is the defect the user reported.
+   - Before a teaching scene would fall back to the simplified card, labels that never stopped overlapping are
+     left out when nothing depends on them.
+8. **Named colours** (engine theme). `red`, `orange`, `yellow`, `green`, `blue`, `sky`, `purple`, `pink`, `brown`
+   and `gray`, in both themes, next to the meaning roles. Before, the model had to guess which abstract role was
+   blue: skies came out pink, the sun green, trees orange.
+
+**Measured** (live, 1-minute lessons, gpt-6-luna, ElevenLabs flash):
+
+| Lesson | Pipeline | Ready in | First scene | Cost | Words (target 150) | Simplified scenes |
+|---|---|---|---|---|---|---|
+| Kinetic vs Potential Energy (Hinglish) | fast | 35 s | 18 s | $0.045 | 95 | 0 |
+| Pyramids (Hinglish) | teaching | 128 s | 89 s | $0.15 | 151 | 0 |
+| Photosynthesis (English) | teaching | 133 s | 125 s | $0.14 | 179 | 0 |
+| JavaScript DOM (Hinglish) | teaching | 107 s | 94 s | $0.14 | 174 | 0 |
+| Why is the sky blue? (English) | teaching | 101 s | 87 s | $0.12 | 154 | 0 |
+| Photosynthesis (Hinglish) | teaching | 136 s | 100 s | $0.15 | 180 | 0 |
+
+- **Teaching.** Every lesson now has:
+  - a hook question;
+  - defined terms;
+  - a worked example where the subject has one (2 kg at 5 m: 2 x 10 x 5 = 100 J, so 10 m/s at the ground);
+  - the main misconception corrected ("a fridge does not make cold", "plant mass comes from the air, not the soil",
+    "the ocean does not colour the sky");
+  - a recap of the core idea.
+- **Visuals,** judged on rendered frames:
+  - parts line up (pyramid layers inside the triangle);
+  - physics pictures are coherent (blue scattering at a molecule while red travels straight);
+  - code agrees with the page;
+  - real colours (a sky-blue sky, a green plant in a brown pot).
+  - Remaining flaws: an occasional stray mark, a label touching an arrow, a frame that leaves one side sparse.
+- **Scene-draft effort.** Low drafts with two critic rounds were faster (102 to 113 s), but 1 of 8 scenes fell back
+  to the simplified card (an equation scene whose labels never stopped overlapping). Medium drafts had 0 of 28.
+  Medium stays; `ANIMATOR_TEACHING_CRITIC_ROUNDS=2` is available.
+- **Delivery.** The same Hinglish teaching paragraph was spoken by ElevenLabs flash v2.5, multilingual v2 and v3 (the
+  user's voice and settings) and rated twice each by an audio model:
+  - flash: naturalness 8 to 9, pacing 9, Hindi 9, flow 8 to 9;
+  - multilingual v2 and v3: the same or lower.
+  - Flash stays: the delivery now comes from a script written for the ear.
+
+**Cost and time.** About $0.10 to $0.18 and 1.7 to 2.3 minutes for a 1-minute lesson, against $0.03 to $0.06 and
+about 30 s for the fast pipeline. The user allowed 1 to 2 minutes for quality.
+
+**Rollback.**
+- `ANIMATOR_PIPELINE=fast` (or single switches: `ANIMATOR_SCRIPT_REVIEW`, `ANIMATOR_TEACHING_VISUAL_CRITIC`,
+  `ANIMATOR_AUTO_FRAME`, `ANIMATOR_EFFORT_TEACHING_SCENE`).
+- Git tag `backup/before-teaching-quality` with `.env.backup-before-teaching-quality`.

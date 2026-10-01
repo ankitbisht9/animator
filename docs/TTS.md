@@ -234,6 +234,12 @@ restarts between sentences. A scene's script is its sentences' scripts one after
 first sentence's tone. Sentence by sentence, ElevenLabs (except `eleven_v3`) gets the previous and the next
 sentence with each request, so the intonation carries across.
 
+**Which ElevenLabs model (ADR-044).** The same Hinglish teaching paragraph was spoken with the same voice by
+`eleven_flash_v2_5`, `eleven_multilingual_v2` and `eleven_v3`, and an audio model rated each twice as a teacher's
+delivery. Flash scored as well as the others or better (naturalness 8-9, pacing 9, Hindi 9, flow 8-9), so it stays.
+Delivery now comes mostly from the script: the teaching pipeline's teacher writes complete conversational sentences
+for the ear, with questions, signposts and pauses.
+
 Measured on live lessons (ElevenLabs `eleven_flash_v2_5`):
 - Sentence by sentence (ADR-041): the silence between sentences went from about 1.3 s to 0.35 s, but each
   sentence still started afresh.

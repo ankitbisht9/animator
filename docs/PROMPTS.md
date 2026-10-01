@@ -1,20 +1,44 @@
 # Prompt packs
 
-The LLM pipeline has four prompt packs, versioned as files in
+The LLM pipelines' prompt packs are versioned as files in
 `apps/api/src/animator/pipeline/prompts/`. Each call records its prompt version in the generation's call log.
 To change a prompt, add a new version file (`name.v2.md`) and point `load_prompt` at it. Don't edit a version that
 recordings depend on: replay fixtures are keyed by the full prompt text.
 
-`load_prompt` picks the newest version of each pack. The current versions:
+`load_prompt` picks the newest version of each pack, except where a pipeline pins one. There are two
+pipelines (`ANIMATOR_PIPELINE`).
+
+### The teaching pipeline (the default, ADR-044)
+
+| Stage | File | Output (strict JSON schema) | Model setting |
+|---|---|---|---|
+| Teacher | `teacher.v1.md` | `TeachingScript` (the whole explanation: every spoken sentence and what is seen, with the core idea, intuition, misconception and worked example) | `ANIMATOR_MODEL_TEACHER` (medium) |
+| Reviewer | `review.v1.md` | `ScriptReview` (what was fixed, and the improved script) | `ANIMATOR_MODEL_REVIEWER` (low) |
+| Visual director | `director.v1.md` | `Direction` (the lesson's look, then each scene's composition and what each beat shows), streamed | `ANIMATOR_MODEL_DIRECTOR` (medium) |
+| Scenes | `animation.v7.md` + DSL reference + component catalog + exemplars | the engine's LLM-facing Scene schema | `ANIMATOR_MODEL_ANIMATION_PLANNER`, at `ANIMATOR_EFFORT_TEACHING_SCENE` (medium) |
+| Correction | same instructions as the scenes | `ScenePatch` | `ANIMATOR_MODEL_CORRECTION`, final attempt `..._CORRECTION_FINAL` |
+| Visual critic | `critic.v2.md` | `CriticReport` | `ANIMATOR_MODEL_VISUAL_CRITIC` |
+
+- The teacher's message gives the length to aim for: duration x 2.5 words per second, split over
+  `max(3, duration / 14)` scenes.
+- The reviewer's message gives the script's measured word count against that target. Models cannot count words.
+- The director gets the reviewed script. Each scene brief takes the script's narration word for word and the
+  director's plan for the picture.
+- The scene message adds the lesson's look and the whole lesson's narration, so each scene knows where it sits.
+- The critic's summary adds the engine's measured composition at each keyframe.
+
+### The fast pipeline (ADR-033)
+
+It uses the scene and critic versions it was tuned with, so `ANIMATOR_PIPELINE=fast` behaves as before ADR-044.
 
 | Stage | File | Output (strict JSON schema) | Model setting |
 |---|---|---|---|
 | 1+2. Outline (lessons up to 150 s) | `outline.v2.md` | `LessonOutline` (a short plan, the scenes, a recap), streamed | `ANIMATOR_MODEL_STORYBOARD` |
 | 1. Educational planner (longer lessons) | `planner.v2.md` | `EducationalPlan` (chapters of 45-90 s) | `ANIMATOR_MODEL_EDUCATIONAL_PLANNER` |
 | 2. Storyboard (per chapter) | `storyboard.v2.md` | `StoryboardChapter` (scenes, beats, identity, engagement) | `ANIMATOR_MODEL_STORYBOARD` |
-| 3. Animation planner | `animation.v5.md` + DSL reference + component catalog + exemplars | the engine's LLM-facing Scene schema | `ANIMATOR_MODEL_ANIMATION_PLANNER` |
+| 3. Animation planner | `animation.v5.md` (pinned) + DSL reference + component catalog + exemplars | the engine's LLM-facing Scene schema | `ANIMATOR_MODEL_ANIMATION_PLANNER` |
 | Correction | same instructions as stage 3 | `ScenePatch` (only what changes; built from the Scene schema) | `ANIMATOR_MODEL_CORRECTION`, final attempt `..._CORRECTION_FINAL` |
-| Critic (optional) | `critic.v1.md` | `CriticReport` (pass/revise, issues with fixes) | `ANIMATOR_MODEL_CRITIC` / `..._VISUAL_CRITIC` |
+| Critic (optional) | `critic.v1.md` (pinned) | `CriticReport` (pass/revise, issues with fixes) | `ANIMATOR_MODEL_CRITIC` / `..._VISUAL_CRITIC` |
 
 The outline and storyboard packs have a `{continuity}` slot, filled from `continuity-parallel.v1.md` or
 `continuity-sequential.v1.md` depending on `ANIMATOR_SCENE_MODE`. In parallel mode (the default), every scene

@@ -93,7 +93,30 @@ def tidy(dsl: dict[str, Any]) -> dict[str, Any]:
             for part in (obj.get("params") or {}).get("parts") or []:
                 if isinstance(part.get("tex"), str):
                     part["tex"] = _tex(part["tex"])
+        elif isinstance(obj.get("params"), dict):
+            _line_breaks(obj["params"])
+    for action in dsl.get("timeline") or []:
+        if action.get("property") == "text":
+            _line_breaks(action.get("keyframes"))
     return dsl
+
+
+# Text params where a backslash is never meant literally (TeX and expressions keep theirs: \neq, \nu).
+_LITERAL_KEYS = {"tex", "expr", "latex", "terms"}
+
+
+def _line_breaks(value: Any) -> Any:
+    """A line break a model wrote escaped ("a\\nb", shown as a visible backslash and n) becomes a
+    real one, which the engine lays out as a new line."""
+    if isinstance(value, dict):
+        for k, v in value.items():
+            if k not in _LITERAL_KEYS:
+                value[k] = _line_breaks(v)
+    elif isinstance(value, list):
+        value[:] = [_line_breaks(v) for v in value]
+    elif isinstance(value, str) and "\\n" in value:
+        return value.replace("\\r\\n", "\n").replace("\\n", "\n")
+    return value
 
 
 _ENDS_AT = re.compile(r"ends at ([0-9.]+)s")
@@ -347,3 +370,46 @@ def autofix(dsl: dict[str, Any], errors: list[dict[str, Any]]) -> dict[str, Any]
                 moved.add(part)
                 applied = True
     return out if applied else None
+
+
+_OVERLAP = re.compile(r"'([A-Za-z0-9_]+)' and '([A-Za-z0-9_]+)' overlap")
+
+
+def salvage(dsl: dict[str, Any], errors: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """A last resort for a scene whose only remaining errors are labels overlapping each other (after
+    every correction round): the later label of each pair is left out, with the actions that show it,
+    when nothing else refers to it. A scene missing one label teaches better than the simplified
+    fallback scene. None when this does not apply; the engine judges the result."""
+    if not errors or any(e.get("code") != "LABEL_OVERLAP" for e in errors):
+        return None
+    drop: set[str] = set()
+    for e in errors:
+        m = _OVERLAP.search(str(e.get("message", "")))
+        if m is None:
+            return None
+        drop.add(m.group(2))
+    out = copy.deepcopy(dsl)
+    kept = [o for o in out.get("objects") or [] if o.get("id") not in drop]
+    if len(kept) == len(out.get("objects") or []):
+        return None
+    removed: dict[str, Any] = {}
+    timeline = []
+    for action in out.get("timeline") or []:
+        if action.get("target") in drop:
+            removed[str(action.get("id"))] = action.get("start")
+        else:
+            timeline.append(action)
+    for action in timeline:
+        start = action.get("start")
+        if isinstance(start, dict):
+            for key in ("with", "after"):
+                if start.get(key) in removed:
+                    # It started from an action that is gone: it starts where that one started.
+                    action["start"] = copy.deepcopy(removed[start[key]]) or {"at": 0}
+                    break
+    rest = json.dumps([kept, timeline, out.get("values"), out.get("solvers"), out.get("interactions")])
+    if any(f'"{oid}"' in rest or f'"{oid}.' in rest or f'"bind": "{oid}' in rest for oid in drop):
+        return None  # something else still depends on it
+    out["objects"] = kept
+    out["timeline"] = timeline
+    return out

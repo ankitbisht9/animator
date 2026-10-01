@@ -17,6 +17,9 @@ from animator import REPO_ROOT
 from animator_contracts.protocol import CatalogResult
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
+# The scene and critic prompt versions of the fast pipeline (ADR-033 .. ADR-042).
+FAST_ANIMATION = 5
+FAST_CRITIC = 1
 EXEMPLARS = [
     (
         "archimedes",
@@ -80,11 +83,18 @@ class PromptPack:
         self.planner = load_prompt("planner")
         self.storyboard = load_prompt("storyboard")
         self.outline = load_prompt("outline")
+        # The teaching pipeline (ADR-044) uses the newest scene and critic prompts; the fast pipeline
+        # keeps the ones it was tuned with, so ANIMATOR_PIPELINE=fast behaves exactly as before.
         self.animation = load_prompt("animation")
         self.critic = load_prompt("critic")
+        self.animation_fast = load_prompt("animation", FAST_ANIMATION)
+        self.critic_fast = load_prompt("critic", FAST_CRITIC)
+        self.teacher = load_prompt("teacher")
+        self.review = load_prompt("review")
+        self.director = load_prompt("director")
         # How scenes relate (parallel: each on a clean stage; sequential: each continues the last).
         self.continuity = {mode: load_prompt(f"continuity-{mode}") for mode in ("parallel", "sequential")}
-        self._animation_text: str | None = None
+        self._animation_text: dict[str, str] = {}
 
     @classmethod
     def from_repo(cls, catalog: CatalogResult, root: Path = REPO_ROOT) -> PromptPack:
@@ -141,15 +151,17 @@ class PromptPack:
             "{continuity}", self.continuity[mode].text.strip()
         )
 
-    def animation_instructions(self) -> str:
-        if self._animation_text is None:
-            head = self.animation.text.replace("{layouts}", self.layouts()).replace(
-                "{solvers}", self.solvers()
-            )
+    def animation_prompt(self, fast: bool = False) -> Prompt:
+        return self.animation_fast if fast else self.animation
+
+    def animation_instructions(self, fast: bool = False) -> str:
+        prompt = self.animation_prompt(fast)
+        if prompt.version not in self._animation_text:
+            head = prompt.text.replace("{layouts}", self.layouts()).replace("{solvers}", self.solvers())
             examples = "\n\n".join(
                 f"### Example: {note}\n\n```json\n{compact(scene)}\n```" for note, scene in self.exemplars
             )
-            self._animation_text = "\n\n".join(
+            self._animation_text[prompt.version] = "\n\n".join(
                 [
                     head,
                     "# Scene DSL reference\n\n" + self.dsl_doc,
@@ -159,7 +171,19 @@ class PromptPack:
                     "Your output must still list every property the schema requires.\n\n" + examples,
                 ]
             )
-        return self._animation_text
+        return self._animation_text[prompt.version]
 
-    def critic_instructions(self) -> str:
-        return self.critic.text
+    def critic_prompt(self, fast: bool = False) -> Prompt:
+        return self.critic_fast if fast else self.critic
+
+    def critic_instructions(self, fast: bool = False) -> str:
+        return self.critic_prompt(fast).text
+
+    def teacher_instructions(self) -> str:
+        return self.teacher.text.replace("{capabilities}", self.capabilities())
+
+    def review_instructions(self) -> str:
+        return self.review.text
+
+    def director_instructions(self) -> str:
+        return self.director.text.replace("{capabilities}", self.capabilities())

@@ -6,7 +6,9 @@ LLMClient and validates the result. Scene DSL is only shaped here; the engine wo
 from __future__ import annotations
 
 import dataclasses
+import json
 import logging
+import re
 from collections.abc import Callable
 from typing import Any, Literal
 
@@ -26,14 +28,20 @@ from animator.llm import (
 )
 from animator.pipeline.language import language_line
 from animator.pipeline.models import (
+    BeatPlan,
     Chapter,
+    DirectedScene,
+    Direction,
     EducationalPlan,
     Generation,
     LessonOutline,
     OutlinePlan,
     SceneRecord,
+    ScriptReview,
+    ScriptScene,
     StoryboardChapter,
     StoryboardScene,
+    TeachingScript,
 )
 from animator.pipeline.prompts import PromptPack, compact
 from animator.pipeline.schemas import apply_patch, patch_schema, strict_schema
@@ -60,6 +68,11 @@ PLAN_SCHEMA = strict_schema(EducationalPlan)
 STORYBOARD_SCHEMA = strict_schema(StoryboardChapter)
 OUTLINE_SCHEMA = strict_schema(LessonOutline)
 CRITIC_SCHEMA = strict_schema(CriticReport)
+SCRIPT_SCHEMA = strict_schema(TeachingScript)
+REVIEW_SCHEMA = strict_schema(ScriptReview)
+DIRECTION_SCHEMA = strict_schema(Direction)
+
+WORDS_PER_SECOND = 2.5  # a teacher's pace (130 to 160 words a minute)
 
 
 def _validated[M: BaseModel](model: type[M], result: LLMResult) -> M:
@@ -103,8 +116,10 @@ class Stages:
         max_out: int,
         gen: Generation,
         label: str,
+        effort: Any = None,
     ) -> LLMRequest:
-        models, effort = self.settings.stage_model(stage)
+        models, configured = self.settings.stage_model(stage)
+        effort = effort or configured
         return LLMRequest(
             stage=stage,
             prompt_version=prompt_version,
@@ -296,6 +311,110 @@ class Stages:
             plan, scenes = shape(out.plan, out.summary), out.scenes
         return plan, StoryboardChapter(chapter_id=plan.chapters[0].id, scenes=scenes)
 
+    # ------------------------------------------------------------------ the teaching pipeline (ADR-044)
+
+    def _lesson_lines(self, gen: Generation) -> list[str]:
+        r = gen.request
+        duration = round(r.duration_min * 60)
+        words, scenes = target_words(r.duration_min * 60), target_scenes(r.duration_min * 60)
+        return [
+            f"Topic: {r.topic}",
+            f"Audience: {r.audience}",
+            f"Duration: {duration} seconds",
+            f"Language: {language_line(r.language)}",
+            f"Style notes: {r.style}" if r.style else "Style notes: none",
+            f"Narration length: about {words} words in total (at most {round(words * 1.1)}), in "
+            f"{scenes} scenes of about {round(words / scenes)} words each.",
+        ]
+
+    async def teach(self, gen: Generation, ctx: CallContext) -> TeachingScript:
+        """The teacher: the whole lesson's explanation, every spoken word and what is seen."""
+        req = self._request(
+            "teacher",
+            self.pack.teacher.version,
+            self.pack.teacher_instructions(),
+            Message.user("\n".join(self._lesson_lines(gen))),
+            "TeachingScript",
+            SCRIPT_SCHEMA,
+            24_000,
+            gen,
+            "lesson script",
+        )
+        return await self._retrying(req, TeachingScript, ctx)
+
+    async def review(self, gen: Generation, script: TeachingScript, ctx: CallContext) -> ScriptReview:
+        """The head of teaching: checks the script (facts, depth, flow, delivery, timing) and returns
+        it improved."""
+        req = self._request(
+            "reviewer",
+            self.pack.review.version,
+            self.pack.review_instructions(),
+            Message.user(
+                "\n".join(self._lesson_lines(gen))
+                + "\n\n"
+                + length_note(script, target_words(gen.request.duration_min * 60))
+                + "\n\nThe teacher's script:\n"
+                + compact(script.model_dump())
+            ),
+            "ScriptReview",
+            REVIEW_SCHEMA,
+            24_000,
+            gen,
+            "script review",
+        )
+        return await self._retrying(req, ScriptReview, ctx)
+
+    async def direct(
+        self,
+        gen: Generation,
+        script: TeachingScript,
+        ctx: CallContext,
+        on_look: Callable[[str], None] | None = None,
+        on_scene: Callable[[DirectedScene], None] | None = None,
+    ) -> Direction:
+        """The visual director: every scene's picture, planned together so the lesson looks
+        consistent. Streamed: each scene's plan is handed over as soon as it is complete."""
+        r = gen.request
+        scenes = [
+            {
+                "scene": i + 1,
+                "title": sc.title,
+                "step": sc.step,
+                "goal": sc.goal,
+                "beats": [{"say": b.say, "show": b.show} for b in sc.beats],
+            }
+            for i, sc in enumerate(script.scenes)
+        ]
+        msg = Message.user(
+            "\n".join(
+                [
+                    f"Lesson: {script.title} ({script.subject}). Audience: {r.audience}.",
+                    f"Narration language: {r.language} (everything on screen is in English).",
+                    f"Core idea: {script.core_idea}",
+                    f"Intuition: {script.intuition}",
+                    f"Worked example: {script.worked_example or 'none'}",
+                    "",
+                    "The script, scene by scene:",
+                    compact(scenes),
+                ]
+            )
+        )
+        if on_scene is not None or on_look is not None:
+            sink = DirectionSink(on_look or (lambda look: None), on_scene or (lambda d: None))
+            ctx = ctx.streaming(sink)
+        req = self._request(
+            "director",
+            self.pack.director.version,
+            self.pack.director_instructions(),
+            msg,
+            "Direction",
+            DIRECTION_SCHEMA,
+            24_000,
+            gen,
+            "visual direction",
+        )
+        return await self._retrying(req, Direction, ctx)
+
     # ------------------------------------------------------------------ stage 3 + corrections
 
     def _stage_start(self, prev_summary: str | None) -> str:
@@ -314,17 +433,28 @@ class Stages:
         used = sorted(
             {oid.split(":")[0].strip() for s in gen.scenes[: rec.index] for oid in s.brief.objects_new}
         )
-        return "\n\n".join(
-            [
-                f'Scene {n}{total}: id "{rec.id}", title "{rec.title}". Title object id: "title_s{n:02d}".',
-                f"Lesson: {gen.plan.title}. Audience: {gen.request.audience}. "
-                f"Language: {language_line(gen.request.language)}.",
-                f"Storyboard brief:\n{compact(rec.brief.model_dump())}",
-                f"Target duration: about {round(rec.brief.duration_s)} seconds.",
-                self._stage_start(prev_summary),
-                "Object ids used earlier in the lesson (keep their meaning): " + (", ".join(used) or "none"),
+        parts = [
+            f'Scene {n}{total}: id "{rec.id}", title "{rec.title}". Title object id: "title_s{n:02d}".',
+            f"Lesson: {gen.plan.title}. Audience: {gen.request.audience}. "
+            f"Language: {language_line(gen.request.language)}.",
+            f"Storyboard brief:\n{compact(rec.brief.model_dump())}",
+            f"Target duration: about {round(rec.brief.duration_s)} seconds.",
+            self._stage_start(prev_summary),
+            "Object ids used earlier in the lesson (keep their meaning): " + (", ".join(used) or "none"),
+        ]
+        if gen.teaching is not None:
+            look = gen.teaching.get("look")
+            if look:
+                parts.append(f"The lesson's look (keep it in every scene): {look}")
+            lesson = [
+                f"{i + 1}. {sc.get('title')}: " + " ".join(b.get("say", "") for b in sc.get("beats") or [])
+                for i, sc in enumerate((gen.teaching.get("script") or {}).get("scenes") or [])
             ]
-        )
+            if lesson:
+                parts.append(
+                    f"The whole lesson, for context (you are drawing scene {n}):\n" + "\n".join(lesson)
+                )
+        return "\n\n".join(parts)
 
     async def scene(
         self,
@@ -359,9 +489,12 @@ class Stages:
             if patch
             else "return the complete scene"
         )
+        teaching = gen.teaching is not None
+        effort = None
         if attempt == 1:
             stage = "animation_planner"
             parts.append("Write this scene.")
+            effort = self.settings.animator_effort_teaching_scene if teaching else None
         else:
             stage = "correction_final" if final else "correction"
             if previous is not None:
@@ -381,14 +514,15 @@ class Stages:
                 )
         req = self._request(
             stage,
-            self.pack.animation.version,
-            self.pack.animation_instructions(),
+            self.pack.animation_prompt(fast=not teaching).version,
+            self.pack.animation_instructions(fast=not teaching),
             Message.user(*parts),
             "ScenePatch" if patch else "Scene",
             self.patch_schema if patch else self.dsl_schema,
             self.settings.animator_scene_max_output_tokens,
             gen,
             f"scene {rec.index + 1} attempt {attempt}",
+            effort,
         )
         result = await self.llm.generate(req, ctx)
         if patch:
@@ -409,10 +543,11 @@ class Stages:
         if images:
             parts.append(f"{len(images)} keyframes of the rendered scene follow, in time order.")
             parts.extend(ImagePart(png, "high") for png in images)
+        fast = gen.teaching is None
         req = self._request(
             stage,
-            self.pack.critic.version,
-            self.pack.critic_instructions(),
+            self.pack.critic_prompt(fast).version,
+            self.pack.critic_instructions(fast),
             Message.user(*parts),
             "CriticReport",
             CRITIC_SCHEMA,
@@ -495,3 +630,147 @@ def stage_objects(gen: Generation) -> list[str]:
                 alive.append(oid)
         alive = [o for o in alive if o not in s.brief.objects_removed]
     return alive
+
+
+class DirectionSink:
+    """Receives a streaming visual direction: the lesson's look, then each scene's plan, as soon as
+    each is complete and valid. A scene handed over is not handed over again after a retry."""
+
+    def __init__(self, on_look: Callable[[str], None], on_scene: Callable[[DirectedScene], None]) -> None:
+        self.on_look = on_look
+        self.on_scene = on_scene
+        self.look: str | None = None
+        self.sent: set[int] = set()
+        self.scanner = JsonScanner(lambda key, value: None, self._item)
+
+    def reset(self) -> None:
+        self.scanner.reset()
+
+    def feed(self, text: str) -> None:
+        self.scanner.feed(text)
+
+    def _item(self, key: str, index: int, value: Any) -> None:
+        if key != "scenes":
+            return
+        if self.look is None:
+            # `look` is a string written before the scenes; the scanner reports containers only.
+            m = LOOK.search("".join(self.scanner.buf))
+            if m:
+                self.look = str(json.loads(m.group(1)))
+                self.on_look(self.look)
+        try:
+            directed = DirectedScene.model_validate(value)
+        except ValidationError:
+            return
+        if directed.scene in self.sent:
+            return
+        self.sent.add(directed.scene)
+        self.on_scene(directed)
+
+
+LOOK = re.compile(r'"look"\s*:\s*("(?:[^"\\]|\\.)*")')
+
+
+def target_words(duration_s: float) -> int:
+    """The narration a lesson of this length has room for, at a teacher's pace."""
+    return round(duration_s * WORDS_PER_SECOND)
+
+
+def target_scenes(duration_s: float) -> int:
+    return max(3, round(duration_s / 14))
+
+
+def script_words(script: TeachingScript) -> int:
+    return sum(len(b.say.split()) for sc in script.scenes for b in sc.beats)
+
+
+def length_note(script: TeachingScript, target: int) -> str:
+    """The script's measured length against the target, as an instruction for the reviewer."""
+    words = script_words(script)
+    if words > target * 1.1:
+        return (
+            f"Length: the script has {words} words of narration; the target is {target}. Shorten it to "
+            f"about {target} words: keep the explanation, the example and the misconception, and cut "
+            "repetition and side details."
+        )
+    if words < target * 0.8:
+        return (
+            f"Length: the script has {words} words of narration; the target is {target}. Use the room "
+            "to explain more fully, up to about that length."
+        )
+    return f"Length: the script has {words} words of narration, close to the target of {target}. Keep it so."
+
+
+def script_plan(script: TeachingScript, audience: str, duration_s: float) -> EducationalPlan:
+    """The lesson plan of a teaching lesson (one chapter; its scenes come from the script)."""
+    chapter = Chapter(
+        id="c1",
+        title=script.title,
+        goal=script.core_idea,
+        key_ideas=script.learning_objectives,
+        target_duration_s=duration_s,
+        visual_approach=script.intuition,
+    )
+    return EducationalPlan(
+        title=script.title,
+        subtitle=script.subtitle,
+        subject=script.subject,
+        audience=audience,
+        target_duration_s=duration_s,
+        hook=script.hook,
+        learning_objectives=script.learning_objectives,
+        prerequisites=[script.learner],
+        key_terms=script.key_terms,
+        misconceptions=[script.misconception],
+        chapters=[chapter],
+        summary=script.summary,
+    )
+
+
+def script_brief(scene: ScriptScene, directed: DirectedScene | None = None) -> StoryboardScene:
+    """A scene's storyboard brief: the script's narration (never changed), with the visual
+    director's plan for it (or the teacher's show notes when there is no plan)."""
+    shown = list(directed.beats) if directed is not None else []
+    beats = [
+        BeatPlan(
+            narration=b.say,
+            on_screen=shown[i] if i < len(shown) and shown[i].strip() else b.show,
+        )
+        for i, b in enumerate(scene.beats)
+    ]
+    words = sum(len(b.say.split()) for b in scene.beats)
+    duration = round(min(60.0, max(8.0, words / WORDS_PER_SECOND + 2.0)), 1)
+    if directed is None:
+        return StoryboardScene(
+            title=scene.title,
+            purpose=scene.goal,
+            duration_s=duration,
+            layout="stage_with_caption",
+            transition="fade",
+            visual_plan=" Then ".join(b.show for b in scene.beats),
+            objects_new=[],
+            objects_kept=[],
+            objects_removed=[],
+            physics=None,
+            beats=beats,
+            engagement="a highlight on the thing the narration names",
+            checkpoint=None,
+        )
+    checkpoint = directed.checkpoint
+    if checkpoint is not None and not 0 <= checkpoint.answer < len(checkpoint.choices):
+        checkpoint = None
+    return StoryboardScene(
+        title=scene.title,
+        purpose=scene.goal,
+        duration_s=duration,
+        layout=directed.layout,
+        transition="fade",
+        visual_plan=directed.visual_plan,
+        objects_new=directed.objects_new,
+        objects_kept=[],
+        objects_removed=[],
+        physics=directed.physics,
+        beats=beats,
+        engagement=directed.engagement,
+        checkpoint=checkpoint,
+    )

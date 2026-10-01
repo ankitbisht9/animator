@@ -37,6 +37,7 @@ from animator.pipeline.generator import Pipeline, chapter_outline, scene_record,
 from animator.pipeline.models import (
     TERMINAL,
     Chapter,
+    DirectedScene,
     EducationalPlan,
     Generation,
     GenerationRequest,
@@ -44,7 +45,7 @@ from animator.pipeline.models import (
     StoryboardChapter,
     StoryboardScene,
 )
-from animator.pipeline.stages import Stages
+from animator.pipeline.stages import Stages, script_brief, script_plan, script_words, target_words
 
 log = logging.getLogger("animator.runner")
 
@@ -356,7 +357,7 @@ class GenerationRunner:
 
                 if gen.plan is not None and not gen.chapters_done and gen.scenes:
                     # Stopped while the outline was still streaming: start the lesson over.
-                    gen.plan, gen.scenes = None, []
+                    gen.plan, gen.scenes, gen.teaching = None, [], None
                 if gen.plan is None:
                     gen.status = "planning"
                     await self._save(gen)
@@ -378,8 +379,17 @@ class GenerationRunner:
     async def _plan_parallel(
         self, gen: Generation, stages: Stages, ctx: CallContext, launch: Callable[[SceneRecord], None]
     ) -> EducationalPlan:
-        """Short lessons: plan and storyboard in one streamed call, each scene launched as soon as its
-        brief arrives. Longer ones (or when the outline fails): the plan only."""
+        """The teaching pipeline (ADR-044, see `_teach`) when it is on. Otherwise short lessons: plan
+        and storyboard in one streamed call, each scene launched as soon as its brief arrives; longer
+        ones (or when the outline fails): the plan only."""
+        if self._teaching(gen):
+            try:
+                return await self._teach(gen, stages, ctx, launch)
+            except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
+                if gen.scenes:
+                    raise  # scenes are already being drawn from the script
+                log.warning("teaching pipeline for %s failed (%s): planning it the fast way", gen.id, e)
+                gen.plan, gen.teaching = None, None
         if gen.request.duration_min * 60 > self.settings.animator_outline_max_duration_s:
             return await stages.plan(gen, ctx)
 
@@ -403,6 +413,78 @@ class GenerationRunner:
         for brief in board.scenes[len(gen.scenes) :]:
             gen.scenes.append(scene_record(gen, board.chapter_id, brief))
         gen.chapters_done.append(board.chapter_id)
+        return plan
+
+    def _teaching(self, gen: Generation) -> bool:
+        return (
+            self.settings.animator_pipeline == "teaching"
+            and gen.request.duration_min * 60 <= self.settings.animator_teaching_max_duration_s
+        )
+
+    async def _teach(
+        self, gen: Generation, stages: Stages, ctx: CallContext, launch: Callable[[SceneRecord], None]
+    ) -> EducationalPlan:
+        """The teaching pipeline (ADR-044): a teacher writes the whole explanation (every spoken word
+        and what is seen), a reviewer checks and improves it, then a visual director plans every
+        scene's picture. The director's reply streams: each scene is launched as soon as its plan
+        (and every earlier scene's) is in. A failed review keeps the teacher's script; a failed or
+        incomplete direction draws the remaining scenes from the teacher's show notes."""
+        duration = gen.request.duration_min * 60
+        script = await stages.teach(gen, ctx)
+        changes: list[str] = []
+        if self.settings.animator_script_review:
+            try:
+                reviewed = await stages.review(gen, script, ctx)
+            except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
+                log.warning("script review for %s failed (%s): keeping the teacher's script", gen.id, e)
+            else:
+                target = target_words(duration)
+                if script_words(reviewed.script) <= target * 1.35 or script_words(
+                    reviewed.script
+                ) <= script_words(script):
+                    script, changes = reviewed.script, reviewed.changes
+                else:
+                    # The lesson would run far longer than asked: the teacher's shorter script stays.
+                    log.warning(
+                        "script review for %s made it %d words (target %d): keeping the teacher's script",
+                        gen.id,
+                        script_words(reviewed.script),
+                        target,
+                    )
+        plan = script_plan(script, gen.request.audience, duration)
+        teaching: dict[str, Any] = {"script": script.model_dump(), "changes": changes, "look": None}
+        gen.plan, gen.teaching = plan, teaching
+        gen.status = "generating"
+        await self._save(gen)
+        chapter = plan.chapters[0].id
+        planned: dict[int, DirectedScene] = {}
+
+        def add(k: int) -> None:
+            rec = scene_record(gen, chapter, script_brief(script.scenes[k], planned.get(k)))
+            gen.scenes.append(rec)
+            launch(rec)
+
+        def on_look(look: str) -> None:
+            teaching["look"] = look
+
+        def on_scene(directed: DirectedScene) -> None:
+            k = directed.scene - 1
+            if not 0 <= k < len(script.scenes) or k in planned:
+                return
+            planned[k] = directed
+            while len(gen.scenes) < len(script.scenes) and len(gen.scenes) in planned:
+                add(len(gen.scenes))
+
+        try:
+            direction = await stages.direct(gen, script, ctx, on_look, on_scene)
+            teaching["look"] = teaching["look"] or direction.look
+            for directed in direction.scenes:
+                on_scene(directed)
+        except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
+            log.warning("visual direction for %s failed (%s): using the teacher's show notes", gen.id, e)
+        while len(gen.scenes) < len(script.scenes):
+            add(len(gen.scenes))
+        gen.chapters_done.append(chapter)
         return plan
 
     async def _generate_sequential(

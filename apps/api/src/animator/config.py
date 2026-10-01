@@ -17,6 +17,9 @@ from animator import REPO_ROOT
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
 
 STAGES = (
+    "teacher",
+    "reviewer",
+    "director",
     "educational_planner",
     "storyboard",
     "animation_planner",
@@ -51,8 +54,15 @@ class Settings(BaseSettings):
     llm_budget_usd_per_generation: float = 5.0
     llm_budget_tokens_per_generation: int = 2_000_000
 
-    # Per-stage model assignment. Empty means "not configured" and fails loudly when used.
-    # Efforts default to low: generation must keep up with playback (ADR-033).
+    # Per-stage model assignment. Empty means "not configured" and fails loudly when used (the
+    # teaching stages then use the storyboard's model). The teaching stages think at medium effort:
+    # the explanation is the product (ADR-044); the fast pipeline's stages default to low (ADR-033).
+    animator_model_teacher: str = ""
+    animator_effort_teacher: ReasoningEffort = "medium"
+    animator_model_reviewer: str = ""
+    animator_effort_reviewer: ReasoningEffort = "low"
+    animator_model_director: str = ""
+    animator_effort_director: ReasoningEffort = "medium"
     animator_model_educational_planner: str = ""
     animator_effort_educational_planner: ReasoningEffort = "low"
     animator_model_storyboard: str = ""
@@ -78,6 +88,27 @@ class Settings(BaseSettings):
     animator_llm_fixtures_dir: Path = Path("fixtures/llm/latest")
 
     # --- Pipeline (used from Phase 8) ---
+    # teaching (ADR-044): a teacher writes the whole explanation, a reviewer checks and improves it, a
+    # visual director plans every scene's picture, then the scenes are drawn (about 1-2 minutes).
+    # fast: plan and storyboard in one call (ADR-033, about 30 seconds).
+    animator_pipeline: Literal["teaching", "fast"] = "teaching"
+    # The reviewer's pass over the teacher's script (teaching pipeline).
+    animator_script_review: bool = True
+    # Longer lessons are planned in chapters by the fast pipeline's planner.
+    animator_teaching_max_duration_s: float = 600.0
+    # A teaching lesson's scene drafts think at this effort (medium: about twice as many valid,
+    # glitch-free first drafts as low, at twice the time; ADR-041's benchmark). Corrections keep
+    # ANIMATOR_EFFORT_CORRECTION.
+    animator_effort_teaching_scene: ReasoningEffort = "medium"
+    # A teaching lesson's valid scenes are rendered and looked at by a vision model, which can ask
+    # for one round of fixes (needs the built web app; ANIMATOR_ENABLE_VISUAL_CRITIC does the same
+    # for every lesson).
+    animator_teaching_visual_critic: bool = True
+    # How many times a teaching scene is reviewed (each review can ask for one round of fixes).
+    animator_teaching_critic_rounds: int = Field(default=1, ge=1, le=3)
+    # A teaching lesson's valid scenes are framed by the camera: their content centred on the stage
+    # and zoomed in (up to 1.5x) to fill it, when the engine confirms the framed scene is clean.
+    animator_auto_frame: bool = True
     animator_max_correction_attempts: int = 3  # patch rounds take seconds, so a third is affordable
     # Tidy each valid scene's layout with the engine's hints (labels off objects, arrows bent around
     # things, nothing under the caption); no model call, a fraction of a second per scene.
@@ -189,6 +220,8 @@ class Settings(BaseSettings):
         if stage not in STAGES:
             raise ValueError(f"unknown pipeline stage '{stage}'")
         primary = str(getattr(self, f"animator_model_{stage}")).strip()
+        if not primary and stage in ("teacher", "reviewer", "director"):
+            primary = self.animator_model_storyboard.strip()
         effort: ReasoningEffort = getattr(self, f"animator_effort_{stage}")
         chain = [primary] if primary else []
         for m in self.animator_model_fallbacks.split(","):

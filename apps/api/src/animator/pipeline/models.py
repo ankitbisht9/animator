@@ -169,6 +169,89 @@ class LessonOutline(_Strict):
         return _check_scenes(v)
 
 
+# ---------------------------------------------------------------------- the teaching pipeline (ADR-044)
+
+TeachingStep = Literal[
+    "hook", "prior_knowledge", "intuition", "concept", "example", "misconception", "apply", "recap"
+]
+
+
+class ScriptBeat(_Strict):
+    say: str = Field(
+        description="What the narrator says: one or two spoken sentences; **word** marks the key word"
+    )
+    show: str = Field(description="What the learner sees while this is said (concrete, drawable)")
+
+
+class ScriptScene(_Strict):
+    title: str = Field(description="Short scene title, in English (it is shown on screen)")
+    step: TeachingStep
+    goal: str = Field(description="What the learner understands after this scene")
+    beats: list[ScriptBeat]
+
+
+class TeachingScript(_Strict):
+    """The lesson as a master teacher would explain it: every spoken word, and what is seen."""
+
+    title: str
+    subtitle: str
+    subject: str = Field(
+        description="physics, chemistry, biology, mathematics, computer_science, economics, ..."
+    )
+    learner: str = Field(description="Who the learner is and what they already know")
+    hook: str = Field(description="The opening question or surprise")
+    learning_objectives: list[str]
+    core_idea: str = Field(description="The one sentence the learner must remember")
+    intuition: str = Field(description="The everyday picture or analogy that makes it click")
+    misconception: str = Field(description="The most likely wrong belief, and why it is wrong")
+    worked_example: str | None = Field(
+        description="A concrete example with real, simple numbers, step by step; null if none fits"
+    )
+    key_terms: list[KeyTerm]
+    scenes: list[ScriptScene]
+    summary: list[str]
+
+    @field_validator("scenes")
+    @classmethod
+    def _has_scenes(cls, v: list[ScriptScene]) -> list[ScriptScene]:
+        if not v:
+            raise ValueError("the script needs at least one scene")
+        for s in v:
+            if not s.beats or not all(b.say.strip() for b in s.beats):
+                raise ValueError(f"scene '{s.title}' needs beats with narration")
+        return v
+
+
+class ScriptReview(_Strict):
+    changes: list[str] = Field(description="What was fixed or improved, one line each; empty if nothing")
+    script: TeachingScript
+
+
+class DirectedScene(_Strict):
+    scene: int = Field(description="The script scene this plans (1-based)")
+    layout: Layout
+    visual_plan: str = Field(
+        description="Composition: the central picture, its region and size, where everything else sits, "
+        "what moves; no coordinates"
+    )
+    objects_new: list[str] = Field(description="'id: short description' for each object in the scene")
+    physics: str | None = Field(description="Solver to use and how, or null when no physics runs")
+    beats: list[str] = Field(
+        description="One per script beat, in order: exactly what appears, moves, changes or is "
+        "highlighted while that beat is said"
+    )
+    engagement: str = Field(description="The attention device of this scene")
+    checkpoint: Checkpoint | None
+
+
+class Direction(_Strict):
+    look: str = Field(
+        description="The lesson's visual identity: recurring objects (id, shape, colour role, size, "
+        "place) and colour meanings, kept the same in every scene"
+    )
+    scenes: list[DirectedScene]
+
+
 # ---------------------------------------------------------------------- generation records
 
 GenerationStatus = Literal["queued", "planning", "generating", "complete", "failed", "cancelled", "paused"]
@@ -260,6 +343,9 @@ class Generation(BaseModel):
     status: GenerationStatus = "queued"
     error: str | None = None
     plan: EducationalPlan | None = None
+    # The teaching pipeline's work (ADR-044): the reviewed script, what the review changed, and the
+    # lesson's visual identity. None for lessons made by the fast pipeline.
+    teaching: dict[str, Any] | None = None
     chapters_done: list[str] = Field(default_factory=list)
     scenes: list[SceneRecord] = Field(default_factory=list)
     metrics: Metrics = Field(default_factory=Metrics)

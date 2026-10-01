@@ -59,7 +59,10 @@ def create_app(
         )
         frames = keyframes
         owned_frames: BrowserKeyframes | None = None
-        if frames is None and s.animator_enable_visual_critic and (WEB_DIST / "index.html").exists():
+        critic = s.animator_enable_visual_critic or (
+            s.animator_pipeline == "teaching" and s.animator_teaching_visual_critic
+        )
+        if frames is None and critic and (WEB_DIST / "index.html").exists():
             owned_frames = BrowserKeyframes()
             frames = owned_frames
         # Narration audio: None unless ANIMATOR_TTS_ENABLED (then nothing speaks anywhere).

@@ -15,6 +15,7 @@ Auth, outage and budget errors propagate: the generation stops and can be resume
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -47,8 +48,8 @@ from animator.pipeline.narration import (
     take_record,
 )
 from animator.pipeline.prompts import PromptPack, slug
-from animator.pipeline.stages import Stages, format_issues
-from animator.pipeline.tidy import autofix, tidy
+from animator.pipeline.stages import CriticIssue, CriticReport, Stages, format_issues
+from animator.pipeline.tidy import autofix, salvage, tidy
 from animator.tts import SpeechCache, Spoken
 from animator.tts.script import Script, SpeechScripter, wants_script
 from animator_contracts.protocol import CompileResult, SceneState
@@ -160,6 +161,12 @@ def fallback_scene(rec: SceneRecord) -> dict[str, Any]:
 
 
 DEFAULT_CAMERA = {"center": {"x": 800, "y": 450}, "zoom": 1}
+
+# Auto-framing (ADR-044): the stage on screen (between the title bar and the captions), how much of it
+# the framed content fills, and the most the camera zooms in.
+STAGE = (48.0, 116.0, 1552.0, 736.0)
+FRAME_FILL = 0.86
+FRAME_MAX_ZOOM = 1.5
 
 
 def normalize(dsl: dict[str, Any], rec: SceneRecord, independent: bool = False) -> dict[str, Any]:
@@ -455,7 +462,9 @@ class Pipeline:
         issues: list[dict[str, Any]] = []
         llm_error: str | None = None
         critic_notes: str | None = None
-        critics_used = False
+        critic_rounds = 0  # reviews spent on this scene
+        # The valid scene a critic asked to revise: kept if the revision does not come out better.
+        reviewed: tuple[dict[str, Any], CompileResult] | None = None
 
         for n in range(1, max_attempts + 1):
             final = n == max_attempts and n > 1
@@ -517,9 +526,19 @@ class Pipeline:
             attempt.warnings = len(warnings)
             if n > 1:
                 gen.metrics.corrections += 1
-            if res.ok and not critics_used and n < max_attempts and self._critics_on():
-                critics_used = True
-                report = await self._critique(gen, rec, dsl, res, previous_scenes, ctx)
+            # What is shown: the valid scene, framed by the camera (teaching lessons). Corrections
+            # keep working on the scene as the model wrote it (`dsl`).
+            shown, shown_res = dsl, res
+            if res.ok and res.endState is not None and self._framing(gen):
+                shown, shown_res = await self._frame(dsl, res, prev_state)
+            if (
+                res.ok
+                and critic_rounds < self._critic_rounds(gen)
+                and n < max_attempts
+                and self._critics_on(gen)
+            ):
+                critic_rounds += 1
+                report = await self._critique(gen, rec, shown, shown_res, previous_scenes, ctx, prev_state)
                 attempt.critic = report.model_dump() if report else None
                 major = [i for i in (report.issues if report else []) if i.severity == "major"]
                 if report is not None and report.verdict == "revise" and major:
@@ -527,15 +546,42 @@ class Pipeline:
                     attempt.seconds = round(time.perf_counter() - t0, 2)
                     rec.attempts.append(attempt)
                     issues = []
+                    if shown_res.endState is not None:
+                        reviewed = (shown, shown_res)
                     continue
             attempt.seconds = round(time.perf_counter() - t0, 2)
             rec.attempts.append(attempt)
             if res.ok and res.endState is not None:
-                gen.metrics.glitches_left += len(glitches_of(res))
-                self._accept(rec, dsl, res, warnings, "ready")
+                if reviewed is not None and len(glitches_of(shown_res)) > len(glitches_of(reviewed[1])):
+                    # The revision added visual glitches: the scene the critic saw stays.
+                    shown, shown_res = reviewed
+                warnings = [i.model_dump() for i in shown_res.issues if i.severity == "warning"]
+                gen.metrics.glitches_left += len(glitches_of(shown_res))
+                self._accept(rec, shown, shown_res, warnings, "ready")
                 await changed()
                 return
             issues = errors + [w for w in warnings if w.get("source") == "layout"][:5]
+
+        if reviewed is not None:
+            # The critic's revision never became valid: the valid scene it reviewed is shown.
+            dsl, res = reviewed
+            warnings = [i.model_dump() for i in res.issues if i.severity == "warning"]
+            gen.metrics.glitches_left += len(glitches_of(res))
+            self._accept(rec, dsl, res, warnings, "ready")
+            await changed()
+            return
+
+        if gen.teaching is not None and dsl is not None and issues:
+            saved = salvage(dsl, [i for i in issues if i.get("severity") == "error"])
+            if saved is not None:
+                fixed, res, _ = await self._check(saved, prev_state)
+                if res.ok and res.endState is not None:
+                    log.info("scene %s: kept without the labels it could not stop overlapping", rec.id)
+                    warnings = [i.model_dump() for i in res.issues if i.severity == "warning"]
+                    gen.metrics.glitches_left += len(glitches_of(res))
+                    self._accept(rec, fixed, res, warnings, "ready")
+                    await changed()
+                    return
 
         reason = llm_error or (
             format_issues(issues, limit=3) if issues else "the scene could not be generated"
@@ -543,6 +589,84 @@ class Pipeline:
         await self._degrade(rec, prev_state, reason)
         gen.metrics.degraded += 1
         await changed()
+
+    def _framing(self, gen: Generation) -> bool:
+        return gen.teaching is not None and self.settings.animator_auto_frame
+
+    async def _frame(
+        self, dsl: dict[str, Any], res: CompileResult, prev_state: SceneState | None
+    ) -> tuple[dict[str, Any], CompileResult]:
+        """Auto-framing (ADR-044): the camera frames what the scene actually shows, like a camera
+        operator. The engine reports where every object is over the whole scene; the camera then
+        centres that content on the stage (between the title bar and the captions) and zooms in until
+        it fills about 86% of it, at most 1.5x. Nothing moves relative to anything else, and text only
+        gets larger. Scenes whose model chose a camera (a set camera or a camera move) are left alone,
+        and the framed scene is kept only if it stays valid with no more glitches or untidiness."""
+        if dsl.get("layout") in ("title_card", "no_title"):
+            return dsl, res
+        if any(a.get("action") == "camera_move" for a in dsl.get("timeline") or []):
+            return dsl, res
+        cam = dsl.get("camera") or {}
+        center = cam.get("center") or {}
+        if (
+            abs(float(center.get("x", 800)) - 800) > 1
+            or abs(float(center.get("y", 450)) - 450) > 1
+            or abs(float(cam.get("zoom") or 1) - 1) > 1e-3
+        ):
+            return dsl, res
+        duration = float(res.duration or dsl.get("duration") or 0)
+        if duration <= 0.2:
+            return dsl, res
+        times = {round(duration * k / 12, 3) for k in range(1, 12)}
+        times |= {round(max(0.05, b.end - 0.1), 3) for b in res.beats or []}
+        try:
+            sample = await self.engine.sample(dsl, sorted(t for t in times if 0 < t < duration), prev_state)
+        except EngineError:
+            return dsl, res
+        boxes = [
+            o["bbox"]
+            for frame in sample.frames
+            for o in frame.get("objects") or []
+            if o.get("layer") != "overlay"
+            and (o.get("alpha") or 0) > 0.05
+            and isinstance(o.get("bbox"), dict)
+            and (o["bbox"].get("w", 0) > 0 or o["bbox"].get("h", 0) > 0)
+        ]
+        if not sample.ok or not boxes:
+            return dsl, res
+        x0 = min(b["x"] for b in boxes)
+        y0 = min(b["y"] for b in boxes)
+        x1 = max(b["x"] + b["w"] for b in boxes)
+        y1 = max(b["y"] + b["h"] for b in boxes)
+        sx0, sy0, sx1, sy1 = STAGE
+        zoom = min(
+            FRAME_MAX_ZOOM,
+            FRAME_FILL * (sx1 - sx0) / max(1.0, x1 - x0),
+            FRAME_FILL * (sy1 - sy0) / max(1.0, y1 - y0),
+        )
+        if zoom < 1:
+            return dsl, res  # it does not fit as it is: the engine's own checks deal with that
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        scx, scy = (sx0 + sx1) / 2, (sy0 + sy1) / 2
+        if zoom < 1.08 and abs(cx - scx) < 60 and abs(cy - scy) < 40:
+            return dsl, res  # already well framed
+        framed = copy.deepcopy(dsl)
+        framed["camera"] = {
+            "center": {"x": round(cx - (scx - 800) / zoom, 1), "y": round(cy - (scy - 450) / zoom, 1)},
+            "zoom": round(zoom, 3),
+        }
+        try:
+            again = await self.engine.compile(framed, prev_state)
+        except EngineError:
+            return dsl, res
+        if (
+            again.ok
+            and again.endState is not None
+            and len(glitches_of(again)) <= len(glitches_of(res))
+            and _untidy(again) <= _untidy(res)
+        ):
+            return framed, again
+        return dsl, res
 
     def _shape(self, data: dict[str, Any], rec: SceneRecord) -> dict[str, Any]:
         return normalize(data, rec, independent=self.settings.animator_scene_mode == "parallel")
@@ -654,10 +778,20 @@ class Pipeline:
         for task in self._background.pop(gen_id, set()):
             task.cancel()
 
-    def _critics_on(self) -> bool:
-        return self.settings.animator_enable_llm_critic or (
-            self.settings.animator_enable_visual_critic and self.keyframes is not None
+    def _visual_critic(self, gen: Generation) -> bool:
+        """Rendered keyframes go to a vision model: for every lesson (ANIMATOR_ENABLE_VISUAL_CRITIC)
+        or for teaching lessons (ANIMATOR_TEACHING_VISUAL_CRITIC, ADR-044)."""
+        wanted = self.settings.animator_enable_visual_critic or (
+            gen.teaching is not None and self.settings.animator_teaching_visual_critic
         )
+        return wanted and self.keyframes is not None
+
+    def _critic_rounds(self, gen: Generation) -> int:
+        """How many times a scene may be reviewed (each review can ask for one round of fixes)."""
+        return max(1, self.settings.animator_teaching_critic_rounds) if gen.teaching is not None else 1
+
+    def _critics_on(self, gen: Generation) -> bool:
+        return self.settings.animator_enable_llm_critic or self._visual_critic(gen)
 
     async def _critique(
         self,
@@ -667,19 +801,98 @@ class Pipeline:
         res: CompileResult,
         previous_scenes: list[dict[str, Any]],
         ctx: CallContext,
+        prev_state: SceneState | None = None,
     ) -> Any:
         stages = await self.stages()
         images: list[bytes] = []
-        if self.settings.animator_enable_visual_critic and self.keyframes is not None and res.beats:
+        summary = summarize_for_critic(dsl, res)
+        poor: list[str] = []
+        if self._visual_critic(gen) and self.keyframes is not None and res.beats:
             k = self.settings.animator_visual_critic_keyframes
             ends = [b.end - 0.1 for b in res.beats]
             step = max(1, len(ends) // k)
             times = [max(0.1, t) for t in ends[::step][:k]]
             images = await self.keyframes.keyframes([*previous_scenes, dsl], len(previous_scenes), times)
+            if gen.teaching is not None:
+                measured, poor = await self._composition(dsl, prev_state, times)
+                if measured:
+                    summary += "\nComposition, measured by the engine at the keyframes:\n" + "\n".join(
+                        measured
+                    )
         try:
-            return await stages.critic(gen, rec, summarize_for_critic(dsl, res), images, ctx)
+            report = await stages.critic(gen, rec, summary, images, ctx)
         except (LLMRefusal, LLMIncomplete, LLMBadOutput):
-            return None  # a failed review never blocks a valid scene
+            report = None  # a failed review never blocks a valid scene
+        if poor:
+            # A picture that is small or off-centre with most of the stage empty is always fixed,
+            # whatever the reviewer saw (Code2Video's occupancy feedback).
+            issue = CriticIssue(
+                severity="major",
+                problem="The composition is poor: " + "; ".join(poor) + ".",
+                fix="At every moment, make the visible picture one balanced group centred on the stage "
+                "that fills about 60 to 80% of it: enlarge the main objects (sizes, widths, icon sizes) "
+                "and place them around the stage centre (slots stage.center, stage.left, stage.right), "
+                "keeping labels next to what they name.",
+            )
+            if report is None:
+                report = CriticReport(verdict="revise", issues=[issue])
+            else:
+                report = CriticReport(verdict="revise", issues=[*report.issues, issue])
+        return report
+
+    async def _composition(
+        self, dsl: dict[str, Any], prev_state: SceneState | None, times: list[float]
+    ) -> tuple[list[str], list[str]]:
+        """Where the visible picture sits on screen at each time (the camera applied): its box, how
+        much of the stage it covers and how far its centre is from the stage centre. Returns the
+        lines for the reviewer and the times whose composition is poor."""
+        try:
+            sample = await self.engine.sample(dsl, times, prev_state)
+        except EngineError:
+            return [], []
+        if not sample.ok:
+            return [], []
+        sx0, sy0, sx1, sy1 = STAGE
+        sw, sh = sx1 - sx0, sy1 - sy0
+        lines: list[str] = []
+        poor: list[str] = []
+        for frame in sample.frames:
+            cam = frame.get("camera") or {}
+            zoom = float(cam.get("zoom") or 1)
+            cx, cy = float(cam.get("cx", 800)), float(cam.get("cy", 450))
+            boxes = [
+                o["bbox"]
+                for o in frame.get("objects") or []
+                if o.get("layer") != "overlay"
+                and (o.get("alpha") or 0) > 0.05
+                and isinstance(o.get("bbox"), dict)
+            ]
+            if not boxes:
+                continue
+            x0 = (min(b["x"] for b in boxes) - cx) * zoom + 800
+            x1 = (max(b["x"] + b["w"] for b in boxes) - cx) * zoom + 800
+            y0 = (min(b["y"] for b in boxes) - cy) * zoom + 450
+            y1 = (max(b["y"] + b["h"] for b in boxes) - cy) * zoom + 450
+            wf, hf = (x1 - x0) / sw, (y1 - y0) / sh
+            dx, dy = ((x0 + x1) / 2 - (sx0 + sx1) / 2) / sw, ((y0 + y1) / 2 - (sy0 + sy1) / 2) / sh
+            t = float(frame.get("t", 0))
+            line = (
+                f"- at {t:.1f}s: the picture spans x {x0:.0f} to {x1:.0f}, y {y0:.0f} to {y1:.0f} "
+                f"({wf:.0%} of the stage width, {hf:.0%} of its height); its centre is "
+                f"{dx:+.0%} across and {dy:+.0%} down from the stage centre"
+            )
+            if wf * hf < 0.25 or abs(dx) > 0.2 or abs(dy) > 0.2:
+                where = "low" if dy > 0.2 else "high" if dy < -0.2 else "left" if dx < -0.2 else "right"
+                problem = (
+                    f"at {t:.1f}s the picture covers only {wf:.0%} x {hf:.0%} of the stage"
+                    if wf * hf < 0.25
+                    else f"at {t:.1f}s the picture sits {where} on the stage (x {x0:.0f}-{x1:.0f}, "
+                    f"y {y0:.0f}-{y1:.0f}), leaving the rest empty"
+                )
+                poor.append(problem)
+                line += " (POOR)"
+            lines.append(line)
+        return lines, poor
 
     def _accept(
         self,

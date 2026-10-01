@@ -43,6 +43,8 @@ def settings(**kw: Any) -> Settings:
         "animator_scene_mode": "sequential",
         "animator_scene_drafts": 1,  # call counts below assume one draft; hedging has its own tests
         "animator_correction_drafts": 1,
+        # These tests cover the fast pipeline; the teaching pipeline has its own (test_teaching.py).
+        "animator_pipeline": "fast",
     }
     base.update(kw)
     return Settings(_env_file=None, **base)

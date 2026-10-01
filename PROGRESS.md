@@ -392,3 +392,22 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - Beats play their part of the scene's recording (`offset` in the narration record). Captions stay word-synced,
   and the player and the export play it continuously.
 - `ANIMATOR_TTS_ONE_TAKE=0` goes back to sentence by sentence.
+
+## The teaching pipeline (ADR-044)
+
+- `ANIMATOR_PIPELINE=teaching` (default):
+  - a teacher writes the whole lesson (every spoken sentence and what is seen, with a worked example, the
+    misconception and the core idea);
+  - a reviewer checks and improves it against a measured word budget;
+  - a visual director plans every scene (streamed);
+  - the scenes are drawn with prompt `animation.v7` at medium effort;
+  - a vision critic sees rendered keyframes plus the engine's composition measurements, and the camera frames
+    small content.
+- `fast` keeps the previous pipeline exactly (its prompts are pinned).
+- Fixes for every lesson: a visible `\n` in text becomes a real line break, and the engine has named colours
+  (blue, green, yellow, sky, brown, ...).
+- Measured on 1-minute lessons:
+  - 150-180 words of real explanation, against 95 before;
+  - ready in about 1.7-2.3 minutes, for $0.10-0.18;
+  - no simplified scenes in 28 scenes.
+- An audio judge rated the new scripts on ElevenLabs flash as well as on multilingual v2 and v3.
