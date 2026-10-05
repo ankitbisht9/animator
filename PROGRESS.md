@@ -421,3 +421,18 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - Default voice model `eleven_v4`:
   - 5.1 vs 3.1 semitones of pitch variation and about 130 words a minute;
   - an audio judge preferred it with modulation over the previous voice 12 to 4.
+
+## Labels clear of what they name (ADR-046)
+
+- **Broken words.** The engine reports a word split across lines (`TEXT_WORD_BROKEN`), and the polish widens the
+  box, for every lesson.
+- **Relocation.** In teaching lessons, a label still covering, hidden under or crossed by something after the
+  polish is moved: to another side of what it names, beside the whole drawing, or nearby. Only places the
+  engine confirms are clean are used. Text meant to be inside a box stays.
+- **No model call** and no prompt change.
+- **Measured** on 95 scenes:
+  - labels over objects 28 -> 13;
+  - arrows through labels 16 -> 9;
+  - hidden text 8 -> 4;
+  - broken words 8 -> 0.
+- **Off switch:** `ANIMATOR_LABEL_RELOCATION=false`.

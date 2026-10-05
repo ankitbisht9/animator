@@ -172,6 +172,8 @@ export interface TextLayout {
   wordCount: number;
   /** Characters replaced by `?` because no font has them. */
   missing: string[];
+  /** Words wider than the box, split across lines character by character. */
+  broken: string[];
 }
 
 export interface TextStyle {
@@ -213,13 +215,31 @@ function tokenize(text: string, baseWeight: FontWeight): Token[] {
 const cache = new Map<string, TextLayout>();
 const CACHE_MAX = 2000;
 
+/** Words split while `brokenWordsIn` runs (layouts made or taken from the cache). */
+let brokenSink: string[] | null = null;
+
+/** The words that the text layouts made while `fn` runs had to split across lines. */
+export function brokenWordsIn(fn: () => unknown): string[] {
+  const outer = brokenSink;
+  const found: string[] = [];
+  brokenSink = found;
+  try {
+    fn();
+  } finally {
+    brokenSink = outer;
+  }
+  return found;
+}
+
 export function layoutText(text: string, style: TextStyle): TextLayout {
   const key = `${text}\u0000${style.size}|${style.weight ?? 400}|${style.maxWidth ?? ""}|${style.lineHeight ?? ""}|${style.align ?? ""}|${style.letterSpacing ?? 0}`;
-  const hit = cache.get(key);
-  if (hit) return hit;
-  const result = computeLayout(text, style);
-  if (cache.size >= CACHE_MAX) cache.clear();
-  cache.set(key, result);
+  let result = cache.get(key);
+  if (!result) {
+    result = computeLayout(text, style);
+    if (cache.size >= CACHE_MAX) cache.clear();
+    cache.set(key, result);
+  }
+  if (brokenSink && result.broken.length) brokenSink.push(...result.broken);
   return result;
 }
 
@@ -255,6 +275,7 @@ function computeLayout(text: string, style: TextStyle): TextLayout {
   let lineWidth = 0;
   let pendingSpace: Token | null = null;
   let wordIndex = 0;
+  const broken: string[] = [];
 
   const flush = () => {
     lines.push({ glyphs: line, width: lineWidth });
@@ -286,6 +307,7 @@ function computeLayout(text: string, style: TextStyle): TextLayout {
     const word = line.length === 0 ? measure(tok.glyphs, null) : wordM;
     if (word.width > maxWidth && line.length === 0) {
       // A single word wider than the box: break it by character.
+      broken.push(word.glyphs.map((g) => g.ch).join(""));
       for (const g of word.glyphs) {
         if (line.length > 0 && lineWidth + g.w > maxWidth) flush();
         line.push({ ...g, x: lineWidth, word: wordIndex });
@@ -321,5 +343,6 @@ function computeLayout(text: string, style: TextStyle): TextLayout {
     glyphCount,
     wordCount: wordIndex,
     missing,
+    broken,
   };
 }

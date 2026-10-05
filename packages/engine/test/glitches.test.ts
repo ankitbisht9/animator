@@ -108,6 +108,27 @@ describe("a row of items wrapping", () => {
   });
 });
 
+describe("a word split across lines (ADR-046)", () => {
+  const note = (width: number) => ({
+    id: "info",
+    type: "note",
+    params: { title: "Delivery details", text: "Item, quantity, destination", width },
+    place: { x: 800, y: 400 },
+  });
+
+  it("flags a box too narrow for its longest word, with the width that keeps every word whole", () => {
+    const broken = find([note(160)], "TEXT_WORD_BROKEN");
+    expect(broken?.message).toContain("'info'");
+    const width = Number(broken?.fix?.params?.width);
+    expect(width).toBeGreaterThan(160);
+    expect(find([note(width)], "TEXT_WORD_BROKEN")).toBeUndefined();
+  });
+
+  it("does not flag text whose words all fit, even when it wraps", () => {
+    expect(find([note(380)], "TEXT_WORD_BROKEN")).toBeUndefined();
+  });
+});
+
 describe("containers", () => {
   const tank = (id: string, x: number, width = 400) => ({
     id,

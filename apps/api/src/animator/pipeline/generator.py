@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+import re
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
@@ -169,6 +170,48 @@ def fallback_scene(rec: SceneRecord) -> dict[str, Any]:
 
 DEFAULT_CAMERA = {"center": {"x": 800, "y": 450}, "zoom": 1}
 
+# Label relocation (ADR-046): labels tried per scene, places tried per label, and compiles per scene.
+RELOCATE_LABELS = 4
+RELOCATE_TRIES = 14
+RELOCATE_COMPILES = 40
+
+
+# First words of ids that name a kind of object, not a drawing ("label_sourcing", "arrow_1").
+_NOT_A_DRAWING = {"label", "labels", "arrow", "link", "text", "note", "badge", "card", "title", "line"}
+
+
+def _drawing_of(ref: str, boxes: dict[str, dict[str, float]]) -> tuple[float, float, float, float] | None:
+    """The box of the whole drawing `ref` is a part of: the objects sharing the first word of its id
+    (`grape_cluster_berry_4` with `grape_cluster_berry_1`... and `grape_cluster_leaf`). None when `ref`
+    stands alone."""
+    head = ref.split("_")[0]
+    if not head or head in _NOT_A_DRAWING:
+        return None
+    parts = [b for oid, b in boxes.items() if oid.split("_")[0] == head]
+    if len(parts) < 3:
+        return None
+    return (
+        min(b["x"] for b in parts),
+        min(b["y"] for b in parts),
+        max(b["x"] + b["w"] for b in parts),
+        max(b["y"] + b["h"] for b in parts),
+    )
+
+
+def _inside_a_frame(label: str, own: dict[str, float], boxes: dict[str, dict[str, float]]) -> bool:
+    """A label lying (90% or more) within an object at least six times its size is meant to be inside
+    it: the address on a browser bar, a heading in a card, a value in a box. It stays there."""
+    area = max(1.0, own["w"] * own["h"])
+    for oid, b in boxes.items():
+        if oid == label or b["w"] * b["h"] < 6 * area:
+            continue
+        w = min(own["x"] + own["w"], b["x"] + b["w"]) - max(own["x"], b["x"])
+        h = min(own["y"] + own["h"], b["y"] + b["h"]) - max(own["y"], b["y"])
+        if w > 0 and h > 0 and w * h >= 0.9 * area:
+            return True
+    return False
+
+
 # Auto-framing (ADR-044): the stage on screen (between the title bar and the captions), how much of it
 # the framed content fills, and the most the camera zooms in.
 STAGE = (48.0, 116.0, 1552.0, 736.0)
@@ -257,6 +300,7 @@ UNTIDY = {
     "OUT_OF_STAGE",
     "TEXT_WRAPPED",
     "LEAVES_CONTAINER",
+    "TEXT_WORD_BROKEN",
 }
 
 # What a viewer sees as a glitch: text hidden or cut, things out of the stage, one thing drawn into
@@ -273,7 +317,36 @@ GLITCHES = {
     "LABEL_OCCLUDES",
     "CONNECTOR_CROSSES_LABEL",
     "TEXT_TOO_SMALL",
+    "TEXT_WORD_BROKEN",
 }
+
+# A label or text that these name stands where it covers, hides under or is crossed by something: the
+# label is moved (ADR-046). The message names the label first, or second for a connector across it.
+LABEL_TROUBLE = {"LABEL_OCCLUDES", "HIDDEN_TEXT", "LABEL_OVERLAP", "CONNECTOR_CROSSES_LABEL"}
+_QUOTED_IDS = re.compile(r"'([A-Za-z0-9_]+)'")
+
+
+def troubled_labels(res: CompileResult) -> list[str]:
+    """The labels a valid scene still shows in trouble, in the order the engine reports them."""
+    out: list[str] = []
+    for i in res.issues:
+        if i.severity != "warning" or i.code not in LABEL_TROUBLE:
+            continue
+        ids = _QUOTED_IDS.findall(i.message)
+        if len(ids) < 2:
+            continue
+        label = ids[1] if i.code == "CONNECTOR_CROSSES_LABEL" else ids[0]
+        if label not in out:
+            out.append(label)
+    return out
+
+
+def _trouble_with(res: CompileResult, label: str) -> int:
+    return sum(
+        1
+        for i in res.issues
+        if i.severity == "warning" and i.code in LABEL_TROUBLE and f"'{label}'" in i.message
+    )
 
 
 def glitches_of(res: CompileResult) -> list[Any]:
@@ -551,6 +624,7 @@ class Pipeline:
                         ),
                         rec,
                         prev_state,
+                        self._relocating(gen),
                     )
                 )
                 for _ in range(count)
@@ -729,7 +803,7 @@ class Pipeline:
         return normalize(data, rec, independent=self.settings.animator_scene_mode == "parallel")
 
     async def _check(
-        self, dsl: dict[str, Any], prev_state: SceneState | None
+        self, dsl: dict[str, Any], prev_state: SceneState | None, relocate: bool = False
     ) -> tuple[dict[str, Any], CompileResult, bool]:
         """Compile, then apply the sure fixes for its errors (pipeline/tidy.py) and compile again.
         The fixed scene is kept when it has fewer errors, or as many but none of the old ones: the
@@ -753,6 +827,9 @@ class Pipeline:
         if res.ok and self.settings.animator_layout_polish:
             dsl, res, polished = await self._polish(dsl, res, prev_state)
             autofixed = autofixed or polished
+        if res.ok and relocate and troubled_labels(res):
+            dsl, res, moved = await self._relocate(dsl, res, prev_state)
+            autofixed = autofixed or moved
         return dsl, res, autofixed
 
     async def _polish(
@@ -780,11 +857,121 @@ class Pipeline:
             dsl, res, polished = fixed, res_fixed, True
         return dsl, res, polished
 
+    async def _relocate(
+        self, dsl: dict[str, Any], res: CompileResult, prev_state: SceneState | None
+    ) -> tuple[dict[str, Any], CompileResult, bool]:
+        """Label relocation (ADR-046), after the polish, without a model call. A label (or note, badge,
+        caption text) that still covers an object, hides under one or has a connector across it is
+        tried in other places around what it names: the other sides of its reference at a few
+        distances, around the whole drawing when it names a part of one (a bunch of grapes made of
+        circles), or nearby when it was placed by coordinates. The engine judges every try; the first
+        place that clears the label without any other problem getting worse is kept."""
+        moved = False
+        budget = RELOCATE_COMPILES
+        for label in troubled_labels(res)[:RELOCATE_LABELS]:
+            if budget <= 0:
+                break
+            places = await self._label_places(dsl, res, label, prev_state)
+            for place in places[:RELOCATE_TRIES]:
+                if budget <= 0:
+                    break
+                budget -= 1
+                trial = copy.deepcopy(dsl)
+                obj = next((o for o in trial.get("objects") or [] if o.get("id") == label), None)
+                if obj is None:
+                    break
+                obj["place"] = place
+                try:
+                    again = await self.engine.compile(trial, prev_state)
+                except EngineError:
+                    continue
+                if (
+                    again.ok
+                    and again.endState is not None
+                    and _trouble_with(again, label) == 0
+                    and _untidy(again) < _untidy(res)
+                    and len(glitches_of(again)) <= len(glitches_of(res))
+                ):
+                    dsl, res, moved = trial, again, True
+                    break
+        return dsl, res, moved
+
+    async def _label_places(
+        self, dsl: dict[str, Any], res: CompileResult, label: str, prev_state: SceneState | None
+    ) -> list[dict[str, Any]]:
+        """Places to try for a label, the most natural first: the other sides of what it is placed
+        against (a little farther each time), the sides of the whole drawing when that is a part of
+        one, then nearby positions when it was placed by coordinates. A label meant to be inside
+        something (placed at its centre or inside it, or lying within a much larger object: the
+        address on a browser bar, a heading in a card) is left where it is."""
+        objects = {str(o.get("id")): o for o in dsl.get("objects") or []}
+        obj = objects.get(label)
+        if obj is None or not isinstance(obj.get("place"), dict):
+            return []
+        place = obj["place"]
+        ref = place.get("relativeTo")
+        if ref and str(place.get("side", "")).startswith(("center", "inside")):
+            return []
+        times = sorted(
+            {round(i.time, 3) for i in res.issues if i.time is not None and f"'{label}'" in i.message}
+        )
+        if not times:
+            return []
+        try:
+            sample = await self.engine.sample(dsl, times[:1], prev_state)
+        except EngineError:
+            return []
+        if not sample.ok or not sample.frames:
+            return []
+        boxes = {
+            o["id"]: o["bbox"]
+            for o in sample.frames[0].get("objects") or []
+            if isinstance(o.get("bbox"), dict)
+        }
+        own = boxes.get(label)
+        if own is None or _inside_a_frame(label, own, boxes):
+            return []
+        out: list[dict[str, Any]] = []
+        if isinstance(ref, str) and ref in objects:
+            for gap in (24, 44, 72):
+                for side in ("below", "above", "right", "left"):
+                    if side == place.get("side") and gap <= float(place.get("gap") or 24):
+                        continue
+                    out.append(
+                        {"relativeTo": ref, "side": side, "gap": gap, "align": "center", "follow": True}
+                    )
+        w, h = own["w"], own["h"]
+        drawing = _drawing_of(str(ref or ""), boxes)
+        if drawing is not None:
+            x0, y0, x1, y1 = drawing
+            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+            for gap in (24, 48):
+                out += [
+                    {"x": round(cx, 1), "y": round(y1 + gap + h / 2, 1)},
+                    {"x": round(cx, 1), "y": round(y0 - gap - h / 2, 1)},
+                    {"x": round(x1 + gap + w / 2, 1), "y": round(cy, 1)},
+                    {"x": round(x0 - gap - w / 2, 1), "y": round(cy, 1)},
+                ]
+        if place.get("x") is not None and place.get("y") is not None:
+            x, y = float(place["x"]), float(place["y"])
+            for r in (0.5, 0.9):
+                for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1)):
+                    out.append({"x": round(x + dx * r * w, 1), "y": round(y + dy * r * h * 1.6, 1)})
+        return out
+
     async def _draft(
-        self, call: Awaitable[LLMResult], rec: SceneRecord, prev_state: SceneState | None
+        self,
+        call: Awaitable[LLMResult],
+        rec: SceneRecord,
+        prev_state: SceneState | None,
+        relocate: bool = False,
     ) -> Draft:
         result = await call
-        return (result, *await self._check(self._shape(result.data, rec), prev_state))
+        return (result, *await self._check(self._shape(result.data, rec), prev_state, relocate))
+
+    def _relocating(self, gen: Generation) -> bool:
+        """Label relocation (ADR-046) for teaching lessons; the fast pipeline keeps its polish only."""
+        return gen.teaching is not None and self.settings.animator_label_relocation
 
     async def _race(self, mine: set[asyncio.Task[Draft]], rivals: set[asyncio.Task[Draft]]) -> Draft:
         """This attempt's calls (`mine`: several drafts for a first attempt, `animator_scene_drafts`)

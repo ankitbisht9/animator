@@ -1501,3 +1501,84 @@ about 30 s for the fast pipeline. The user allowed 1 to 2 minutes for quality.
 - `ANIMATOR_TTS_MODEL=eleven_flash_v2_5`: the previous voice model.
 - `ANIMATOR_TTS_SYNC_HIGHLIGHTS=0`: highlights as the scene writer timed them.
 - Git tag `backup/before-voice-modulation` (56506ba).
+
+## ADR-046 Labels clear of what they name: relocation and whole words (2026-10-02)
+
+**Problem.**
+- **Labels on top of objects.** When objects stand close together, a label or caption text sometimes covers an
+  object, hides under one drawn later, or has an arrow running through it. Reported examples: "Grapes" and
+  "Sugar-rich juice" over the grape drawing (wine lesson), and arrows through a "Delivery details" note (supply
+  chain lesson).
+- **Words split across lines.** A word wider than its box was broken character by character ("Deliver / y").
+
+**Audit** (95 finished teaching scenes, the engine's own warnings):
+- 30 scenes had an overlap-type warning:
+  - LABEL_OCCLUDES in 15 scenes;
+  - CONNECTOR_CROSSES_LABEL in 10;
+  - CONNECTOR_CROSSES_OBJECT in 7;
+  - HIDDEN_TEXT in 6;
+  - OBJECT_OVERLAP in 6.
+- **Causes:**
+  - The polish applies one engine hint per issue. That hint clears one object, so a label between two
+    objects goes from one to the other, and the batch is dropped.
+  - For relativeTo labels, the polish may only flip the side.
+  - Labels are anchored to one part of a drawing (one berry of a grape cluster), so every side of that part is
+    still on the drawing.
+  - The critic has one fix round, and it is spent on bigger things.
+  - The engine breaks a word that does not fit its box character by character, without saying so.
+
+**Decision.** Deterministic layout fixes judged by the engine, with no extra model call and no prompt change:
+1. **`TEXT_WORD_BROKEN`** (engine, warning).
+   - The text layout records every word it had to break. A label-like object (label, text, note, card...) with a
+     broken word is reported once, with a fix: the width (or maxWidth) grown by 10% steps, up to 900, until no
+     word is broken.
+   - It is in UNTIDY and GLITCHES, so the polish applies the widening for every lesson, fast ones too. The
+     polish keeps a change only when the scene gets tidier.
+2. **Label relocation** (`ANIMATOR_LABEL_RELOCATION`, on; teaching lessons only).
+   - **When.** After the polish, for a label still named by LABEL_OCCLUDES, HIDDEN_TEXT, LABEL_OVERLAP or
+     CONNECTOR_CROSSES_LABEL.
+   - **Places tried**, the most natural first:
+     - the other sides of the object it is placed against, at gaps of 24, 44 and 72;
+     - the four sides of the whole drawing, when the object is part of one (three or more objects sharing the
+       first word of their id: `grape_cluster_berry_4`, `grape_cluster_leaf`...);
+     - nearby offsets (half and nine tenths of the label's size, eight directions), when it was placed by
+       coordinates.
+   - **Accepted** only when the compiled scene is valid, the label has no trouble left, the scene is tidier, and
+     there are no more glitches than before.
+   - **Bounds:** 4 labels per scene, 14 places per label, 40 compiles per scene.
+   - **Left alone:**
+     - text placed at the centre of or inside something;
+     - text that lies (90% or more) within an object at least six times its size: a heading in a card, an
+       address on a browser bar, a value in a box. That text is meant to be there.
+
+**Not done.**
+- **No scene-prompt change.** The scene prompt already asks for spacing. Changing it risks the composition that
+  works, and costs a rerun of every eval.
+- **Not handled:** OBJECT_OVERLAP, arrows through objects (CONNECTOR_CROSSES_OBJECT) and TEXT_TOO_SMALL. Moving
+  objects (rather than labels) changes the picture the scene writer meant.
+
+**Measured.**
+- **Offline replay** of the 95 scenes' final scenes: 20 changed, 0 invalid.
+
+  | Warning | Before | After |
+  |---|---|---|
+  | LABEL_OCCLUDES | 28 | 13 |
+  | CONNECTOR_CROSSES_LABEL | 16 | 9 |
+  | HIDDEN_TEXT | 8 | 4 |
+  | TEXT_WORD_BROKEN | 8 | 0 |
+
+  - OBJECT_OVERLAP (10), CONNECTOR_CROSSES_OBJECT (10) and TEXT_TOO_SMALL (14) are unchanged.
+  - The grape scene went from 7 warnings to 0, and the "Delivery details" note was widened.
+- **Visual review** of every changed scene, before and after:
+  - The first version moved text that belongs inside a box out of it (a card heading, a fridge's badge, a
+    browser's address), which is why the frame rule exists.
+  - With the frame rule, every change was an improvement or neutral.
+- **Timing.** Relocation takes 0.01 s per scene typically and 1.9 s at most.
+- **Live** (the two reported topics, 4 scenes each):
+  - 7 of 8 scenes had no overlap warning. The eighth kept a bottle's label on the bottle (meant to be there) and
+    an arrow through a barrel.
+  - Ready in 134-163 s, $0.17 a lesson, as before.
+
+**Rollback.**
+- `ANIMATOR_LABEL_RELOCATION=false`: labels are left where the polish puts them.
+- Git tag `backup/before-overlap-fixes` (f86b6b2, v1.45).

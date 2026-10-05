@@ -14,6 +14,7 @@ import { apply, multiply, transformRect } from "../math/matrix";
 import { roundTo } from "../math/num";
 import { area, contains, expand, intersection, type Rect } from "../math/rect";
 import type { Vec2 } from "../math/vec";
+import { brokenWordsIn } from "../text/layout";
 import { getTheme } from "../theme/themes";
 import type { CompiledScene } from "../timeline/types";
 import { type IssueFix, issue, type ValidationIssue } from "./issues";
@@ -230,6 +231,7 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
   // `object|container` pairs seen fully inside at rest (a block in a tank), and texts checked for wrapping.
   const insideOnce = new Set<string>();
   const wrapChecked = new Set<string>();
+  const brokenChecked = new Set<string>();
   // Moving objects are checked at rest (after each move), not in passing (SGA: transient overlaps during
   // a motion are fine, the positions it rests in are not).
   const actions = Object.values(cs.actions);
@@ -629,6 +631,36 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
           ? `Give it maxWidth ${want} so the row stays on one line.`
           : "Too many items for one line: show at most about 16, abbreviating the middle with '…' (1 2 3 … 62 63 64), in one text or one object per item.",
         fits ? { dx: 0, dy: 0, params: { maxWidth: want } } : undefined,
+      );
+    }
+
+    // A word too long for its box, split across lines ("Deliver / y", "destinati / on"): the sure fix
+    // widens the box to the narrowest width that keeps every word whole.
+    for (const o of labels) {
+      if (brokenChecked.has(o.id)) continue;
+      brokenChecked.add(o.id);
+      const sp = spec(o);
+      if (!sp) continue;
+      const ctx = { theme, prep: prepById.get(o.id) };
+      const broken = brokenWordsIn(() => sp.geometry(o.params, ctx));
+      if (!broken.length) continue;
+      const key = "width" in sp.params.shape ? "width" : "maxWidth";
+      const now = typeof o.params[key] === "number" ? (o.params[key] as number) : sp.geometry(o.params, ctx).bbox.w;
+      let want: number | undefined;
+      for (let w = Math.ceil(now * 1.1); w <= 900; w = Math.ceil(w * 1.1)) {
+        if (!brokenWordsIn(() => sp.geometry({ ...o.params, [key]: w }, ctx)).length) {
+          want = w;
+          break;
+        }
+      }
+      report(
+        "TEXT_WORD_BROKEN",
+        o.id,
+        `A word in '${o.id}' is split across lines ("${broken[0]}"): its box is too narrow.`,
+        t,
+        "warning",
+        want ? `Give it ${key} ${want} so no word is split.` : "Use shorter words or a wider box.",
+        want ? { dx: 0, dy: 0, params: { [key]: want } } : undefined,
       );
     }
 

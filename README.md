@@ -160,6 +160,9 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
 - Visual glitches: the engine checks every scene for text hidden or cut off, content leaving the stage, things
   drawn into each other and rows that wrap. The polish applies the sure fixes (ADR-040). There is no extra
   model call for them: ADR-042 reverted that repair round and the prompt changes that came with it.
+  The engine also reports a word split across lines, and the polish widens its box. In teaching lessons, a
+  label still covering, hidden under or crossed by something is moved to a place the engine confirms is clear;
+  text meant to be inside a box stays there (`ANIMATOR_LABEL_RELOCATION`, ADR-046).
 - Optional quality passes: `ANIMATOR_ENABLE_LLM_CRITIC`, `ANIMATOR_ENABLE_VISUAL_CRITIC` (reviews rendered
   keyframes with a vision model; slower and more expensive).
 

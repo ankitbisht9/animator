@@ -109,6 +109,9 @@ class Settings(BaseSettings):
     # A teaching lesson's valid scenes are framed by the camera: their content centred on the stage
     # and zoomed in (up to 1.5x) to fill it, when the engine confirms the framed scene is clean.
     animator_auto_frame: bool = True
+    # A teaching lesson's labels that still cover, hide under or are crossed by something after the
+    # polish are tried in other places around what they name; the engine judges every try (ADR-046).
+    animator_label_relocation: bool = True
     animator_max_correction_attempts: int = 3  # patch rounds take seconds, so a third is affordable
     # Tidy each valid scene's layout with the engine's hints (labels off objects, arrows bent around
     # things, nothing under the caption); no model call, a fraction of a second per scene.
