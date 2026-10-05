@@ -27,6 +27,19 @@ from animator.engine_client import EngineClient
 from animator.engine_client.errors import EngineError
 from animator.llm import CallContext, LLMBadOutput, LLMClient, LLMIncomplete, LLMRefusal, LLMResult
 from animator.pipeline.layout_plan import LayoutPlanner, StagePlan, parse_plan, repair_draft
+from animator.pipeline.layout_plan.figures import sample_times
+from animator.pipeline.layout_plan.relations import (
+    TOLERANCE,
+    Verdict,
+    describe,
+    expand,
+    implied,
+    intended,
+    resolve_kinds,
+    snap,
+    verify,
+    worth_reporting,
+)
 from animator.pipeline.models import (
     Attempt,
     BeatPlan,
@@ -213,6 +226,12 @@ def _inside_a_frame(label: str, own: dict[str, float], boxes: dict[str, dict[str
     return False
 
 
+# Relations (ADR-048): snapping passes per scene, and how far off (px) a relation still broken is
+# reported to the reviewer.
+RELATION_PASSES = 2
+RELATION_REPORT_PX = 12.0
+RELATION_SINGLES = 6  # when snapping them together does not help: this many tried one at a time
+
 # The planned layout (ADR-047): a layout that would shrink anything below this is not used (items
 # with text already stop at 0.85x, see layout_plan/figures.py).
 PLANNED_LEAST_SCALE = 0.6
@@ -353,6 +372,13 @@ def _trouble_with(res: CompileResult, label: str) -> int:
         for i in res.issues
         if i.severity == "warning" and i.code in LABEL_TROUBLE and f"'{label}'" in i.message
     )
+
+
+def planned_glitches(res: CompileResult, plan: StagePlan | None) -> int:
+    """Visual glitches of a planned scene: contact its relations mean (a car on its road, juice in its
+    glass, ADR-048) is not one."""
+    rels = plan.relations if plan is not None else []
+    return sum(1 for i in glitches_of(res) if not (rels and intended(i.message, rels)))
 
 
 def layout_only(res: CompileResult) -> bool:
@@ -867,6 +893,11 @@ class Pipeline:
         if res.ok and self.settings.animator_layout_polish:
             dsl, res, polished = await self._polish(dsl, res, prev_state)
             autofixed = autofixed or polished
+        # Relations last among the moves (ADR-048): nothing after them shifts what they placed.
+        if plan is not None and (res.ok or layout_only(res)):
+            dsl, res = await self._snap_relations(
+                dsl, res, plan, prev_state, report if report is not None else {}
+            )
         if res.ok and relocate and troubled_labels(res):
             dsl, res, moved = await self._relocate(dsl, res, prev_state)
             autofixed = autofixed or moved
@@ -893,7 +924,7 @@ class Pipeline:
         report["draft_valid"] = res.ok
         # A draft with layout errors takes the first candidate the engine finds valid; a valid one
         # only a candidate with no more visual glitches.
-        before = len(glitches_of(res)) if res.ok else 10**6
+        before = planned_glitches(res, plan) if res.ok else 10**6
         # A broken draft is taken from the planner only clean: a messy one goes to a correction
         # round with the engine's exact errors instead.
         max_glitches = 10**6 if res.ok else PLANNED_RESCUE_GLITCHES
@@ -911,16 +942,98 @@ class Pipeline:
                 tried[cand.name] = "engine error"
                 continue
             errors = [i for i in again.issues if i.severity == "error"]
-            after = len(glitches_of(again))
+            after = planned_glitches(again, plan)
             if again.ok and again.endState is not None and after <= min(before, max_glitches):
                 report.update(
-                    applied=cand.name, glitches=[min(before, len(glitches_of(res))), after], tried=tried
+                    applied=cand.name, glitches=[min(before, planned_glitches(res, plan)), after], tried=tried
                 )
                 return cand.dsl, again
             tried[cand.name] = (
                 f"{errors[0].code}: {errors[0].message[:120]}" if errors else f"glitches {before} -> {after}"
             )
         report["tried"] = tried
+        return dsl, res
+
+    async def _snap_relations(
+        self,
+        dsl: dict[str, Any],
+        res: CompileResult,
+        plan: StagePlan,
+        prev_state: SceneState | None,
+        report: dict[str, Any],
+    ) -> tuple[dict[str, Any], CompileResult]:
+        """Relations (ADR-048): what the plan says sits on, in or along what is checked with the
+        engine's geometry at every moment it should hold, and snapped right where it does not. A snap
+        is kept when the relations are closer to holding, the scene is no less valid and shows no more
+        visual glitches (contact the relations mean is not a glitch). What stays broken is reported
+        precisely, for the reviewer and a correction round."""
+        out: dict[str, Any] = {}
+
+        async def frames_of(scene: dict[str, Any], comp: dict[str, Any] | None) -> list[dict[str, Any]]:
+            duration = float((comp or {}).get("duration") or scene.get("duration") or 0)
+            sample = await self.engine.sample(scene, sample_times(duration, comp), prev_state, lenient=True)
+            return sample.frames
+
+        def glitches(r: CompileResult) -> int:
+            return sum(1 for i in glitches_of(r) if not intended(i.message, rels))
+
+        try:
+            compiled = res.compiled or (await self.engine.compile(dsl, prev_state, lenient=True)).compiled
+            if compiled is None:
+                return dsl, res
+            frames = await frames_of(dsl, compiled)
+            # Vehicles on a road the plan forgot; a subject naming several separate things is each.
+            extra = implied(dsl, plan.relations, frames)
+            rels = expand(dsl, resolve_kinds(dsl, [*plan.relations, *extra], frames), frames)
+            if not rels:
+                return dsl, res
+            report["relations"] = out
+            out["checked"] = len(rels)
+            if extra:
+                out["implied"] = [f"{r.subject} {r.relation} {r.object}" for r in extra]
+            verdict = verify(dsl, rels, frames, compiled)
+            out["broken"] = [describe(c) for c in verdict.broken()]
+            snaps: list[str] = []
+
+            async def attempt(v: Verdict) -> bool:
+                """Snap what `v` finds broken; kept when the relations are closer to holding, the scene
+                no less valid and with no more visual glitches."""
+                nonlocal dsl, res, verdict, frames, compiled
+                cand, done = snap(dsl, rels, v, frames, compiled)
+                if not done:
+                    return False
+                again = await self.engine.compile(cand, prev_state)
+                if not (again.ok or (not res.ok and layout_only(again))):
+                    return False
+                comp = again.compiled or (await self.engine.compile(cand, prev_state, lenient=True)).compiled
+                f2 = await frames_of(cand, comp)
+                v2 = verify(cand, rels, f2, comp)
+                worse = again.ok and res.ok and glitches(again) > glitches(res)
+                if v2.total >= verdict.total - 1 or worse:
+                    return False
+                dsl, res, verdict, frames, compiled = cand, again, v2, f2, comp
+                snaps.extend(done)
+                return True
+
+            for _ in range(RELATION_PASSES):
+                if not verdict.broken():
+                    break
+                if await attempt(verdict):
+                    continue
+                # Together they did not help (one snap pushed a thing into another): one at a time.
+                singles = [n for n, c in verdict.worst.items() if c.size > TOLERANCE][:RELATION_SINGLES]
+                progress = False
+                for n in singles if len(singles) > 1 else []:
+                    if n in verdict.worst and verdict.worst[n].size > TOLERANCE:
+                        progress = await attempt(verdict.only(n)) or progress
+                if not progress:
+                    break
+        except EngineError as e:
+            out["error"] = str(e)[:200]
+            return dsl, res
+        if snaps:
+            out["snapped"] = snaps
+        out["unresolved"] = [describe(c) for c in verdict.broken(RELATION_REPORT_PX) if worth_reporting(c)]
         return dsl, res
 
     async def _rescue_labels(
@@ -1240,6 +1353,17 @@ class Pipeline:
             report = await stages.critic(gen, rec, summary, images, ctx, planned=planned)
         except (LLMRefusal, LLMIncomplete, LLMBadOutput):
             report = None  # a failed review never blocks a valid scene
+        broken = ((rec.layout_plan or {}).get("relations") or {}).get("unresolved") or [] if planned else []
+        if broken:
+            # What the plan says sits on, in or along what, and still does not (ADR-048): always fixed.
+            issue = CriticIssue(
+                severity="major",
+                problem="Things are not where the scene's plan says they are: " + " ".join(broken[:4]),
+                fix="Place each of these so it sits exactly where the plan says (on the surface, inside "
+                "the container, along the line), and make its moves end there; keep everything else.",
+            )
+            issues = [*(report.issues if report else []), issue]
+            report = CriticReport(verdict="revise", issues=issues)
         if poor:
             # A picture that is small or off-centre with most of the stage empty is always fixed,
             # whatever the reviewer saw (Code2Video's occupancy feedback).

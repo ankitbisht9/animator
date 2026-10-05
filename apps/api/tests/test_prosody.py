@@ -10,6 +10,7 @@ import base64
 import json
 import re
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,18 @@ from tests.test_pipeline import settings
 from tests.test_tts import mock, mp3_frames
 
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is not installed")
+
+
+def audio_seconds(path: Path) -> float:
+    """How long an audio file really plays (ffprobe)."""
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return float(out.stdout.strip())
+
 
 # ---------------------------------------------------------------------- the text the voice reads
 
@@ -178,6 +191,11 @@ async def test_the_cache_speaks_the_delivery_and_keeps_the_captions_in_time(tmp_
         "Look here. Now, see."
     )
     assert spoken.marks[2].start - spoken.marks[1].end == pytest.approx(0.4, abs=0.03)
+    # The file the player plays is the shaped speech the word times belong to (the voice and the
+    # caption highlight stay together to the last word).
+    saved = tmp_path / "directed" / spoken.file
+    assert saved.suffix == ".mp3" and audio_seconds(saved) == pytest.approx(spoken.duration_s, abs=0.06)
+    assert spoken.marks[-1].end <= audio_seconds(saved)
     again = await SpeechCache(FakeTTS(seconds_per_word=0.3), tmp_path / "directed", prosody=Shaping()).speak(
         "Look here. Now, see.", script=script
     )

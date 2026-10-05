@@ -1677,3 +1677,163 @@ cost):
 - `ANIMATOR_LAYOUT_MODE=classic` (the default), or Layout: Classic in the app.
 - Git tag `backup/before-layout-planner` (v1.46); full snapshot in
   `D:\animation-backups\v1.46-before-layout-planner` (git bundle plus the working folder with `.env` and `var/`).
+
+## ADR-048 Relations: what sits on, in or along what, verified by geometry and snapped (2026-10-05)
+
+**Request.** Placing things precisely relative to each other is what makes a picture read right: cars on
+the road, not scattered around it; a ball on its ramp; beans in their jar. Some overlap is the point
+(a car on its road), some is a mistake. The scene's coordinates alone do not say which. Build a
+geometric check that verifies, at every moment, that each thing is where it belongs (its position and its
+angle) before the scene is played, and snaps it right. Research how such tools work first. Planned flow
+only; the classic flow stays as it is, as the backup.
+
+**Research** (how comparable systems place things by relation):
+- [Penrose](https://penrose.ink/media/Penrose_SIGGRAPH2020a.pdf) (SIGGRAPH 2020): a diagram is constraints
+  and objectives over shapes; each is a penalty that is zero when it holds, minimised numerically.
+- [Bluefish](https://arxiv.org/abs/2307.00146) (UIST 2024): diagrams composed from declarative relations
+  (align, distribute, stack, contain) rather than coordinates.
+- [Holodeck](https://arxiv.org/abs/2312.09067) (CVPR 2024): an LLM writes spatial relations between
+  objects ("on", "near", "against the wall"); a search solver places them to satisfy those relations.
+- [Scenethesis](https://research.nvidia.com/labs/cosmos-lab/scenethesis/): LLM layout, then optimisation
+  for contact and support (nothing floating, nothing sunk), then a judge that checks the result.
+- [SGA](https://arxiv.org/abs/2607.18116), geometric verification for educational video synthesis:
+  checks object geometry at keyframes, filters overlaps that are intended, and feeds precise violations
+  back to the LLM.
+- [Code2Video](https://arxiv.org/abs/2510.01174) and [TheoremExplainAgent](https://arxiv.org/abs/2502.19400):
+  anchor grids and visual feedback for LLM-written educational animation.
+
+The common pattern: the model states the relation, a deterministic solver measures and enforces it,
+and what cannot be enforced goes back to the model precisely. That is what was built, on the engine's own
+geometry (no second geometry model to drift from what is drawn).
+
+**Decision** (planned flow only; `layout_plan/geometry.py`, `layout_plan/relations.py`):
+- **Relations in the stage plan.** `stage.relations`: subject, relation (`on`, `along`, `inside`,
+  `under`, `above`, `below`, `near`), object, `when` (always, or only at the end: a ball thrown into a
+  basket). Prompt `animation-planned.v4` asks for one for every vehicle on its road, everything resting
+  on a surface or held in a container.
+- **Outlines as the engine draws them.** From each sampled frame object (its params and matrix): turned
+  boxes as their corners, lines and arrows as their ends, polygons, SVG paths flattened (curves
+  included), and round things (ball, circle, pulley) as circles, whatever their turn.
+- **The verifier** samples the scene (engine) and measures every relation at every moment it should
+  hold, in px (and degrees). `on` and `along` hold while the thing moves too; moments when a thing is
+  appearing or leaving (a pop overshoots its size, a road draws itself on) are not judged.
+  - `on`: the outline touches the surface, neither floating nor sunk (a ball touches a slope off its
+    centre; its box would sink into it). On a slope the thing tilts with it.
+  - `along`: anywhere across the road's width (each car in its lane), lying along it (a car on a
+    north-south road points north or south). For a junction or a map, the road the car is on; where two
+    roads cross, the one it lies along, and it may be turning (up to 46 degrees). A road drawn as one
+    outline of straight arms (a plus-shaped junction, a T, an L) counts as its arms; two lines side by
+    side (a track's rails, a road drawn as its two edges) as the way between them.
+  - `on` and `under` rest on the tops of all the object's parts together (a wheelset on two rails, a
+    tabletop over its legs).
+  - `inside`, `under`, `above`, `below`, `near` as named; too big to fit is reported as such.
+  - What is measured of a subject is its body: its largest part and everything joined to it. A marker,
+    an arrow or a label drawn apart from it moves with it but does not decide where it rests.
+- **The snapper** (no model call): moves the subject with all its parts (labels follow), tilts it to a
+  slope, turns it to lie along its road (upright when either way would do; facing the way it drives),
+  snaps where it starts and where each move ends (`to` and `by`), and turns a move along a curved road
+  or surface into keyframes that follow it (in its lane, turning with the road; riding the surface at a
+  constant distance along its normal).
+- **Implied relations.** A vehicle (car, bus, truck, bike, train, boat...) drawn on or right beside a
+  road, rail, river or route the plan does not mention, and that never leaves it, is `along` it (seen
+  from above) or `on` it (seen from the side). A vehicle the plan puts `on` a road seen from above is
+  along it.
+- **Turning at a junction.** A move from one road into another follows the first in its lane to the
+  crossing, rounds the corner (60 px radius) and goes on along the second, turning as it goes.
+- **One relation per thing.** A subject naming several separate things (`cars_blue`: the north and the
+  south car) is checked for each.
+- **Kept only when better.** A snap is kept when the relations are closer to holding, the scene is no
+  less valid and has no more visual glitches (contact a relation means, a car on its road, is not a
+  glitch). If snapping them together does not help, they are tried one at a time.
+- **What cannot be snapped** (more than 12 px off: a thing moved against another object, one too big to
+  fit, a car whose lane is taken) goes to the reviewer as a major issue with the exact numbers ("'ball'
+  should be inside 'box' but is not at 3.0s: it is 140 px too big to fit"), so a correction round fixes
+  it. A thing sunk into its surface by less than half its height is not sent back (a boat in the water,
+  a wheel's flange beside its rail may be meant).
+- **Order.** After the planner and the polish, before label relocation: nothing after it moves what it
+  placed.
+- **Classic is unchanged**: the relations stage runs only with a stage plan, which only the planned flow
+  writes. No engine change.
+
+**What did not work first** (live batch and offline replay of its scenes):
+- **Boxes for contact.** A rolling ball's box is its turned square: 1.4 times larger at 45 degrees, so
+  mid-roll it seemed to sink 25 px into its ramp, and the snap that fixed its floating end was refused.
+  Outlines (circles for round things) fixed it.
+- **Measuring while things appear.** A ball still popping in (5% oversize) as it set off had its start
+  measured wrong. Appearing and leaving moments are skipped; a thing that sets off while still popping
+  is measured at its settled size.
+- **Moves by an amount.** A `by` move ended where its snapped start plus the amount put it; it is now
+  corrected for the start.
+- **The middle of the road.** Snapping every car onto the road's middle line would stack cars of
+  opposite lanes; anywhere across its width is on it.
+- **Relying on the model alone.** In the first live batch the model wrote no relation for cars at a
+  junction (cars drawn lying across their roads), nor for grapes on a tray. Hence implied relations for
+  vehicles, and a prompt that asks for relations as a build step (then it wrote them for every junction
+  scene).
+- **False reports cost correction rounds.** In the second batch, cars driving straight through the
+  middle of a junction were measured against the crossing road ("lies 90 degrees across it"); a road
+  drawn as one plus-shaped outline was taken as one wide band; a wheelset was measured against one of
+  its two rails, and lifted until a contact marker drawn below the rail touched it. Each false report
+  sent a scene to a correction round with a wrong instruction. Crossings, arms, tracks, the body of a
+  thing and all parts of a surface fixed these; a moderate sink is no longer sent back.
+
+**Voice and captions in sync (shared voice layer, both flows).** The words of a caption were lit up
+after the voice had already said them, and at the end of a scene the voice stopped and waited for the
+highlighting to catch up.
+- **Cause.** With voice modulation (ADR-045) the speech is shaped (pauses after sentences and commas,
+  slower definitions) and the word times move with it, but the cache saved the audio before shaping. The
+  player played the unshaped (shorter) audio against the shaped (longer) word times and scene timing:
+  97 of 400 cached clips were affected.
+- **Fix.** The audio saved is the audio the word times were measured on (`tts/cache.py`). The cache key
+  changed (`#audio:shaped`), so no old clip is reused. A test checks that the saved file lasts as long as
+  its word times say.
+- **Impact.** New lessons are in sync (every clip of the live batches: file length equals the timed
+  length, last word within 0.05 s of the end). Lessons made before keep their audio: regenerate one to
+  fix it. Each sentence is spoken once more the first time after the update (provider credits as for a
+  new lesson).
+
+**Measured.**
+- **Tests.** 20 relation tests on the engine, among them:
+  - cars beside a road end up on it;
+  - cars at a junction lie along their own road, in their lane (no relation written: implied);
+  - a car turning at a junction takes the corner and stays on the road;
+  - a truck follows a curved road and turns with it;
+  - a block on a ramp tilts;
+  - a rolling ball touches its ramp within 1.5 px the whole way (moves `to` and `by`);
+  - a wheelset rests on both rails whatever is drawn beside it;
+  - a ball thrown into a basket lands in it;
+  - a relation that cannot be kept reaches the reviewer.
+- **Live lessons, final code** (record mode, voice on): junction, train and wine.
+
+  | Lesson | Cost | Model calls | Corrections | Glitches left |
+  |---|---|---|---|---|
+  | Traffic junction | $0.076 | 17 | 2 | 4 |
+  | Train on its tracks | $0.095 | 19 | 4 | 0 |
+  | Wine | $0.102 | 21 | 6 | 4 |
+
+  - Every first draft wrote relations (12 of 12; 49 relations checked).
+  - 5 were broken: 3 were snapped, 1 went to the reviewer (a car the model placed 181 px off its own turn
+    path).
+  - The cost is within the planned flow's range (ADR-047: $0.08-0.11), with no added model call. The
+    traffic lesson was $0.115-0.121 with 4-5 corrections in the earlier batches, when false reports
+    sent scenes back.
+- **Earlier batches replayed with the final code** (36 scenes, offline, no model calls):
+  - 9 relations implied (vehicles the plan did not place);
+  - 19 relations broken, 12 subjects snapped;
+  - 7 left to the reviewer, each a real misplacement or a genuine conflict (yeast drawn outside its
+    container, a car whose lane is taken by a parked car).
+- **Rendered frames.** The cars that lay across their roads now lie along them, in their lanes. A ball
+  rolling down a ramp touches it the whole way; before, it floated 28 px at the end. Wheels rest on
+  their rails.
+- **Voice.** All 48 clips made in the three live batches play in sync: each file's length is the length
+  its word times were measured on, and the last word ends within 0.05 s of the file's end.
+- **Limits.** Semantics stay the model's. A relation it does not write is not checked (except vehicles
+  near roads). A wrong one (a car `along` a turn path it then drives away from) is reported, not
+  guessed at. Two cars meant for the same lane are not separated (the glitch checks report the
+  overlap).
+
+**Rollback.**
+- `ANIMATOR_LAYOUT_MODE=classic` (the default), or Layout: Classic in the app.
+- Git tag `backup/before-placement-precision` (v1.47); full snapshot in
+  `D:\animation-backups\v1.47-before-placement-precision` (git bundle plus the working folder with `.env`
+  and `var/`).

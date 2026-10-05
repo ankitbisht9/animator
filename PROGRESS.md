@@ -451,3 +451,21 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - **Measured.** Live lessons cost $0.08-0.11 against $0.16-0.18 (18-21 model calls against 29-31), with no
   degraded scene. 83% of first drafts end up valid without a correction (44% as written).
 - **Engine.** Opt-in `lenient` compile and sample, to measure a draft.
+
+## Relations: things where they belong (ADR-048)
+
+- **Planned flow only.** The stage plan also lists relations: `on`, `along`, `inside`, `under`, `above`,
+  `below`, `near`, always or at the end. Classic is unchanged.
+- **Verified by geometry.** Every relation is measured at every moment it should hold, on the outlines the
+  engine draws (turned boxes, lines, polygons, curved paths, circles), in px and degrees.
+- **Snapped without a model call.** Things move onto their surface or road with their parts, tilt with a
+  slope, lie along their road (in a lane, facing the way they drive), follow a curved road or surface, and
+  turn corners at junctions. Vehicles drawn beside a road the plan forgot are put on it too.
+- **Reported precisely** when it cannot be fixed (a lane taken, too big to fit): a correction round gets
+  the exact numbers.
+
+## Voice and captions in sync
+
+- The cache saved the voice before the modulation shaped it, while the captions were timed on the shaped
+  voice: the voice ran ahead and waited at the end of each scene. The shaped audio is saved now; old
+  lessons need regenerating.

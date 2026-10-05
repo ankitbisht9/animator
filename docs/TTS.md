@@ -263,6 +263,9 @@ Measured on live lessons (ElevenLabs `eleven_flash_v2_5`):
     sentences together; this fixes that.
   - Slow sentences at `ANIMATOR_TTS_SLOW_TEMPO` (0.9, pitch unchanged).
   - The captions' word times move with it.
+  - The audio saved is the shaped audio, the one the word times were measured on, so each caption
+    word lights up as it is said (ADR-048). Lessons made before then play the unshaped audio, which
+    runs ahead of their captions: regenerate them.
   - Needs ffmpeg (`FFMPEG_PATH`).
 - **Voice and picture.** A highlight lands when the thing it highlights is named
   (`ANIMATOR_TTS_SYNC_HIGHLIGHTS`).

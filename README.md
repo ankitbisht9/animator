@@ -167,6 +167,10 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   app. Planned: the scene writer adds a stage plan and a layout planner measures everything with the engine
   and places it precisely in the fixed frame (no overlaps, nothing cut off, the stage used well); one draft per
   scene and plain slips repaired without a model call, about 40% cheaper per lesson.
+  Relations (ADR-048): the plan also says what sits on, in or along what (cars on their road, a ball on
+  its ramp, beans in their jar). The engine's geometry checks each at every moment and puts the thing
+  there, at the right tilt and heading (vehicles beside a road the plan forgot too); what cannot be
+  fixed goes to the reviewer with exact numbers. No extra model call.
 - Optional quality passes: `ANIMATOR_ENABLE_LLM_CRITIC`, `ANIMATOR_ENABLE_VISUAL_CRITIC` (reviews rendered
   keyframes with a vision model; slower and more expensive).
 

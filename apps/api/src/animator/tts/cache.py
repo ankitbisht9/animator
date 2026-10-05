@@ -146,7 +146,10 @@ class SpeechCache:
         )
         keyed = plain if script is None else f"{plain}\n#caption:{text}\n#tone:{tone or ''}"
         if self.prosody is not None:
+            # `#audio:shaped`: entries made before the shaped audio was saved with its word times
+            # (their file is the unshaped speech) are never reused.
             keyed += f"\n#delivery:{script.delivery_key if script else ''}\n#timing:{self.prosody.key}"
+            keyed += "\n#audio:shaped"
         sid = self._id(keyed, v, prov)
         hit = self._load(sid)
         if hit is not None:
@@ -210,14 +213,16 @@ class SpeechCache:
                 raise last if isinstance(last, TTSError) else TTSError(str(last)) from last
         if speech.duration_s <= 0:
             raise TTSError(f"{provider.name}: audio has no duration")
-        file = f"{sid}.{speech.format}"
-        self.directory.mkdir(parents=True, exist_ok=True)
-        _write(self.directory / file, speech.audio)
         found = speech.marks
         if script is not None and caption is not None:
             found = caption_marks(caption, script, speech)
         if self.prosody is not None and caption is not None and speech.marks:
             speech, found = await self._shape(speech, found, caption, script)
+        # The audio written is the audio the word times were measured on (shaped when it was): the
+        # player plays this file and lights up each caption word at its time.
+        file = f"{sid}.{speech.format}"
+        self.directory.mkdir(parents=True, exist_ok=True)
+        _write(self.directory / file, speech.audio)
         marks = [[m.text, round(m.start, 4), round(m.end, 4)] for m in found] if found else None
         meta = {
             "file": file,

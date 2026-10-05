@@ -440,7 +440,7 @@ async def test_a_planned_lesson_is_drawn_once_and_laid_out_by_the_planner(pool: 
     assert first.layout_plan is not None and first.layout_plan["applied"] == "plan"
     drafts = [r for r in script.calls if r.label == "scene 1 attempt 1"]
     assert len(drafts) == 1  # one draft, not a race of two
-    assert drafts[0].prompt_version == "animation-planned.v2"
+    assert drafts[0].prompt_version == "animation-planned.v4"
     assert "stage" in drafts[0].schema["properties"]
     assert "The stage plan" in drafts[0].instructions and "Sizes (canvas px" in drafts[0].instructions
 

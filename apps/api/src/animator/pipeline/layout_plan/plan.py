@@ -25,10 +25,24 @@ class PlanGroup(BaseModel):
     connected: bool | None = None
 
 
+RELATIONS = ("on", "along", "inside", "under", "above", "below", "near")
+
+
+class PlanRelation(BaseModel):
+    """What a thing sits on, in or along (ADR-048): checked at every moment it should hold, snapped right."""
+
+    model_config = ConfigDict(extra="ignore")
+    subject: str = Field(max_length=48)
+    relation: Literal["on", "along", "inside", "under", "above", "below", "near"]
+    object: str = Field(max_length=48)
+    when: Literal["always", "end"] | None = None
+
+
 class StagePlan(BaseModel):
     model_config = ConfigDict(extra="ignore")
     direction: Literal["column", "row"] | None = None
     groups: list[PlanGroup] = Field(default_factory=list, max_length=8)
+    relations: list[PlanRelation] = Field(default_factory=list, max_length=24)
 
 
 def parse_plan(data: Any) -> StagePlan | None:
@@ -38,7 +52,7 @@ def parse_plan(data: Any) -> StagePlan | None:
         return None
     groups = data.get("groups")
     if not isinstance(groups, list):
-        return None
+        groups = []
     cleaned = []
     for g in groups:
         if not isinstance(g, dict):
@@ -49,11 +63,23 @@ def parse_plan(data: Any) -> StagePlan | None:
         g["items"] = [str(i) for i in g.get("items") or [] if isinstance(i, str) and i.strip()][:16]
         if g["items"]:
             cleaned.append(g)
+    relations = []
+    for r in data.get("relations") or []:
+        if not isinstance(r, dict):
+            continue
+        try:
+            rel = PlanRelation.model_validate({k: v for k, v in r.items() if v is not None})
+        except ValidationError:
+            continue
+        if rel.subject != rel.object:
+            relations.append(rel)
     try:
-        plan = StagePlan.model_validate({"direction": data.get("direction"), "groups": cleaned[:8]})
+        plan = StagePlan.model_validate(
+            {"direction": data.get("direction"), "groups": cleaned[:8], "relations": relations[:24]}
+        )
     except ValidationError:
         return None
-    return plan if plan.groups else None
+    return plan if plan.groups or plan.relations else None
 
 
 def _nullable(schema: dict[str, Any], description: str) -> dict[str, Any]:
@@ -95,11 +121,32 @@ def plan_schema() -> dict[str, Any]:
         },
         "required": ["id", "region", "arrange", "items", "align", "columns", "connected"],
     }
+    relation = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "subject": {"type": "string", "description": "The thing placed: an object id or item id"},
+            "relation": {
+                "type": "string",
+                "enum": list(RELATIONS),
+                "description": "on: its bottom rests on the object's top (side view); along: its centre "
+                "is on the object's line (a road from above, a wire, a route); inside: within the object; "
+                "under: its top touches the object's bottom; above / below: wholly above / below; near: "
+                "close to it",
+            },
+            "object": {"type": "string", "description": "The thing it relates to: an object id or item id"},
+            "when": _nullable(
+                {"type": "string", "enum": ["always", "end"]},
+                "always: whenever both are on stage (null means always); end: at the end of the scene",
+            ),
+        },
+        "required": ["subject", "relation", "object", "when"],
+    }
     return {
         "type": "object",
         "additionalProperties": False,
-        "description": "The stage plan: how the things on stage are arranged. The engine computes "
-        "their exact sizes and positions from it.",
+        "description": "The stage plan: how the things on stage are arranged, and what sits on, in or "
+        "along what. The engine computes exact sizes and positions from it and checks every relation.",
         "properties": {
             "direction": _nullable(
                 {"type": "string", "enum": ["column", "row"]},
@@ -107,8 +154,14 @@ def plan_schema() -> dict[str, Any]:
                 "(side by side)",
             ),
             "groups": {"type": "array", "items": group},
+            "relations": {
+                "type": "array",
+                "items": relation,
+                "description": "What sits on, in or along what: every vehicle on its road, everything "
+                "resting on a surface or held in a container (empty only when nothing does)",
+            },
         },
-        "required": ["direction", "groups"],
+        "required": ["direction", "groups", "relations"],
     }
 
 
