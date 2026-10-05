@@ -509,6 +509,10 @@
               "type": "null"
             }
           ]
+        },
+        "lenient": {
+          "description": "scene.compile: also return the compiled scene when it failed only its layout checks (to measure a draft); ok stays false",
+          "type": "boolean"
         }
       },
       "required": [
@@ -949,6 +953,10 @@
             "type": "number",
             "minimum": 0
           }
+        },
+        "lenient": {
+          "description": "Also sample a scene that compiled but failed its layout checks (to measure a draft); ok stays false",
+          "type": "boolean"
         }
       },
       "required": [

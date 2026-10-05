@@ -1582,3 +1582,98 @@ about 30 s for the fast pipeline. The user allowed 1 to 2 minutes for quality.
 **Rollback.**
 - `ANIMATOR_LABEL_RELOCATION=false`: labels are left where the polish puts them.
 - Git tag `backup/before-overlap-fixes` (f86b6b2, v1.45).
+
+## ADR-047 The planned layout flow: a stage plan, measured and placed by the engine (2026-10-05)
+
+**Request.** Use the fixed frame: know every object's real size and place things precisely (no overlaps, nothing
+cut off or broken across lines, the space used well), with fewer model calls and without losing the animation
+quality (motion, flows, what changes over time). Isolated from the current flow and switchable either way.
+
+**Decision.** A second layout flow for teaching lessons, `planned`, next to `classic` (unchanged, the default).
+- **Switch.** `ANIMATOR_LAYOUT_MODE=classic|planned` (default classic). A lesson can choose its own (`layout` in
+  the request; the app's Layout selector). The fast pipeline is always classic.
+- **The scene writer** (prompt `animation-planned.v2`: the classic prompt, unchanged, plus the stage plan, a size
+  sheet measured with the engine, and rules for groups and flows) composes the scene as before. It adds `stage`:
+  the items (things that stay in place, named by id prefix) and how groups of them are arranged (row, column,
+  grid, cycle, free), in which region. The plan is written before the objects and is never played.
+- **Repairs** (`layout_plan/repair.py`): plain slips seen in recorded drafts, fixed without a model call:
+  - parts of a group given as offsets from its centre (the engine reads canvas coordinates: they landed in its
+    corner; the commonest slip, also in classic scenes);
+  - parts that `follow` their own group (the group's position applied twice);
+  - starts written `{"at": "after:a3"}` or `{"at": "a3"}`;
+  - a `parent` that is not a group;
+  - a slot of another layout (`stage.center` in a split scene).
+- **The planner** (`layout_plan/`, no model call):
+  - **Measures** every item with the engine: its parts, the labels placed against it, anything drawn inside it,
+    over its whole time on stage (the scene sampled with its motion frozen).
+  - **Solves** the layout:
+    - groups on stage together get separate lanes of their region; groups shown later reuse it; the direction
+      is the plan's, or as drawn;
+    - one scale per group, as large as fits: drawings up to 1.6x and down to 0.6x; text never enlarged,
+      never below 0.85x or unreadable;
+    - rows, columns, grids and cycles evenly spaced and aligned; a long row wraps into two, snaking back;
+    - free groups kept as drawn, only sized and centred (items the scene never placed go in a row).
+  - **Rewrites** every coordinate:
+    - an item moves and scales as one piece (positions, scales, moves, keyframes);
+    - labels follow by themselves;
+    - arrow ends go with the items they touch;
+    - a move into an item lands in it wherever it now is;
+    - things beside an item keep their distance from it.
+  - **Checks with motion:** anything leaving its region brings the region's content back in.
+  - **Lays out drafts whose only errors are layout errors** (overlaps, things off the frame): these no longer
+    cost a correction round.
+- **Kept only when better.** A planned layout is used only if:
+  - the engine finds the scene valid;
+  - it has no more visual glitches than the scene as drawn (a broken draft: at most 4);
+  - nothing is shrunk below 0.6x.
+
+  Otherwise the scene goes on as drawn: to a correction round when it has errors, else as is. The classic
+  polish and the label relocation (ADR-046) follow.
+- **Cost.** One draft per scene and per correction (no racing; `ANIMATOR_PLANNED_*_DRAFTS`).
+- **The critic** (`critic-planned.v2`) is the classic critic plus a note: the layout is planned, and room kept for
+  later things is intended. It still judges composition from the engine's measurements.
+- **Engine.** Additive and opt-in: `scene.compile` and `scene.sample` take `lenient`. They then also return a
+  scene that compiled but failed its layout checks (still not ok), so a draft can be measured. Classic never
+  sends it. Contracts regenerated.
+- **Full screen** needs nothing: the canvas is drawn as SVG at 1600 x 900 and scaled; a layout planned once is
+  right at every size.
+
+**What did not work first** (live lessons in record mode, then iterated offline on the recorded drafts at no model
+cost):
+- **A prompt that let the planner place things.** The model left items unplaced (all at the stage centre) or
+  scattered, and the planner can only refine a composition. The classic composition rules stay in the prompt.
+- **Planning only valid drafts.** Most drafts failed on exactly the layout errors the planner fixes; hence the
+  lenient engine calls.
+- **Shrinking to fit.** It gave valid but tiny pictures; now limited per item, and refused below 0.6x.
+- **A critic told not to judge composition.** Scattered scenes passed; composition is judged again.
+
+**Measured.**
+- **Recorded first drafts with the final prompt** (36 scenes): valid as written 44%; after the repairs and the
+  planner, with no model call, 83%; laid out by the planner, 72%. Over all 60 recorded planned drafts: 40% to
+  82%.
+- **Live lessons** (1 minute, 4 scenes, Hinglish and English, voice on in the last batches):
+
+  | Flow | Cost per lesson | Model calls | Degraded scenes |
+  |---|---|---|---|
+  | Classic | $0.159-0.175 | 29-31 | 0 |
+  | Planned | $0.084-0.107 | 18-21 | 0 of 20 (batch 4) |
+
+  - Generation time is about the same (125-180 s).
+  - Scenes the planner laid out ended with no visual glitch; the glitches left are in scenes it left as drawn,
+    or are intended (grapes going into the crusher).
+  - **Final run** (the final code, planned as the server default, voice on): wine $0.098, supply chain $0.088,
+    vaccines (a new topic) $0.107; 18-20 model calls; no degraded scene; 1-2 glitches left per lesson; the
+    planner laid out 11 of 12 scenes.
+- **Rendered sheets.** Classic and planned compared on the same topics (wine, supply chain, photosynthesis, water
+  cycle, refrigerator):
+  - process rows clean and evenly spaced;
+  - drawings use the stage;
+  - broken drafts (items piled up, parts in the corner) come out laid out instead of needing corrections.
+  - Planned is on par with classic or cleaner.
+- **Not solved.** Meaning problems (a wrong-looking icon, a process not shown happening) are still the critic's.
+  Labels crowded inside one drawing may still need a correction.
+
+**Rollback.**
+- `ANIMATOR_LAYOUT_MODE=classic` (the default), or Layout: Classic in the app.
+- Git tag `backup/before-layout-planner` (v1.46); full snapshot in
+  `D:\animation-backups\v1.46-before-layout-planner` (git bundle plus the working folder with `.env` and `var/`).

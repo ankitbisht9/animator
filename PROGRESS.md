@@ -436,3 +436,18 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   - hidden text 8 -> 4;
   - broken words 8 -> 0.
 - **Off switch:** `ANIMATOR_LABEL_RELOCATION=false`.
+
+## The planned layout flow (ADR-047)
+
+- **Switch.** `ANIMATOR_LAYOUT_MODE=classic|planned`, or the Layout selector per lesson. Classic is the default
+  and is unchanged.
+- **How it works.** The scene writer adds a stage plan (items and how they are arranged). A layout planner
+  measures every item with the engine over the whole scene and places everything in the fixed frame. It:
+  - spaces and aligns rows, columns, grids and cycles;
+  - fits the stage, keeping text readable;
+  - keeps moves landing where they should.
+
+  It also lays out drafts that failed only on layout, and plain slips are repaired without a model call.
+- **Measured.** Live lessons cost $0.08-0.11 against $0.16-0.18 (18-21 model calls against 29-31), with no
+  degraded scene. 83% of first drafts end up valid without a correction (44% as written).
+- **Engine.** Opt-in `lenient` compile and sample, to measure a draft.

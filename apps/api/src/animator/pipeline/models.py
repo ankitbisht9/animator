@@ -266,6 +266,9 @@ class GenerationRequest(_Strict):
     style: str | None = Field(default=None, max_length=300)
     language: str = Field(default="English", max_length=40)
     paced: bool = Field(default=False, description="Generate only a buffer ahead of playback (saves cost)")
+    # How the scenes are laid out (ADR-047): classic or planned; None: the server's default
+    # (ANIMATOR_LAYOUT_MODE).
+    layout: Literal["classic", "planned"] | None = None
 
 
 class Attempt(BaseModel):
@@ -299,6 +302,8 @@ class SceneRecord(BaseModel):
     degraded_reason: str | None = None
     # Spoken narration (TTS on): per beat, its audio file and when each caption word is said.
     narration: dict[str, Any] | None = None
+    # The planned layout flow (ADR-047): the scene's stage plan and what the planner made of it.
+    layout_plan: dict[str, Any] | None = None
     started_at: float | None = None
     finished_at: float | None = None
 

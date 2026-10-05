@@ -27,6 +27,7 @@ from animator.llm import (
     Message,
 )
 from animator.pipeline.language import language_line
+from animator.pipeline.layout_plan import planned_patch_schema, planned_scene_schema
 from animator.pipeline.models import (
     BeatPlan,
     Chapter,
@@ -104,6 +105,9 @@ class Stages:
         self.pack = pack
         self.dsl_schema = dsl_schema
         self.patch_schema = patch_schema(dsl_schema)
+        # The planned layout flow (ADR-047): the same scene, with its stage plan.
+        self.planned_schema = planned_scene_schema(dsl_schema)
+        self.planned_patch_schema = planned_patch_schema(self.patch_schema)
 
     def _request(
         self,
@@ -469,10 +473,12 @@ class Stages:
         issues: list[dict[str, Any]] | None = None,
         llm_error: str | None = None,
         critic_notes: str | None = None,
+        planned: bool = False,
     ) -> LLMResult:
         """Attempt 1 drafts the scene; later attempts correct it (issues from the engine or the
         critic) or repair it (the previous reply was unusable). A correction replies with only
-        what changes (a patch, merged here), unless `animator_patch_corrections` is off."""
+        what changes (a patch, merged here), unless `animator_patch_corrections` is off. A planned
+        scene (ADR-047) also carries its stage plan, which a patch may replace."""
         parts = [self.scene_context(gen, rec, prev_summary)]
         patch = (
             attempt > 1
@@ -512,13 +518,21 @@ class Stages:
                     "Write the scene again, more compactly if needed (fewer objects and actions), "
                     "following the schema exactly."
                 )
+        if planned:
+            version = self.pack.animation_planned.version
+            instructions = self.pack.planned_animation_instructions()
+            schema = self.planned_patch_schema if patch else self.planned_schema
+        else:
+            version = self.pack.animation_prompt(fast=not teaching).version
+            instructions = self.pack.animation_instructions(fast=not teaching)
+            schema = self.patch_schema if patch else self.dsl_schema
         req = self._request(
             stage,
-            self.pack.animation_prompt(fast=not teaching).version,
-            self.pack.animation_instructions(fast=not teaching),
+            version,
+            instructions,
             Message.user(*parts),
             "ScenePatch" if patch else "Scene",
-            self.patch_schema if patch else self.dsl_schema,
+            schema,
             self.settings.animator_scene_max_output_tokens,
             gen,
             f"scene {rec.index + 1} attempt {attempt}",
@@ -527,13 +541,22 @@ class Stages:
         result = await self.llm.generate(req, ctx)
         if patch:
             assert previous is not None
-            return dataclasses.replace(result, data=apply_patch(previous, result.data))
+            merged = apply_patch(previous, result.data)
+            if planned and isinstance(result.data, dict) and result.data.get("stage") is not None:
+                merged["stage"] = result.data["stage"]
+            return dataclasses.replace(result, data=merged)
         return result
 
     # ------------------------------------------------------------------ critics
 
     async def critic(
-        self, gen: Generation, rec: SceneRecord, summary: str, images: list[bytes], ctx: CallContext
+        self,
+        gen: Generation,
+        rec: SceneRecord,
+        summary: str,
+        images: list[bytes],
+        ctx: CallContext,
+        planned: bool = False,
     ) -> CriticReport:
         stage = "visual_critic" if images else "critic"
         parts: list[Any] = [
@@ -544,10 +567,11 @@ class Stages:
             parts.append(f"{len(images)} keyframes of the rendered scene follow, in time order.")
             parts.extend(ImagePart(png, "high") for png in images)
         fast = gen.teaching is None
+        prompt = self.pack.critic_planned if planned else self.pack.critic_prompt(fast)
         req = self._request(
             stage,
-            self.pack.critic_prompt(fast).version,
-            self.pack.critic_instructions(fast),
+            prompt.version,
+            prompt.text,
             Message.user(*parts),
             "CriticReport",
             CRITIC_SCHEMA,

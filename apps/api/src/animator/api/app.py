@@ -129,6 +129,8 @@ def create_app(
             "llm_critic": st.animator_enable_llm_critic,
             "visual_critic": st.animator_enable_visual_critic,
             "storage": st.animator_storage_backend,
+            # How teaching lessons are laid out unless a lesson asks otherwise (ADR-047).
+            "layout_mode": st.animator_layout_mode,
             "tts": {
                 "enabled": speech is not None,
                 "provider": st.animator_tts_provider if st.animator_tts_enabled else None,

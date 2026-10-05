@@ -51,6 +51,22 @@ describe("worker protocol", () => {
     expect(call("scene.stateAt", { scene, t: 0 }).result.state.objects.dot.visible).toBe(false);
   });
 
+  it("samples a scene that failed only its layout checks when asked to (ADR-047)", () => {
+    const off = { ...scene, objects: [{ id: "dot", type: "circle", place: { x: -300, y: 450 } }] };
+    expect(call("scene.compile", { scene: off }).result.ok).toBe(false); // outside the frame
+    expect(call("scene.sample", { scene: off, times: [2] }).result.frames).toHaveLength(0);
+    const lenient = call("scene.sample", { scene: off, times: [2], lenient: true }).result;
+    expect(lenient.ok).toBe(false);
+    expect(lenient.frames).toHaveLength(1);
+    const broken = { ...scene, objects: [] }; // does not compile: still nothing to sample
+    expect(call("scene.sample", { scene: broken, times: [2], lenient: true }).result.frames).toHaveLength(0);
+    const compiled = call("scene.compile", { scene: off, lenient: true }).result;
+    expect(compiled.ok).toBe(false);
+    expect(compiled.compiled.actions).toBeDefined();
+    expect(compiled.endState).toBeUndefined(); // never mistaken for a valid scene
+    expect(call("scene.compile", { scene: off }).result.compiled).toBeUndefined();
+  });
+
   it("reports scene problems as issues, not RPC errors", () => {
     const res = call("scene.compile", { scene: { ...scene, objects: [] } }).result;
     expect(res.ok).toBe(false);

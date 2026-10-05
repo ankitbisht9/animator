@@ -72,7 +72,7 @@ export const handlers: Record<string, Handler> = {
   "scene.compile": (params) => {
     const p = parse(protocol.SceneParams, params);
     const prev = p.prevState as SceneState | null | undefined;
-    return compileResult(compileCached(p.scene, prev), prev);
+    return compileResult(compileCached(p.scene, prev), prev, p.lenient);
   },
   "scene.stateAt": (params) => {
     const p = parse(protocol.StateAtParams, params);
@@ -81,7 +81,7 @@ export const handlers: Record<string, Handler> = {
   },
   "scene.sample": (params) => {
     const p = parse(protocol.SampleParams, params);
-    return sampleResult(compileCached(p.scene, p.prevState as SceneState | null | undefined), p.times);
+    return sampleResult(compileCached(p.scene, p.prevState as SceneState | null | undefined), p.times, p.lenient);
   },
 };
 

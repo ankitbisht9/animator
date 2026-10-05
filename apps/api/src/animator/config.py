@@ -112,6 +112,15 @@ class Settings(BaseSettings):
     # A teaching lesson's labels that still cover, hide under or are crossed by something after the
     # polish are tried in other places around what they name; the engine judges every try (ADR-046).
     animator_label_relocation: bool = True
+    # How a teaching lesson's scenes are laid out (ADR-047). classic: as the scene writer places
+    # them, then tidied (everything above). planned: the scene writer adds a stage plan (which
+    # things are arranged how) and the layout planner measures everything with the engine and
+    # places it precisely in the fixed frame; one draft per scene and a critic that checks meaning.
+    # A lesson can ask for either (its `layout` field); this is the default.
+    animator_layout_mode: Literal["classic", "planned"] = "classic"
+    # Drafts per scene and per correction round in the planned flow (no racing: cheaper).
+    animator_planned_scene_drafts: int = Field(default=1, ge=1, le=4)
+    animator_planned_correction_drafts: int = Field(default=1, ge=1, le=4)
     animator_max_correction_attempts: int = 3  # patch rounds take seconds, so a third is affordable
     # Tidy each valid scene's layout with the engine's hints (labels off objects, arrows bent around
     # things, nothing under the caption); no model call, a fraction of a second per scene.

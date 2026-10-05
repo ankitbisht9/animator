@@ -314,6 +314,10 @@ class SampleParams(BaseModel):
     End state of the previous scene (continuity)
     """
     times: list[Time] = Field(..., max_length=240, min_length=1)
+    lenient: bool | None = None
+    """
+    Also sample a scene that compiled but failed its layout checks (to measure a draft); ok stays false
+    """
 
 
 class SceneParams(BaseModel):
@@ -327,6 +331,10 @@ class SceneParams(BaseModel):
     prevState: SceneState | None = None
     """
     End state of the previous scene (continuity)
+    """
+    lenient: bool | None = None
+    """
+    scene.compile: also return the compiled scene when it failed only its layout checks (to measure a draft); ok stays false
     """
 
 

@@ -51,8 +51,15 @@ class EngineClient:
         res = await self.pool.call("scene.validate", {"scene": dict(scene), "prevState": _prev(prev_state)})
         return ValidateResult.model_validate(res)
 
-    async def compile(self, scene: SceneJson, prev_state: SceneState | None = None) -> CompileResult:
-        res = await self.pool.call("scene.compile", {"scene": dict(scene), "prevState": _prev(prev_state)})
+    async def compile(
+        self, scene: SceneJson, prev_state: SceneState | None = None, lenient: bool = False
+    ) -> CompileResult:
+        """Compile a scene. `lenient` also returns the compiled form of a scene that failed only its
+        layout checks (the layout planner measuring a draft); `ok` then stays false."""
+        params: dict[str, Any] = {"scene": dict(scene), "prevState": _prev(prev_state)}
+        if lenient:
+            params["lenient"] = True
+        res = await self.pool.call("scene.compile", params)
         return CompileResult.model_validate(res)
 
     async def state_at(
@@ -64,9 +71,16 @@ class EngineClient:
         return StateAtResult.model_validate(res)
 
     async def sample(
-        self, scene: SceneJson, times: Sequence[float], prev_state: SceneState | None = None
+        self,
+        scene: SceneJson,
+        times: Sequence[float],
+        prev_state: SceneState | None = None,
+        lenient: bool = False,
     ) -> SampleResult:
-        res = await self.pool.call(
-            "scene.sample", {"scene": dict(scene), "prevState": _prev(prev_state), "times": list(times)}
-        )
+        """Frames at the given times. `lenient` also samples a scene that compiled but failed its
+        layout checks (the layout planner measuring a draft); `ok` then stays false."""
+        params: dict[str, Any] = {"scene": dict(scene), "prevState": _prev(prev_state), "times": list(times)}
+        if lenient:
+            params["lenient"] = True
+        res = await self.pool.call("scene.sample", params)
         return SampleResult.model_validate(res)

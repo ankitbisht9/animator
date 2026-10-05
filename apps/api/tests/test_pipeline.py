@@ -408,11 +408,11 @@ class CrashingEngine(EngineClient):
         super().__init__(pool)
         self.crash_on = crash_on
 
-    async def compile(self, scene: Any, prev_state: Any = None) -> Any:
+    async def compile(self, scene: Any, prev_state: Any = None, lenient: bool = False) -> Any:
         fallback = any(str(o.get("id", "")).startswith("flag_") for o in scene.get("objects", []))
         if self.crash_on == "*" or (scene.get("id") == self.crash_on and not fallback):
             raise WorkerCrashed("worker exited with code 3221225477")
-        return await super().compile(scene, prev_state)
+        return await super().compile(scene, prev_state, lenient)
 
 
 async def test_a_scene_that_keeps_crashing_the_engine_is_degraded(pool: EngineWorkerPool) -> None:

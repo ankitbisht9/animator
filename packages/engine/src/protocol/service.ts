@@ -99,7 +99,18 @@ export function validateResult(o: CompileOutcome) {
   return { ok: o.ok && !hasErrors(o.issues), issues: o.issues, ...(o.canonical ? { scene: o.canonical } : {}) };
 }
 
-export function compileResult(o: CompileOutcome, prev: SceneState | null | undefined) {
+export function compileResult(o: CompileOutcome, prev: SceneState | null | undefined, lenient = false) {
+  // Lenient: a scene that compiled but failed its layout checks comes back with its compiled form
+  // (for a layout planner to measure), still not ok and without an end state.
+  if (lenient && !o.ok && o.compiled) {
+    return {
+      ok: false,
+      issues: o.issues,
+      compiled: o.compiled as unknown as Record<string, unknown>,
+      duration: o.compiled.duration,
+      beats: o.compiled.beats,
+    };
+  }
   if (!o.ok || !o.compiled) return { ok: false, issues: o.issues };
   const endState = sceneEndState(o.compiled, prev ?? null, prev ? prev.sceneIndex + 1 : 0);
   return {
@@ -122,11 +133,13 @@ export function stateAtResult(o: CompileOutcome, prev: SceneState | null | undef
   };
 }
 
-export function sampleResult(o: CompileOutcome, times: number[]) {
-  if (!o.ok || !o.compiled) return { ok: false, issues: o.issues, frames: [] };
+export function sampleResult(o: CompileOutcome, times: number[], lenient = false) {
+  // Lenient: a scene that compiled but failed its layout checks is still sampled (ok stays false),
+  // so a layout planner can measure it. A scene that did not compile has nothing to sample.
+  if (!o.compiled || (!o.ok && !lenient)) return { ok: false, issues: o.issues, frames: [] };
   const cs = o.compiled;
   return {
-    ok: true,
+    ok: o.ok,
     issues: o.issues,
     frames: times.map((t) => evaluate(cs, t) as unknown as Record<string, unknown>),
   };

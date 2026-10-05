@@ -146,7 +146,16 @@ export const LiftResult = z
   .meta({ id: "LiftResult", title: "LiftResult" });
 
 export const SceneParams = z
-  .strictObject({ scene: SceneInput, prevState: PrevState })
+  .strictObject({
+    scene: SceneInput,
+    prevState: PrevState,
+    lenient: z
+      .boolean()
+      .optional()
+      .describe(
+        "scene.compile: also return the compiled scene when it failed only its layout checks (to measure a draft); ok stays false",
+      ),
+  })
   .meta({ id: "SceneParams", title: "SceneParams" });
 
 export const ValidateResult = z
@@ -177,7 +186,15 @@ export const StateAtResult = z
   .meta({ id: "StateAtResult", title: "StateAtResult" });
 
 export const SampleParams = z
-  .strictObject({ scene: SceneInput, prevState: PrevState, times: z.array(z.number().min(0)).min(1).max(240) })
+  .strictObject({
+    scene: SceneInput,
+    prevState: PrevState,
+    times: z.array(z.number().min(0)).min(1).max(240),
+    lenient: z
+      .boolean()
+      .optional()
+      .describe("Also sample a scene that compiled but failed its layout checks (to measure a draft); ok stays false"),
+  })
   .meta({ id: "SampleParams", title: "SampleParams" });
 export const SampleResult = z
   .strictObject({

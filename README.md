@@ -163,6 +163,10 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   The engine also reports a word split across lines, and the polish widens its box. In teaching lessons, a
   label still covering, hidden under or crossed by something is moved to a place the engine confirms is clear;
   text meant to be inside a box stays there (`ANIMATOR_LABEL_RELOCATION`, ADR-046).
+- Layout flow (ADR-047): `ANIMATOR_LAYOUT_MODE=classic` (default) or `planned`, or per lesson with Layout in the
+  app. Planned: the scene writer adds a stage plan and a layout planner measures everything with the engine
+  and places it precisely in the fixed frame (no overlaps, nothing cut off, the stage used well); one draft per
+  scene and plain slips repaired without a model call, about 40% cheaper per lesson.
 - Optional quality passes: `ANIMATOR_ENABLE_LLM_CRITIC`, `ANIMATOR_ENABLE_VISUAL_CRITIC` (reviews rendered
   keyframes with a vision model; slower and more expensive).
 

@@ -19,6 +19,9 @@ export interface SceneSummary {
   degraded_reason: string | null;
 }
 
+/** classic: laid out as the scene writer places things; planned: a stage plan, measured and placed by the layout planner (ADR-047). */
+export type LayoutMode = "classic" | "planned";
+
 export interface GenerationSummary {
   id: string;
   created_at: number;
@@ -30,6 +33,7 @@ export interface GenerationSummary {
     style: string | null;
     language: string;
     paced: boolean;
+    layout?: LayoutMode | null;
   };
   status: GenerationStatus;
   error: string | null;
@@ -81,6 +85,8 @@ export interface ApiConfig {
   llm_critic: boolean;
   visual_critic: boolean;
   storage: string;
+  /** How teaching lessons are laid out unless a lesson asks otherwise (ADR-047). */
+  layout_mode?: LayoutMode;
   tts?: {
     enabled: boolean;
     provider: string | null;
@@ -132,6 +138,7 @@ export const api = {
     style?: string | null;
     paced?: boolean;
     language?: string;
+    layout?: LayoutMode | null;
   }) => call<GenerationSummary>("/api/generations", { method: "POST", body: JSON.stringify(body) }),
   cancel: (id: string) => call<GenerationSummary>(`/api/generations/${id}/cancel`, { method: "POST" }),
   resume: (id: string) => call<GenerationSummary>(`/api/generations/${id}/resume`, { method: "POST" }),

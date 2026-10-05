@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { type ApiConfig, ApiError, api, type GenerationSummary } from "../api";
+import { type ApiConfig, ApiError, api, type GenerationSummary, type LayoutMode } from "../api";
 import { FIXTURE_LESSONS } from "../lesson/fixtures";
 import { buildLesson } from "../lesson/lesson";
 import { formatTime } from "../player/clock";
@@ -15,6 +15,11 @@ const AUDIENCES = [
 const DURATIONS = [1, 2, 3, 5, 8, 10, 15];
 /** The language the explainer speaks (voice and captions); on-screen text is always English (ADR-039). */
 const LANGUAGES = ["English", "Hinglish"];
+/** How the scenes are laid out (ADR-047). */
+const LAYOUTS: { value: LayoutMode; label: string }[] = [
+  { value: "classic", label: "Classic" },
+  { value: "planned", label: "Planned (precise, fewer AI calls)" },
+];
 const EXAMPLES = [
   "Explain Archimedes' principle",
   "How does photosynthesis work?",
@@ -53,6 +58,7 @@ export function Home() {
   const [audience, setAudience] = useState("high-school student");
   const [minutes, setMinutes] = useState(3);
   const [language, setLanguage] = useState("English");
+  const [layout, setLayout] = useState<LayoutMode | null>(null);
   const [style, setStyle] = useState("");
   const [paced, setPaced] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -82,6 +88,7 @@ export function Home() {
         style: style || null,
         paced,
         language,
+        layout: layout ?? config?.layout_mode ?? null,
       });
       navigate(`/g/${gen.id}`);
     } catch (err) {
@@ -125,6 +132,19 @@ export function Home() {
                 {DURATIONS.map((d) => (
                   <option key={d} value={d}>
                     {d} min
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Layout
+              <select
+                value={layout ?? config?.layout_mode ?? "classic"}
+                onChange={(e) => setLayout(e.target.value as LayoutMode)}
+              >
+                {LAYOUTS.map((l) => (
+                  <option key={l.value} value={l.value}>
+                    {l.label}
                   </option>
                 ))}
               </select>
@@ -198,6 +218,7 @@ export function Home() {
                 <div className="card-kicker">
                   <span className={`status-chip ${g.status}`}>{STATUS_LABEL[g.status] ?? g.status}</span>{" "}
                   {g.request.audience} · {g.request.duration_min} min · {g.scenes.length} scenes
+                  {g.request.layout === "planned" ? " · planned layout" : ""}
                 </div>
                 <div className="card-title">{g.title ?? g.request.topic}</div>
                 <div className="card-desc">{g.error ?? g.subtitle ?? g.request.topic}</div>

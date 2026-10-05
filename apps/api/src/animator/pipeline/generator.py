@@ -26,6 +26,7 @@ from animator.config import Settings
 from animator.engine_client import EngineClient
 from animator.engine_client.errors import EngineError
 from animator.llm import CallContext, LLMBadOutput, LLMClient, LLMIncomplete, LLMRefusal, LLMResult
+from animator.pipeline.layout_plan import LayoutPlanner, StagePlan, parse_plan, repair_draft
 from animator.pipeline.models import (
     Attempt,
     BeatPlan,
@@ -212,6 +213,11 @@ def _inside_a_frame(label: str, own: dict[str, float], boxes: dict[str, dict[str
     return False
 
 
+# The planned layout (ADR-047): a layout that would shrink anything below this is not used (items
+# with text already stop at 0.85x, see layout_plan/figures.py).
+PLANNED_LEAST_SCALE = 0.6
+PLANNED_RESCUE_GLITCHES = 4
+
 # Auto-framing (ADR-044): the stage on screen (between the title bar and the captions), how much of it
 # the framed content fills, and the most the camera zooms in.
 STAGE = (48.0, 116.0, 1552.0, 736.0)
@@ -349,6 +355,13 @@ def _trouble_with(res: CompileResult, label: str) -> int:
     )
 
 
+def layout_only(res: CompileResult) -> bool:
+    """A draft that failed only its layout checks (things overlapping, off the stage): it compiled,
+    and the planned flow's planner can still lay it out (ADR-047)."""
+    errors = [i for i in res.issues if i.severity == "error"]
+    return bool(errors) and all(i.source == "layout" for i in errors)
+
+
 def glitches_of(res: CompileResult) -> list[Any]:
     """A label covering an object counts only when it straddles the object's edge (the engine then
     says where to move it); a letter written on a magnet's pole is meant to be there."""
@@ -403,6 +416,9 @@ class Pipeline:
         self._stages: Stages | None = None
         # Losing scene drafts still running, per generation (see `_drafts`).
         self._background: dict[str, set[asyncio.Task[Any]]] = {}
+        # The planned layout flow (ADR-047): the planner, and what it reported per scene reply.
+        self.layout_planner = LayoutPlanner(engine)
+        self._plan_reports: dict[int, dict[str, Any]] = {}
 
     async def stages(self) -> Stages:
         if self._stages is None:
@@ -595,6 +611,8 @@ class Pipeline:
         critic_rounds = 0  # reviews spent on this scene
         # The valid scene a critic asked to revise: kept if the revision does not come out better.
         reviewed: tuple[dict[str, Any], CompileResult] | None = None
+        planned = self._planned(gen)
+        plan: Any = None  # the planned flow's stage plan (ADR-047), carried into corrections
 
         for n in range(1, max_attempts + 1):
             final = n == max_attempts and n > 1
@@ -604,9 +622,7 @@ class Pipeline:
             await changed()
             t0 = time.perf_counter()
             attempt = Attempt(n=n, kind=kind, stage=stage)
-            count = (
-                self.settings.animator_scene_drafts if n == 1 else self.settings.animator_correction_drafts
-            )
+            count = self._draft_count(gen, n)
             mine = {
                 asyncio.create_task(
                     self._draft(
@@ -617,20 +633,25 @@ class Pipeline:
                             ctx,
                             attempt=n,
                             final=final,
-                            previous=dsl,
+                            previous=dsl if not planned or dsl is None else {**dsl, "stage": plan},
                             issues=issues,
                             llm_error=llm_error,
                             critic_notes=critic_notes,
+                            planned=planned,
                         ),
                         rec,
                         prev_state,
                         self._relocating(gen),
+                        planned,
                     )
                 )
                 for _ in range(count)
             }
             try:
                 result, dsl, res, attempt.autofixed = await self._race(mine, rivals)
+                if planned:
+                    plan = result.data.get("stage") if isinstance(result.data, dict) else None
+                    rec.layout_plan = self._plan_reports.pop(id(result), None) or rec.layout_plan
             except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
                 llm_error = str(e)
                 attempt.llm_error = llm_error
@@ -803,12 +824,18 @@ class Pipeline:
         return normalize(data, rec, independent=self.settings.animator_scene_mode == "parallel")
 
     async def _check(
-        self, dsl: dict[str, Any], prev_state: SceneState | None, relocate: bool = False
+        self,
+        dsl: dict[str, Any],
+        prev_state: SceneState | None,
+        relocate: bool = False,
+        plan: StagePlan | None = None,
+        report: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], CompileResult, bool]:
         """Compile, then apply the sure fixes for its errors (pipeline/tidy.py) and compile again.
         The fixed scene is kept when it has fewer errors, or as many but none of the old ones: the
         engine checks layout only once the timing and references are right, so new layout errors
-        are progress. Three passes at most (a fix can uncover the next one)."""
+        are progress. Three passes at most (a fix can uncover the next one). With a stage plan (the
+        planned flow, ADR-047), a valid scene is laid out by the planner before the polish."""
         res = await self.engine.compile(dsl, prev_state)
         autofixed = False
         for _ in range(3):
@@ -819,11 +846,24 @@ class Pipeline:
                 break
             res_fixed = await self.engine.compile(fixed, prev_state)
             before, after = _keys(res), _keys(res_fixed)
-            if not res_fixed.ok and (
-                len(after) > len(before) or (len(after) == len(before) and after & before)
+            # In the planned flow a draft left with layout errors only is progress: the planner
+            # lays those out.
+            onward = plan is not None and layout_only(res_fixed) and not layout_only(res)
+            if (
+                not res_fixed.ok
+                and not onward
+                and (len(after) > len(before) or (len(after) == len(before) and after & before))
             ):
                 break
             dsl, res, autofixed = fixed, res_fixed, True
+        if plan is not None and (res.ok or layout_only(res)):
+            dsl, res = await self._plan_layout(
+                dsl, res, plan, prev_state, report if report is not None else {}
+            )
+            if not res.ok and layout_only(res):
+                dsl, res = await self._rescue_labels(
+                    dsl, res, prev_state, report if report is not None else {}
+                )
         if res.ok and self.settings.animator_layout_polish:
             dsl, res, polished = await self._polish(dsl, res, prev_state)
             autofixed = autofixed or polished
@@ -831,6 +871,104 @@ class Pipeline:
             dsl, res, moved = await self._relocate(dsl, res, prev_state)
             autofixed = autofixed or moved
         return dsl, res, autofixed
+
+    async def _plan_layout(
+        self,
+        dsl: dict[str, Any],
+        res: CompileResult,
+        plan: StagePlan,
+        prev_state: SceneState | None,
+        report: dict[str, Any],
+    ) -> tuple[dict[str, Any], CompileResult]:
+        """The planned layout (ADR-047): the planner's candidates, best first, each kept only when the
+        engine finds the scene valid with no more visual glitches than the scene as drawn. When none
+        is, the scene stays as drawn (and the classic tidying follows)."""
+        try:
+            planned = await self.layout_planner.plan(dsl, plan, res, prev_state)
+        except EngineError as e:
+            report.update(applied=None, skipped=f"engine: {e}")
+            return dsl, res
+        report.update(planned.report)
+        report["applied"] = None
+        report["draft_valid"] = res.ok
+        # A draft with layout errors takes the first candidate the engine finds valid; a valid one
+        # only a candidate with no more visual glitches.
+        before = len(glitches_of(res)) if res.ok else 10**6
+        # A broken draft is taken from the planner only clean: a messy one goes to a correction
+        # round with the engine's exact errors instead.
+        max_glitches = 10**6 if res.ok else PLANNED_RESCUE_GLITCHES
+        tried: dict[str, str] = {}
+        for cand in planned.candidates:
+            if cand.least < PLANNED_LEAST_SCALE:
+                # It only fits by making things small: the scene goes on as drawn (a correction
+                # round, when it has errors, does better than a tiny picture). Anything else the
+                # engine judges (valid, no more glitches, text readable).
+                tried[cand.name] = f"does not fit unless things shrink to {cand.least}x"
+                continue
+            try:
+                again = await self.engine.compile(cand.dsl, prev_state)
+            except EngineError:
+                tried[cand.name] = "engine error"
+                continue
+            errors = [i for i in again.issues if i.severity == "error"]
+            after = len(glitches_of(again))
+            if again.ok and again.endState is not None and after <= min(before, max_glitches):
+                report.update(
+                    applied=cand.name, glitches=[min(before, len(glitches_of(res))), after], tried=tried
+                )
+                return cand.dsl, again
+            tried[cand.name] = (
+                f"{errors[0].code}: {errors[0].message[:120]}" if errors else f"glitches {before} -> {after}"
+            )
+        report["tried"] = tried
+        return dsl, res
+
+    async def _rescue_labels(
+        self, dsl: dict[str, Any], res: CompileResult, prev_state: SceneState | None, report: dict[str, Any]
+    ) -> tuple[dict[str, Any], CompileResult]:
+        """The planned flow (ADR-047): labels the planner could not separate (two labels inside one
+        drawing) are moved like a covered label (ADR-046), the later of each pair first. A move is
+        kept when the scene has fewer errors and no new kind of error; no model call."""
+        budget = RELOCATE_COMPILES
+        moved: list[str] = []
+        for _ in range(RELOCATE_LABELS):
+            pairs = [
+                ids
+                for i in res.issues
+                if i.severity == "error"
+                and i.code == "LABEL_OVERLAP"
+                and len(ids := _QUOTED_IDS.findall(i.message)) >= 2
+            ]
+            if not pairs or budget <= 0:
+                break
+            improved = False
+            for label in (pairs[0][1], pairs[0][0]):
+                for place in (await self._label_places(dsl, res, label, prev_state, lenient=True))[
+                    :RELOCATE_TRIES
+                ]:
+                    if budget <= 0:
+                        break
+                    budget -= 1
+                    trial = copy.deepcopy(dsl)
+                    obj = next((o for o in trial.get("objects") or [] if o.get("id") == label), None)
+                    if obj is None:
+                        break
+                    obj["place"] = place
+                    try:
+                        again = await self.engine.compile(trial, prev_state)
+                    except EngineError:
+                        continue
+                    if again.ok or (layout_only(again) and _count(again) < _count(res)):
+                        dsl, res, improved = trial, again, True
+                        moved.append(label)
+                        break
+                if improved:
+                    break
+            if not improved or res.ok:
+                break
+        if moved:
+            report["rescued_labels"] = moved
+        return dsl, res
 
     async def _polish(
         self, dsl: dict[str, Any], res: CompileResult, prev_state: SceneState | None
@@ -897,7 +1035,12 @@ class Pipeline:
         return dsl, res, moved
 
     async def _label_places(
-        self, dsl: dict[str, Any], res: CompileResult, label: str, prev_state: SceneState | None
+        self,
+        dsl: dict[str, Any],
+        res: CompileResult,
+        label: str,
+        prev_state: SceneState | None,
+        lenient: bool = False,
     ) -> list[dict[str, Any]]:
         """Places to try for a label, the most natural first: the other sides of what it is placed
         against (a little farther each time), the sides of the whole drawing when that is a part of
@@ -918,10 +1061,10 @@ class Pipeline:
         if not times:
             return []
         try:
-            sample = await self.engine.sample(dsl, times[:1], prev_state)
+            sample = await self.engine.sample(dsl, times[:1], prev_state, lenient=lenient)
         except EngineError:
             return []
-        if not sample.ok or not sample.frames:
+        if not sample.frames or (not sample.ok and not lenient):
             return []
         boxes = {
             o["id"]: o["bbox"]
@@ -965,13 +1108,42 @@ class Pipeline:
         rec: SceneRecord,
         prev_state: SceneState | None,
         relocate: bool = False,
+        planned: bool = False,
     ) -> Draft:
         result = await call
-        return (result, *await self._check(self._shape(result.data, rec), prev_state, relocate))
+        if not planned:
+            return (result, *await self._check(self._shape(result.data, rec), prev_state, relocate))
+        # The planned flow (ADR-047): the stage plan rides with the reply; the scene itself is the
+        # engine's (the plan is never part of what is compiled or played).
+        data = dict(result.data) if isinstance(result.data, dict) else {}
+        plan = parse_plan(data.pop("stage", None))
+        report: dict[str, Any] = {}
+        shaped, repaired = repair_draft(self._shape(data, rec))
+        if repaired:
+            report["repaired"] = repaired
+        checked = await self._check(shaped, prev_state, relocate, plan, report)
+        if len(self._plan_reports) > 256:  # reports of drafts that lost a race are never collected
+            self._plan_reports.pop(next(iter(self._plan_reports)))
+        self._plan_reports[id(result)] = report
+        return (result, *checked)
 
     def _relocating(self, gen: Generation) -> bool:
         """Label relocation (ADR-046) for teaching lessons; the fast pipeline keeps its polish only."""
         return gen.teaching is not None and self.settings.animator_label_relocation
+
+    def _planned(self, gen: Generation) -> bool:
+        """The planned layout flow (ADR-047): teaching lessons whose layout mode is planned (the
+        lesson's own choice, else ANIMATOR_LAYOUT_MODE). Everything else is laid out the classic way."""
+        mode = gen.request.layout or self.settings.animator_layout_mode
+        return gen.teaching is not None and mode == "planned"
+
+    def _draft_count(self, gen: Generation, attempt: int) -> int:
+        if self._planned(gen):
+            s = self.settings
+            return s.animator_planned_scene_drafts if attempt == 1 else s.animator_planned_correction_drafts
+        return (
+            self.settings.animator_scene_drafts if attempt == 1 else self.settings.animator_correction_drafts
+        )
 
     async def _race(self, mine: set[asyncio.Task[Draft]], rivals: set[asyncio.Task[Draft]]) -> Draft:
         """This attempt's calls (`mine`: several drafts for a first attempt, `animator_scene_drafts`)
@@ -1051,6 +1223,7 @@ class Pipeline:
         images: list[bytes] = []
         summary = summarize_for_critic(dsl, res)
         poor: list[str] = []
+        planned = self._planned(gen)
         if self._visual_critic(gen) and self.keyframes is not None and res.beats:
             k = self.settings.animator_visual_critic_keyframes
             ends = [b.end - 0.1 for b in res.beats]
@@ -1064,7 +1237,7 @@ class Pipeline:
                         measured
                     )
         try:
-            report = await stages.critic(gen, rec, summary, images, ctx)
+            report = await stages.critic(gen, rec, summary, images, ctx, planned=planned)
         except (LLMRefusal, LLMIncomplete, LLMBadOutput):
             report = None  # a failed review never blocks a valid scene
         if poor:

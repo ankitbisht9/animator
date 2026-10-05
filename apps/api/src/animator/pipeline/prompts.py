@@ -92,6 +92,10 @@ class PromptPack:
         self.teacher = load_prompt("teacher")
         self.review = load_prompt("review")
         self.director = load_prompt("director")
+        # The planned layout flow (ADR-047): its own scene and critic prompts, by name, so the classic
+        # flow's prompts (`animation`, `critic`) are never affected.
+        self.animation_planned = load_prompt("animation-planned")
+        self.critic_planned = load_prompt("critic-planned")
         # How scenes relate (parallel: each on a clean stage; sequential: each continues the last).
         self.continuity = {mode: load_prompt(f"continuity-{mode}") for mode in ("parallel", "sequential")}
         self._animation_text: dict[str, str] = {}
@@ -178,6 +182,30 @@ class PromptPack:
 
     def critic_instructions(self, fast: bool = False) -> str:
         return self.critic_prompt(fast).text
+
+    def planned_animation_instructions(self) -> str:
+        """The planned flow's scene instructions, with the same reference material as the classic
+        ones (DSL reference, component catalog, example scenes)."""
+        return self._with_reference(self.animation_planned)
+
+    def _with_reference(self, prompt: Prompt) -> str:
+        if prompt.version not in self._animation_text:
+            head = prompt.text.replace("{layouts}", self.layouts()).replace("{solvers}", self.solvers())
+            examples = "\n\n".join(
+                f"### Example: {note}\n\n```json\n{compact(scene)}\n```" for note, scene in self.exemplars
+            )
+            self._animation_text[prompt.version] = "\n\n".join(
+                [
+                    head,
+                    "# Scene DSL reference\n\n" + self.dsl_doc,
+                    "# Component catalog\n\n" + self.components_doc,
+                    "# Hand-authored example scenes\n\nThese are written in compact form: "
+                    "omitted fields are null (default). They show the scene format only: a planned scene "
+                    "also has its `stage` plan. Your output must still list every property the schema "
+                    "requires.\n\n" + examples,
+                ]
+            )
+        return self._animation_text[prompt.version]
 
     def teacher_instructions(self) -> str:
         return self.teacher.text.replace("{capabilities}", self.capabilities())
