@@ -14,8 +14,10 @@ Two layers, after the speech script has marked the delivery (`Script.stress`, `.
    as they are.
 2. **Timing** (`shape`): applied to the audio, with the word timings the provider reported, so it is
    exact for every model: a pause at least as long as a teacher's at each full stop and comma and
-   before a key point (silence inserted where the voice ran on), and a slower tempo (pitch unchanged)
-   for sentences marked slow. Every word time moves with the audio, so the captions stay in sync.
+   before a key point (silence added in the middle of the gap between the words, found on the audio
+   itself; where the voice runs two words together no pause is added, so a word is never cut in two),
+   and a slower tempo (pitch unchanged) for sentences marked slow. Every word time moves with the
+   audio, so the captions stay in sync.
 
 Anything that fails here leaves the speech as the provider made it.
 """
@@ -36,6 +38,18 @@ from animator.tts.types import Speech, WordMark
 log = logging.getLogger("animator.tts")
 
 RATE = 44100  # Hz, mono 16-bit: what the shaped speech is processed at
+
+# Where the audio may be cut. The word times a provider reports can be 50-150 ms off, so a cut made at
+# them can split a word ("ze ... zero"). Cuts are made where the voice itself is quiet: the loudness of
+# each 5 ms frame against the voice's loud level.
+FRAMES_PER_S = 200
+QUIET = 0.06  # a frame quieter than this share of the voice's loud level is silence
+GAP_LEAST = 0.06  # s: the shortest quiet that is a gap between words (shorter: a stop inside a word)
+# How far from where the word times put a boundary its gap is looked for (s): further back than
+# ahead, since reported word times run late (ElevenLabs': 30-160 ms in measured clips), and looking far
+# ahead would find the gap after a short next word.
+GAP_SEARCH = 0.2
+GAP_AHEAD = 0.05
 
 # The tone of a sentence as a delivery tag (models that take audio tags). Neutral sentences get none.
 TONE_TAGS = {
@@ -73,7 +87,8 @@ class Shaping:
 
     @property
     def key(self) -> str:
-        return f"{self.sentence_pause}|{self.comma_pause}|{self.key_pause}|{self.slow_tempo}"
+        # `gaps`: cuts are made only where the voice is quiet (clips shaped before cut words in two)
+        return f"{self.sentence_pause}|{self.comma_pause}|{self.key_pause}|{self.slow_tempo}|gaps"
 
 
 # ---------------------------------------------------------------------- the text layer
@@ -169,9 +184,16 @@ def shape(
     samples = array.array("h")
     samples.frombytes(pcm[: len(pcm) - len(pcm) % 2])
     duration = len(samples) / RATE
+    levels = _levels(samples)
+    quiet = _quiet_level(levels)
 
-    # 1. Slow stretches (definitions, equations): their audio is stretched, pitch unchanged.
-    slow = _slow_spans(marks, deliveries, duration)
+    # 1. Slow stretches (definitions, equations): their audio is stretched, pitch unchanged. They
+    #    start and end where the voice is quietest near their first and last word.
+    slow = [
+        (a2, b2)
+        for a, b in _slow_spans(marks, deliveries, duration)
+        if (a2 := _quietest(levels, a, duration)) < (b2 := _quietest(levels, b, duration))
+    ]
     pieces: list[tuple[float, float, float]] = []  # (old start, old end, tempo)
     t = 0.0
     for a, b in slow:
@@ -182,15 +204,20 @@ def shape(
     if t < duration:
         pieces.append((t, duration, 1.0))
 
-    # 2. Pauses: where the voice left less silence than a teacher would, silence is added just after
-    #    the word (inside the gap there is, so nothing is cut).
+    # 2. Pauses: where the voice left less silence than a teacher would, silence is added in the
+    #    middle of the gap there is between the two words, measured on the audio. Where the words run
+    #    together (no gap), none is added: the voice is never cut while it sounds.
     least = plan_pauses(words, pause_before, shaping)
     inserts: list[tuple[float, float]] = []  # (old time, seconds of silence)
     for i in range(len(marks) - 1):
-        gap = marks[i + 1].start - marks[i].end
-        add = least[i] - max(0.0, gap)
+        if least[i] <= 0:
+            continue
+        gap = _gap_between(levels, quiet, marks[i], marks[i + 1])
+        if gap is None:
+            continue
+        add = least[i] - (gap[1] - gap[0])
         if add > 0.02:
-            inserts.append((marks[i].end + min(max(0.0, gap), 0.02), round(add, 3)))
+            inserts.append(((gap[0] + gap[1]) / 2, round(add, 3)))
     if not slow and not inserts:
         return None
 
@@ -243,6 +270,67 @@ def _slow_spans(
         if b - a > 0.3:
             spans.append((a, b))
     return spans
+
+
+def _levels(samples: array.array[int]) -> list[float]:
+    """The loudness (RMS) of every 5 ms of the audio."""
+    n = RATE // FRAMES_PER_S
+    out = []
+    for i in range(0, len(samples), n):
+        chunk = samples[i : i + n]
+        out.append((sum(x * x for x in chunk) / len(chunk)) ** 0.5)
+    return out
+
+
+def _quiet_level(levels: Sequence[float]) -> float:
+    """Below this a frame is silence: a small share of how loud the voice gets."""
+    if not levels:
+        return 0.0
+    loud = sorted(levels)[int(0.9 * (len(levels) - 1))]
+    return max(30.0, QUIET * loud)
+
+
+def _gap_between(
+    levels: Sequence[float], quiet: float, a: WordMark, b: WordMark
+) -> tuple[float, float] | None:
+    """The silence between two words, measured on the audio near where their times put it (they can be
+    off, mostly late): the longest quiet stretch of at least GAP_LEAST around the reported boundary,
+    measured whole. None when the voice does not stop between them."""
+    lo = max((a.start + a.end) / 2, a.end - GAP_SEARCH)
+    hi = min((b.start + b.end) / 2, b.start + GAP_AHEAD)
+    if hi <= lo:
+        lo, hi = min(a.end, b.start) - GAP_SEARCH / 2, max(a.end, b.start) + GAP_AHEAD
+    want = (a.end + b.start) / 2
+    first, last = max(0, int(lo * FRAMES_PER_S)), min(len(levels), int(hi * FRAMES_PER_S) + 1)
+    best: tuple[tuple[float, float], tuple[float, float]] | None = None
+    k = first
+    while k < last:
+        if levels[k] >= quiet:
+            k += 1
+            continue
+        i, j = k, k
+        while j < len(levels) and levels[j] < quiet:  # the whole gap, past the search window too
+            j += 1
+        while i > 0 and levels[i - 1] < quiet:
+            i -= 1
+        run = (i / FRAMES_PER_S, j / FRAMES_PER_S)
+        # The quiet before the first word and after the last is not between two words.
+        if i > 0 and j < len(levels) and run[1] - run[0] >= GAP_LEAST:
+            score = (run[1] - run[0], -abs((run[0] + run[1]) / 2 - want))
+            if best is None or score > best[0]:
+                best = (score, run)
+        k = max(j, k + 1)
+    return best[1] if best else None
+
+
+def _quietest(levels: Sequence[float], t: float, duration: float) -> float:
+    """The quietest moment within GAP_SEARCH of `t` (where a stretch of the audio may start or end)."""
+    first = max(0, int((t - GAP_SEARCH) * FRAMES_PER_S))
+    last = min(len(levels), int((t + GAP_SEARCH) * FRAMES_PER_S) + 1)
+    if last <= first:
+        return t
+    k = min(range(first, last), key=lambda i: (levels[i], abs(i / FRAMES_PER_S - t)))
+    return min(duration, max(0.0, (k + 0.5) / FRAMES_PER_S))
 
 
 def _fade_in(chunk: array.array[int], n: int = 220) -> None:  # 5 ms: no click where silence was added

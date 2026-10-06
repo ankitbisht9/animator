@@ -469,3 +469,6 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - The cache saved the voice before the modulation shaped it, while the captions were timed on the shaped
   voice: the voice ran ahead and waited at the end of each scene. The shaped audio is saved now; old
   lessons need regenerating.
+- **No word cut in two (ADR-049).** The pauses were placed at the voice's reported word times, which run
+  late, so some landed inside the next word ("ze ... zero"). Pauses now go only in the silence the voice
+  really leaves between words; where it runs words together nothing is added.

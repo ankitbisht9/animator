@@ -6,11 +6,16 @@ moment the thing they highlight is named."""
 
 from __future__ import annotations
 
+import array
 import base64
+import io
 import json
+import math
 import re
 import shutil
 import subprocess
+import wave
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +25,6 @@ import pytest
 from animator.llm import FakeLLM, LLMRequest
 from animator.pipeline.narration import sync_highlights, take_script
 from animator.tts import ElevenLabsTTS, FakeTTS, SpeechCache, caption_words
-from animator.tts.audio import silent_wav
 from animator.tts.prosody import Delivery, Shaping, plan_pauses, render, shape, tags_supported
 from animator.tts.script import Script, SpeechScripter
 from animator.tts.types import Speech, WordMark
@@ -71,13 +75,67 @@ def test_a_teacher_pauses_at_full_stops_commas_and_before_a_key_point() -> None:
 # ---------------------------------------------------------------------- a teacher's timing on the audio
 
 
+RATE = 44100
+
+
+def voiced_wav(duration: float, said: Sequence[tuple[float, float]]) -> bytes:
+    """A stand-in voice: a tone while each word is said, silence between."""
+    frames = array.array("h", bytes(2 * round(duration * RATE)))
+    for a, b in said:
+        for i in range(round(a * RATE), min(len(frames), round(b * RATE))):
+            frames[i] = int(8000 * math.sin(2 * math.pi * 220 * i / RATE))
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(RATE)
+        w.writeframes(frames.tobytes())
+    return buf.getvalue()
+
+
+def said_spans(audio: bytes) -> list[tuple[float, float]]:
+    """When the voice sounds in some audio (5 ms resolution)."""
+    raw = subprocess.run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            "pipe:0",
+            "-f",
+            "s16le",
+            "-ac",
+            "1",
+            "-ar",
+            str(RATE),
+            "pipe:1",
+        ],
+        input=audio,
+        capture_output=True,
+        check=True,
+    ).stdout
+    a = array.array("h")
+    a.frombytes(raw[: len(raw) - len(raw) % 2])
+    n = RATE // 200
+    loud = [max(abs(x) for x in a[i : i + n]) > 1500 for i in range(0, len(a) - n, n)]
+    spans: list[tuple[float, float]] = []
+    for k, on in enumerate(loud):
+        if on and (k == 0 or not loud[k - 1]):
+            spans.append((k / 200, k / 200))
+        if on:
+            spans[-1] = (spans[-1][0], (k + 1) / 200)
+    return spans
+
+
 def fake_speech(words: list[str], spw: float = 0.3) -> tuple[Speech, list[WordMark]]:
-    """Silence with a word every `spw` seconds and 0.06 s between them: a voice running on."""
+    """A voice saying a word every `spw` seconds, with 0.09 s between them: a voice running on."""
     marks = [
-        WordMark(w, round(0.1 + spw * i, 3), round(0.1 + spw * (i + 0.8), 3)) for i, w in enumerate(words)
+        WordMark(w, round(0.1 + spw * i, 3), round(0.1 + spw * (i + 0.7), 3)) for i, w in enumerate(words)
     ]
     duration = round(0.2 + spw * len(words), 3)
-    return Speech(silent_wav(duration), "wav", duration, tuple(marks)), marks
+    audio = voiced_wav(duration, [(m.start, m.end) for m in marks])
+    return Speech(audio, "wav", duration, tuple(marks)), marks
 
 
 @needs_ffmpeg
@@ -87,10 +145,10 @@ def test_short_pauses_are_lengthened_and_every_word_time_moves_with_the_audio() 
     shaped = shape(speech, marks, words, shaping=Shaping(0.4, 0.18, 0.35, 0.9))
     assert shaped is not None
     out, moved = shaped
-    assert out.format == "mp3" and out.duration_s == pytest.approx(speech.duration_s + 0.34 + 0.12, abs=0.06)
+    assert out.format == "mp3" and out.duration_s == pytest.approx(speech.duration_s + 0.31 + 0.09, abs=0.06)
     gaps = [moved[i + 1].start - moved[i].end for i in range(len(moved) - 1)]
     assert gaps[1] == pytest.approx(0.4, abs=0.02) and gaps[3] == pytest.approx(0.18, abs=0.02)
-    assert gaps[0] == pytest.approx(0.06, abs=0.01)  # no punctuation, no pause added
+    assert gaps[0] == pytest.approx(0.09, abs=0.01)  # no punctuation, no pause added
     assert [m.text for m in moved] == words
 
 
@@ -107,6 +165,29 @@ def test_a_slow_sentence_is_stretched_and_a_key_point_gets_its_pause() -> None:
     assert after_slow == pytest.approx(1 / 0.9, abs=0.05)  # 10% slower
     assert moved[3].start - moved[2].end >= 0.33  # the pause before the key word
     assert moved[4].end - moved[1].start > before
+
+
+@needs_ffmpeg
+def test_a_pause_goes_in_the_gap_the_voice_leaves_never_inside_a_word() -> None:
+    """The word times a voice reports can run late (ElevenLabs' by 50-160 ms): a pause added at the
+    reported end of 'two,' would land in the start of 'three' ("thr ... three"). It goes in the
+    silence the voice really left, every word stays whole, and the times move with the audio."""
+    words = ["one", "two,", "three"]
+    said = [(0.1, 0.4), (0.5, 0.8), (0.95, 1.3)]  # the voice: a 0.15 s gap after "two,"
+    late = [WordMark("one", 0.2, 0.5), WordMark("two,", 0.6, 0.98), WordMark("three", 1.0, 1.35)]
+    speech = Speech(voiced_wav(1.5, said), "wav", 1.5, tuple(late))
+    shaped = shape(speech, late, words, shaping=Shaping(0.4, 0.3, 0.35, 0.9))
+    assert shaped is not None
+    out, moved = shaped
+    spans = said_spans(out.audio)
+    assert len(spans) == 3  # three whole words: none cut in two
+    assert [round(b - a, 2) for a, b in spans] == pytest.approx([0.3, 0.3, 0.35], abs=0.011)
+    assert spans[2][0] - spans[1][1] == pytest.approx(0.3, abs=0.015)  # the comma pause, in the gap
+    assert moved[2].start - late[2].start == pytest.approx(0.15, abs=0.015)  # times move with it
+
+    # Words the voice runs together: no pause is forced between them.
+    together = Speech(voiced_wav(1.2, [(0.1, 0.4), (0.5, 0.8), (0.8, 1.1)]), "wav", 1.2, tuple(late))
+    assert shape(together, late, words, shaping=Shaping(0.4, 0.3, 0.35, 0.9)) is None
 
 
 def test_nothing_to_shape_leaves_the_speech_as_it_is() -> None:
@@ -178,9 +259,18 @@ def test_a_take_keeps_each_sentences_delivery() -> None:
 # ---------------------------------------------------------------------- the speech cache
 
 
+class VoicedTTS(FakeTTS):
+    """The fake provider, with a voice that sounds while each word is said (0.08 s between words)."""
+
+    async def synthesize(self, text: str, voice: str | None = None, context: Any = None) -> Speech:
+        speech = await super().synthesize(text, voice, context)
+        said = [(m.start, m.end - 0.02) for m in speech.marks or ()]
+        return Speech(voiced_wav(speech.duration_s, said), "wav", speech.duration_s, speech.marks)
+
+
 @needs_ffmpeg
 async def test_the_cache_speaks_the_delivery_and_keeps_the_captions_in_time(tmp_path: Path) -> None:
-    tts = FakeTTS(seconds_per_word=0.3)
+    tts = VoicedTTS(seconds_per_word=0.3)
     plain = await SpeechCache(tts, tmp_path / "plain").speak("Look here. Now, see.")
     directed = SpeechCache(tts, tmp_path / "directed", prosody=Shaping())
     script = Script(("Look", "here.", "Now,", "see."), "neutral", frozenset({3}), frozenset(), (Delivery(0),))
@@ -196,9 +286,9 @@ async def test_the_cache_speaks_the_delivery_and_keeps_the_captions_in_time(tmp_
     saved = tmp_path / "directed" / spoken.file
     assert saved.suffix == ".mp3" and audio_seconds(saved) == pytest.approx(spoken.duration_s, abs=0.06)
     assert spoken.marks[-1].end <= audio_seconds(saved)
-    again = await SpeechCache(FakeTTS(seconds_per_word=0.3), tmp_path / "directed", prosody=Shaping()).speak(
-        "Look here. Now, see.", script=script
-    )
+    again = await SpeechCache(
+        VoicedTTS(seconds_per_word=0.3), tmp_path / "directed", prosody=Shaping()
+    ).speak("Look here. Now, see.", script=script)
     assert again.file == spoken.file  # from disk
 
 

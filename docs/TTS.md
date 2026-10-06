@@ -262,6 +262,10 @@ Measured on live lessons (ElevenLabs `eleven_flash_v2_5`):
     after a comma and `ANIMATOR_TTS_KEY_PAUSE_S` (0.35 s) before a key point. Voices sometimes run two
     sentences together; this fixes that.
   - Slow sentences at `ANIMATOR_TTS_SLOW_TEMPO` (0.9, pitch unchanged).
+  - Pauses are added only inside the silence the voice already leaves between the two words,
+    measured on the audio itself, and only as much as it falls short (ADR-049). Word times
+    reported by voices run 30-160 ms late, so a cut made at them split words ("ze ... zero"). Where
+    the voice runs two words together nothing is added: a word is never cut.
   - The captions' word times move with it.
   - The audio saved is the shaped audio, the one the word times were measured on, so each caption
     word lights up as it is said (ADR-048). Lessons made before then play the unshaped audio, which

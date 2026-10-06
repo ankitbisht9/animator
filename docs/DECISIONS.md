@@ -1837,3 +1837,46 @@ highlighting to catch up.
 - Git tag `backup/before-placement-precision` (v1.47); full snapshot in
   `D:\animation-backups\v1.47-before-placement-precision` (git bundle plus the working folder with `.env`
   and `var/`).
+
+## ADR-049 Voice pauses only in the voice's own gaps: no word cut in two (2026-10-06)
+
+**Request.** Since ADR-048 the voice is in sync with the captions, but some words are cut by a very
+short stop: "Displacement is ze ... zero", "on st ... starting point". Fix it, or else revert to the
+voice as it was.
+
+**Cause.** The voice modulation (ADR-045) adds silence where a teacher pauses (full stops, commas, before
+a key point), and it placed that silence at the word times the voice reported. ElevenLabs' word times run
+late: measured on fresh audio of the lesson's own sentences, by 30-160 ms at every one of 22 pauses. The
+silence then landed in the first sound of the next word ("ze", silence, "zero"). The times also made the
+voice's own pauses look 0.03-0.08 s long when they were 0.19-0.57 s, so about 1.1 s of silence was added
+per clip where little or none was needed. Before ADR-048 the unshaped audio was played, so none of this
+was heard.
+- In the cached clips made since ADR-048, 109 of 966 added silences (11%) had the voice sounding on both
+  sides.
+
+**Decision** (`tts/prosody.py`, both pipelines):
+- The audio is measured: loudness every 5 ms; quiet is below 6% of how loud the voice gets.
+- A pause goes in the middle of the real gap between the two words: the longest quiet stretch of at
+  least 60 ms (shorter is a stop consonant inside a word), looked for up to 200 ms before and 50 ms after
+  the reported boundary, and measured whole. Only what the gap falls short of the teacher's pause is
+  added. No gap (the voice runs the words together): nothing is added. The silence before the first word
+  and after the last is never taken for a gap.
+- A slow sentence's stretch starts and ends at the quietest moment near its first and last word.
+- Word times still move with the audio: captions stay in sync. The cache key changed (`gaps`), so clips
+  shaped the old way are not reused.
+
+**Measured** (the lesson's four sentences with "zero" and "starting", fetched again unshaped, both
+shapings on the same audio):
+
+| Shaping | Silences added inside the voice | Added length |
+|---|---|---|
+| Before (ADR-045) | 5 of 58 | about 1.1 s per clip |
+| Now | 0 | 0, 0, 0.03, 0.08 s |
+
+Every comma and full stop already had a real gap. Two of the four clips come out exactly as the voice
+made them.
+
+**Impact.** Lessons made before keep their audio: regenerate them. Each sentence is spoken once more the
+first time after the update (provider credits as for a new lesson).
+
+**Rollback.** Git tag `backup/before-tts-stutter-fix` (= v1.48) and `.env.backup-before-tts-stutter-fix`.
