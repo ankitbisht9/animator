@@ -6,6 +6,7 @@
 import type { SceneNarration } from "@animator/components";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api, type ExportJob, type GenerationSummary, subscribe, TERMINAL } from "../api";
+import { DoubtFeature } from "../doubts/DoubtFeature";
 import { buildLesson, type LessonCache } from "../lesson/lesson";
 import { formatTime } from "../player/clock";
 import { type PendingScene, Player } from "../player/Player";
@@ -232,7 +233,21 @@ export function GenerationPage({ id }: { id: string }) {
         )}
       </div>
 
-      <Player lesson={lesson} pending={pending} generating={running} onTime={running ? onTime : undefined} />
+      <Player
+        lesson={lesson}
+        pending={pending}
+        generating={running}
+        onTime={running ? onTime : undefined}
+        addon={(control) => (
+          <DoubtFeature
+            control={control}
+            lessonId={id}
+            language={summary.request.language || "English"}
+            audience={summary.request.audience}
+            durationMin={summary.request.duration_min}
+          />
+        )}
+      />
     </div>
   );
 }

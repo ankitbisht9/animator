@@ -171,6 +171,10 @@ Copy `.env.example` to `.env`. The only value you must fill in is `OPENAI_API_KE
   its ramp, beans in their jar). The engine's geometry checks each at every moment and puts the thing
   there, at the right tilt and heading (vehicles beside a road the plan forgot too); what cannot be
   fixed goes to the reviewer with exact numbers. No extra model call.
+- Doubts (ADR-050, docs/DOUBTS.md): a learner raises a hand mid-lesson (button or `D`), types or says a
+  doubt, and the tutor answers aloud in one model call, on the lesson's own picture (what it talks about
+  glows) or on a board, as long as the doubt needs within half the lesson's length; follow-ups get
+  simpler; the lesson resumes where it stopped. `ANIMATOR_DOUBTS_ENABLED=false` turns it off.
 - Optional quality passes: `ANIMATOR_ENABLE_LLM_CRITIC`, `ANIMATOR_ENABLE_VISUAL_CRITIC` (reviews rendered
   keyframes with a vision model; slower and more expensive).
 

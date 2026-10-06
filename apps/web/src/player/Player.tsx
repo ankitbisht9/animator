@@ -22,6 +22,19 @@ export interface PendingScene {
   status: string;
 }
 
+/** What an add-on on the stage (doubts, ADR-050) may see and do with the player. */
+export interface PlayerControl {
+  /** The global playhead (seconds). */
+  t: number;
+  playing: boolean;
+  /** The scene on screen and how far into it (seconds). */
+  scene: { index: number; local: number } | null;
+  pause: () => void;
+  play: () => void;
+  /** While locked (a dialog is open) the player's keyboard shortcuts and its play button are off. */
+  lock: (on: boolean) => void;
+}
+
 interface Props {
   lesson: Lesson;
   autoPlay?: boolean;
@@ -31,6 +44,8 @@ interface Props {
   generating?: boolean;
   /** Called with the playhead about every 2 s while playing (pacing). */
   onTime?: (t: number) => void;
+  /** Drawn on the stage, with control of the player (optional: without it nothing changes). */
+  addon?: (control: PlayerControl) => ReactNode;
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -70,7 +85,7 @@ class SceneBoundary extends Component<
   }
 }
 
-export function Player({ lesson, autoPlay = false, pending = [], generating = false, onTime }: Props) {
+export function Player({ lesson, autoPlay = false, pending = [], generating = false, onTime, addon }: Props) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
@@ -80,6 +95,9 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
   const [question, setQuestion] = useState<{ sceneIndex: number; id: string } | null>(null);
   const [answered, setAnswered] = useState<Record<string, number>>({});
   const [buffering, setBuffering] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const lockedRef = useRef(locked);
+  lockedRef.current = locked;
   const stageRef = useRef<HTMLDivElement>(null);
   const questionRef = useRef(question);
   questionRef.current = question;
@@ -188,6 +206,7 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
   const onKey = useCallback(
     (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest("input, textarea, select, .cm-editor")) return;
+      if (lockedRef.current) return;
       if (e.code === "Space") {
         e.preventDefault();
         if (!questionRef.current) clock.toggle();
@@ -282,7 +301,7 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
               <div className="inspector-type">{hovered.type.replace(/_/g, " ")}</div>
             </div>
           )}
-          {!playing && !q && !buffering && !empty && (
+          {!playing && !q && !buffering && !empty && !locked && (
             <button type="button" className="stage-play" onClick={() => clock.play()} aria-label="Play">
               <svg viewBox="0 0 24 24" width="44" height="44" aria-hidden="true">
                 <path d="M8 5v14l11-7z" fill="currentColor" />
@@ -333,6 +352,14 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
               </div>
             </div>
           )}
+          {addon?.({
+            t,
+            playing,
+            scene: loc ? { index: loc.scene.index, local: loc.local } : null,
+            pause: () => clock.pause(),
+            play: () => clock.play(),
+            lock: setLocked,
+          })}
         </div>
         <Controls
           lesson={lesson}

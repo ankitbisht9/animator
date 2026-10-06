@@ -207,6 +207,23 @@ class Settings(BaseSettings):
     animator_tts_timeout_s: float = 30.0
     animator_tts_cache_dir: Path = Path("var/tts")
 
+    # --- Doubts (ADR-050) ---
+    # A learner raises a hand mid-lesson and the tutor answers in one model call, reusing the
+    # lesson's own picture where the doubt is about it. Off: no hand-raise anywhere.
+    animator_doubts_enabled: bool = True
+    # Empty: the teacher's model (else the storyboard's), then ANIMATOR_MODEL_FALLBACKS.
+    animator_model_doubt: str = ""
+    animator_effort_doubt: ReasoningEffort = "low"
+    # The longest answer: this share of the lesson's length, within [min, max] seconds.
+    animator_doubt_share: float = Field(default=0.5, gt=0.0, le=2.0)
+    animator_doubt_min_s: float = Field(default=20.0, ge=5.0, le=120.0)
+    animator_doubt_max_s: float = Field(default=60.0, ge=10.0, le=180.0)
+    # What one lesson's doubts may cost in all, and how many follow-ups one doubt may have.
+    animator_doubt_budget_usd: float = Field(default=0.5, ge=0.0)
+    animator_doubt_max_turns: int = Field(default=8, ge=1, le=30)
+    # Speech-to-text for browsers without built-in speech recognition (OpenAI).
+    animator_doubt_transcribe_model: str = "gpt-4o-mini-transcribe"
+
     # --- Storage: no database for now (see ADR-003) ---
     animator_storage_backend: Literal["memory", "files"] = "files"
     animator_data_dir: Path = Path("var")

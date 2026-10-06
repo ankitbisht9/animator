@@ -472,3 +472,13 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - **No word cut in two (ADR-049).** The pauses were placed at the voice's reported word times, which run
   late, so some landed inside the next word ("ze ... zero"). Pauses now go only in the silence the voice
   really leaves between words; where it runs words together nothing is added.
+
+## Doubts: raise a hand mid-lesson (ADR-050)
+
+- **Asking.** A hand-raise button on the stage (or `D`) pauses the lesson and opens a doubt screen: the
+  tutor greets, the learner types or speaks, the tutor answers aloud with captions, on the lesson's own
+  picture (what it talks about glows) or on a board. Follow-ups get simpler each time; "Got it" resumes
+  the lesson where it stopped. A related topic gets a short answer and "Create that lesson".
+- **Cost.** One model call per question ($0.001-0.002), no scene written, nothing corrected; answers fit
+  half the lesson's length (20-60 s). Isolated: `animator/doubts`, `web/src/doubts`, off with
+  `ANIMATOR_DOUBTS_ENABLED=false`. Guide: docs/DOUBTS.md.

@@ -19,6 +19,8 @@ from animator import REPO_ROOT
 from animator.api.generations import router as generations_router
 from animator.api.tts import router as tts_router
 from animator.config import STAGES, Settings, get_settings
+from animator.doubts import DoubtService
+from animator.doubts import router as doubts_router
 from animator.engine_client import EngineClient, EngineWorkerPool, pool_from_settings
 from animator.export.jobs import BrowserKeyframes, ExportJobs
 from animator.export.site import WEB_DIST
@@ -67,11 +69,16 @@ def create_app(
             frames = owned_frames
         # Narration audio: None unless ANIMATOR_TTS_ENABLED (then nothing speaks anywhere).
         speech = build_speech(s, tts, env_file)
-        pipeline = Pipeline(engine, llm or build_llm(), s, frames, speech)
+        llm_client = llm or build_llm()
+        pipeline = Pipeline(engine, llm_client, s, frames, speech)
         runner = GenerationRunner(the_store, pipeline, s)
         app.state.settings = s
         app.state.speech = speech
         app.state.runner = runner
+        # Doubts (ADR-050): an isolated feature reading lessons; nothing above depends on it.
+        app.state.doubts = (
+            DoubtService(engine, llm_client, s, speech, the_store) if s.animator_doubts_enabled else None
+        )
         app.state.exports = ExportJobs(s)
         if resume_on_start:
             resumed = await runner.resume_all()
@@ -97,6 +104,7 @@ def create_app(
     )
     app.include_router(generations_router)
     app.include_router(tts_router)
+    app.include_router(doubts_router)
 
     @app.get("/api/health")
     async def health(request: Request) -> dict[str, Any]:

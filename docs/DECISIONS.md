@@ -1880,3 +1880,115 @@ made them.
 first time after the update (provider credits as for a new lesson).
 
 **Rollback.** Git tag `backup/before-tts-stutter-fix` (= v1.48) and `.env.backup-before-tts-stutter-fix`.
+
+## ADR-050 Doubts: a raised hand mid-lesson, answered in one call on the lesson's own picture (2026-10-06)
+
+**Request.** A learner can raise a hand at any moment of a lesson, say or type a doubt, and get an
+explanation from the tutor, as in a classroom: based on what has been taught up to that moment, as long
+as the doubt needs (within reason for the lesson's length), short for a topic outside the lesson. They
+can keep asking in the same conversation, each answer simpler than the last, then close it and carry on
+where they left off. Budget first, without poorer answers: one model call per question, reusing the
+lesson's own scene where the doubt is about it. A polished, classroom-like screen. Isolated: nothing
+existing may depend on it.
+
+**Decision.**
+- **Isolated.** `animator/doubts/` (service, context, visuals, phrases, prompt `doubt.v1`, routes under
+  `/api/doubts`) and `apps/web/src/doubts/`. Existing code changed only by additions: the app creates the
+  service and mounts its routes; the settings gained a doubts block; the lesson player gained an optional
+  `addon` slot (with it: pause, resume, the moment on screen, and a lock on its own shortcuts while the
+  doubt screen is open); the lesson page passes the add-on. `ANIMATOR_DOUBTS_ENABLED=false` removes it.
+- **The flow.** Hand raised (button or `D`): the lesson pauses; the doubt screen opens over it; the tutor
+  greets the learner (fixed lines in English and Hinglish, spoken once and cached; no model call). The
+  learner types or speaks (the browser's own speech recognition, free, words shown live; elsewhere the
+  recording goes to OpenAI speech to text). While the answer is prepared the tutor says a fixed line.
+  The answer plays on its own stage with voice and word-timed captions; then "Still not clear", "Give an
+  example", another question, or "Got it, continue", which resumes the lesson where it was.
+- **One model call per question**, strict schema, effort low. It gets:
+  - the lesson: each scene's narration and what its picture shows (object ids, names, descriptions).
+    This is the same for every doubt of a lesson and comes right after the static instructions, so the
+    provider caches it;
+  - the moment: the scene, the time, the sentence being said, what is on screen (the engine's state at
+    that time) and which scenes come later;
+  - this doubt's conversation, the question, the time the answer may take and the language.
+
+  It returns:
+  - the kind of doubt (lesson, related, unrelated, unclear) and how deep it is;
+  - a title;
+  - the sentences, each with its tone, the on-screen ids it talks about, and an optional short note.
+    For Hinglish it also gives how the voice says each sentence, one entry per caption word, Hindi in
+    Devanagari. That folds in the speech-script call lessons make (ADR-041);
+  - the picture: the lesson's own picture or a board (with an optional icon and equation);
+  - for a related topic, the lesson it could make.
+- **Reusing the lesson's DSL, never writing one.** The model writes no scene, so nothing needs
+  validating against the model or correcting.
+  - A picture answer is a scene that continues from the engine's state at the moment the hand went up
+    (or from an earlier scene's end). The objects each sentence talks about glow while it is said, and
+    up to three short callout notes point at them, placed in the stage corner that covers least of the
+    picture.
+  - A board is built by code: the title, an icon, an equation written at its sentence, and one-point
+    cards written as they are said.
+  - Each comes in variants from fullest to plainest, and the first the engine compiles is kept.
+  - The voice is the lessons' (one take, the scene fitted to the speech, ADR-043/049).
+- **How long.** The longest answer is half the lesson's length, within 20-60 s (a one-minute lesson
+  never gets a two-minute answer). The model chooses quick, standard or deep within it. Code drops whole
+  sentences beyond 1.25 times the word budget; no second call.
+- **Kinds of doubt.** A related topic gets a short answer and a "Create that lesson" button (it starts
+  that lesson in a new tab). An unrelated question gets a friendly line back to the lesson. A doubt
+  answered later in this lesson gets a short answer and "the lesson comes to it".
+- **Follow-ups** continue the same doubt: the conversation is in the message, and from the second turn
+  the tutor is told to go simpler, then to basics, never repeating itself.
+- **Limits.** `ANIMATOR_DOUBT_BUDGET_USD` (0.50) for all doubts of a lesson; `ANIMATOR_DOUBT_MAX_TURNS`
+  (8) answers per doubt. A broken reply (rare with a strict schema) is asked for once more.
+- **The lesson is never changed.** Doubts are saved next to it (`var/generations/<lesson>/doubts/`); its
+  record, call log and cost are untouched.
+
+**Budget levers considered and not taken.** A cheaper or faster voice for answers: it would not sound
+like the lesson's tutor. Fewer reasoning tokens (effort none): the answers' quality comes first. Writing
+new scenes for doubts: a scene costs about ten times an answer, and needs checking and correcting.
+
+**What did not work first.**
+- **Glows outlasting the answer.** The sentences were spread evenly over the scene, but each glow was
+  sized from its own sentence, so the last one ran past the end. The engine rejected those variants and
+  picture answers fell back to the bare picture, pointing at nothing. Now sentences get explicit start
+  times; glows are 65% of their sentence; a fitted scene that still overruns is tried with brief glows.
+- **A silent first greeting.** The fixed lines were still being recorded the first time a language was
+  used. Built-in texts now show at once; the audio follows when it exists.
+- **Small key points.** Note cards (small text) were hard to read on the half-size doubt stage.
+  One-point cards with body-size text replaced them.
+- **Server speech to text writes Hindi speech in Devanagari**, whatever the prompt or language setting.
+  Kept: it is the fallback for browsers without speech recognition, and the tutor understands it.
+
+**Measured** (live; gpt-6-luna at low effort, ElevenLabs eleven_v4; the user's 4-minute Hinglish lesson
+on average speed and an English lesson on a ball on a ramp):
+- **Cost and speed.** $0.0011-0.0022 per answer (about 6k input tokens, a third or more cached; 0.5-1k
+  output). 6-15 s per answer: model 4-8.5 s, voice and picture 3.5-7 s.
+- **What came back.**
+  - Picture answers pointed at the right things: the student, the start and finish markers and the zero
+    arrow on the track; the downhill component and the ball on the ramp.
+  - Every Hinglish voice line matched its caption word for word.
+  - "Instantaneous speed" got a related-topic answer with a lesson suggestion; "the velocity formula"
+    asked in scene 1 was answered with "the lesson comes to it"; a cricket question got one line back to
+    the lesson.
+  - A follow-up ("still not clear") used a new everyday analogy and pointed at the picture again.
+- **In the browser** (end to end, the user's lesson):
+  - the hand paused the lesson at 0:45 and the tutor greeted;
+  - the thinking line played while the answer came, after 13.6 s;
+  - the answer played on the lesson's track picture with glows, a note and word-timed captions;
+  - "Still not clear" gave a simpler second answer;
+  - "Got it" resumed the lesson from 0:45;
+  - a related topic showed the board and "Create that lesson";
+  - the screen works at phone width, with no console errors.
+- **Tests.** 10 Python (picture and board answers, follow-ups, time limit, voice timing, budget and turn
+  limits, the lesson untouched, HTTP, the off switch) and 2 web (an answer's scene compiles, on its own
+  or from the lesson moment).
+
+**Not done.**
+- A picture answer points at what the lesson drew; it does not draw anything new or replay a motion. A
+  board explains what the lesson did not draw.
+- An answer takes 6-15 s; the tutor's thinking line covers the first seconds.
+
+**Rollback.**
+- `ANIMATOR_DOUBTS_ENABLED=false`.
+- Git tag `backup/before-doubts` (= v1.49), and `.env.backup-before-doubts`.
+- Full snapshot in `D:\animation-backups\v1.49-before-doubts` (git bundle, plus the working folder with
+  `.env` and `var/`).
