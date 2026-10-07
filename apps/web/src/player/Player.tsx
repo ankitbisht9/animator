@@ -33,6 +33,10 @@ export interface PlayerControl {
   play: () => void;
   /** While locked (a dialog is open) the player's keyboard shortcuts and its play button are off. */
   lock: (on: boolean) => void;
+  /** Jump to a global time (seconds), within what is ready. */
+  seek: (t: number) => void;
+  /** The ready part of the lesson (seconds). */
+  duration: number;
 }
 
 interface Props {
@@ -46,6 +50,8 @@ interface Props {
   onTime?: (t: number) => void;
   /** Drawn on the stage, with control of the player (optional: without it nothing changes). */
   addon?: (control: PlayerControl) => ReactNode;
+  /** How playback starts (the learner's preferences); defaults: normal speed, captions and voice on. */
+  initial?: { rate?: number; captions?: boolean; voice?: boolean };
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -85,12 +91,12 @@ class SceneBoundary extends Component<
   }
 }
 
-export function Player({ lesson, autoPlay = false, pending = [], generating = false, onTime, addon }: Props) {
+export function Player({ lesson, autoPlay = false, pending = [], generating = false, onTime, addon, initial }: Props) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [rate, setRate] = useState(1);
-  const [captions, setCaptions] = useState(true);
-  const [voiceOn, setVoiceOn] = useState(true);
+  const [rate, setRate] = useState(initial?.rate ?? 1);
+  const [captions, setCaptions] = useState(initial?.captions ?? true);
+  const [voiceOn, setVoiceOn] = useState(initial?.voice ?? true);
   const [hover, setHover] = useState<string | null>(null);
   const [question, setQuestion] = useState<{ sceneIndex: number; id: string } | null>(null);
   const [answered, setAnswered] = useState<Record<string, number>>({});
@@ -142,6 +148,9 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
   }
   const clock = clockRef.current;
   useEffect(() => () => clock.dispose(), [clock]);
+  useEffect(() => {
+    if (initial?.rate && initial.rate !== 1) clock.rate = initial.rate;
+  }, [clock, initial?.rate]);
   useEffect(() => {
     if (autoPlay) clock.play();
   }, [clock, autoPlay]);
@@ -302,7 +311,12 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
             </div>
           )}
           {!playing && !q && !buffering && !empty && !locked && (
-            <button type="button" className="stage-play" onClick={() => clock.play()} aria-label="Play">
+            <button
+              type="button"
+              className={`stage-play ${t > 0 ? "paused" : ""}`}
+              onClick={() => clock.play()}
+              aria-label="Play"
+            >
               <svg viewBox="0 0 24 24" width="44" height="44" aria-hidden="true">
                 <path d="M8 5v14l11-7z" fill="currentColor" />
               </svg>
@@ -359,6 +373,11 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
             pause: () => clock.pause(),
             play: () => clock.play(),
             lock: setLocked,
+            seek: (x) => {
+              setBuffering(false);
+              clock.seek(x);
+            },
+            duration: lesson.duration,
           })}
         </div>
         <Controls

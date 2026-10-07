@@ -1,0 +1,240 @@
+/*
+ * Design tokens. The brand: white and red (#d90429) with a deep navy-grey ink; serif headings
+ * (Source Serif 4) for a classic, academic feel, Inter for everything you read and click.
+ * Light is the default; dark is chosen in settings (data-theme on <html>).
+ * The older names (--accent, --good, ...) are kept for the player, the playground and doubts.
+ */
+
+:root {
+  --brand: #d90429;
+  --brand-400: #ef233c;
+  --brand-600: #b80322;
+  --brand-700: #8d0801;
+  --brand-50: #fff1f3;
+  --brand-100: #ffe0e5;
+  --brand-200: #fdbac5;
+  --brand-ink: #ffffff;
+
+  --ink: #14161f;
+  --text: #2b2d42;
+  --muted: #646a82;
+  --subtle: #959bb0;
+
+  --bg: #f7f7f9;
+  --surface: #ffffff;
+  --surface-2: #f3f4f7;
+  --surface-3: #eceef3;
+  --line: #e6e8ef;
+  --line-strong: #d3d6e0;
+  --overlay: rgba(14, 16, 24, 0.48);
+
+  --success: #13795b;
+  --success-bg: #e6f5ef;
+  --warning: #a95205;
+  --warning-bg: #fff4e3;
+  --danger: #c1121f;
+  --danger-bg: #ffe9ec;
+  --info: #2554c7;
+  --info-bg: #eaf0ff;
+
+  --accent: var(--brand);
+  --accent-soft: var(--brand-50);
+  --good: var(--success);
+  --bad: var(--danger);
+  --warn: var(--warning);
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  --shadow-xs: 0 1px 2px rgba(20, 22, 31, 0.06);
+  --shadow-sm: 0 1px 3px rgba(20, 22, 31, 0.08), 0 1px 2px rgba(20, 22, 31, 0.04);
+  --shadow: 0 8px 24px rgba(20, 22, 31, 0.08), 0 2px 6px rgba(20, 22, 31, 0.04);
+  --shadow-lg: 0 24px 60px rgba(20, 22, 31, 0.14), 0 6px 16px rgba(20, 22, 31, 0.06);
+  --shadow-brand: 0 10px 26px rgba(217, 4, 41, 0.28);
+  --ring: 0 0 0 3px rgba(217, 4, 41, 0.24);
+
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman", serif;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur: 180ms;
+
+  --sidebar-w: 264px;
+  --sidebar-w-collapsed: 76px;
+  --topbar-h: 64px;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --brand: #ff2d4d;
+  --brand-400: #ff5470;
+  --brand-600: #e00a30;
+  --brand-700: #b80322;
+  --brand-50: rgba(255, 45, 77, 0.12);
+  --brand-100: rgba(255, 45, 77, 0.2);
+  --brand-200: rgba(255, 45, 77, 0.35);
+
+  --ink: #f5f6f9;
+  --text: #e2e4eb;
+  --muted: #a4aabb;
+  --subtle: #7b8194;
+
+  --bg: #0e1016;
+  --surface: #161921;
+  --surface-2: #1d212b;
+  --surface-3: #262a35;
+  --line: #2a2f3b;
+  --line-strong: #3a404f;
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --success: #3ccf91;
+  --success-bg: rgba(60, 207, 145, 0.12);
+  --warning: #f0a54a;
+  --warning-bg: rgba(240, 165, 74, 0.13);
+  --danger: #ff6b7d;
+  --danger-bg: rgba(255, 107, 125, 0.13);
+  --info: #7ea6ff;
+  --info-bg: rgba(126, 166, 255, 0.13);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
+  --shadow-brand: 0 10px 26px rgba(255, 45, 77, 0.25);
+  --ring: 0 0 0 3px rgba(255, 45, 77, 0.35);
+  color-scheme: dark;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--brand-100);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 7px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+
+code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.88em;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -400px 0;
+  }
+  to {
+    background-position: 400px 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+}
+
+.page-enter {
+  animation: page-enter 260ms var(--ease) both;
+}
+
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

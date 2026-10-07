@@ -482,3 +482,23 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - **Cost.** One model call per question ($0.001-0.002), no scene written, nothing corrected; answers fit
   half the lesson's length (20-60 s). Isolated: `animator/doubts`, `web/src/doubts`, off with
   `ANIMATOR_DOUBTS_ENABLED=false`. Guide: docs/DOUBTS.md.
+
+## The platform (ADR-051)
+
+- **Accounts and roles.** Sign up, sign in (httpOnly cookie sessions, rotating refresh tokens), email
+  confirmation and password reset, devices, data export and account deletion. Learner, educator and admin, as
+  permissions; daily quotas per role.
+- **The gateway.** One layer in front of every route:
+  - request ids, size limits, origin and CSRF checks, rate limits, security headers, metrics;
+  - access rules for the pipeline's routes (owners, shared lessons, admins; deny by default).
+  - The pipeline's code is unchanged.
+- **A database.** SQLite in `var/platform/` with Alembic migrations (PostgreSQL by URL). It holds the lesson
+  catalog (existing lessons imported for the first admin), progress, streaks, notes, saved lessons, ratings,
+  doubts, notifications, support tickets and the audit log.
+- **The web app.** In white and red:
+  - landing (with a live lesson), onboarding, dashboard, Create, My lessons, Explore, Library, Progress,
+    Profile, Settings, Help, Support;
+  - an admin console (overview, people, lessons, support queue, audit, system);
+  - dark mode, phone layouts.
+  - The lesson page: progress, notes, sharing, resume, a lesson-complete card, a restyled player.
+- Guide: docs/PLATFORM.md.

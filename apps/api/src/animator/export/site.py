@@ -83,6 +83,13 @@ _TYPES = {
 }
 
 
+class _Server(ThreadingHTTPServer):
+    # Several browsers load the app at once, each fetching its code split in chunks in parallel. The
+    # default backlog (5) overflows and Windows then refuses connections, so a page never loads.
+    request_queue_size = 128
+    daemon_threads = True
+
+
 class _Handler(SimpleHTTPRequestHandler):
     # The base class declares this as an instance attribute, so no ClassVar here.
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map, **_TYPES}  # noqa: RUF012
@@ -105,7 +112,7 @@ class StaticSite:
         if not (root / "index.html").exists():
             raise FileNotFoundError(f"web app not built at {root}; run `make build-web`")
         self.root = root
-        self._server: ThreadingHTTPServer | None = None
+        self._server: _Server | None = None
         self._thread: threading.Thread | None = None
 
     @property
@@ -116,7 +123,7 @@ class StaticSite:
 
     def __enter__(self) -> StaticSite:
         handler = partial(_Handler, directory=str(self.root))
-        self._server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        self._server = _Server(("127.0.0.1", 0), handler)
         self._thread = threading.Thread(target=self._server.serve_forever, name="static-site", daemon=True)
         self._thread.start()
         return self

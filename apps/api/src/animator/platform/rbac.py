@@ -1,0 +1,48 @@
+"""Roles and permissions (RBAC). Code asks for a permission, never for a role, so what a role may
+do is decided here, in one table.
+
+- learner: watches, creates lessons within a daily quota, asks doubts, shares privately (a link).
+- educator: everything a learner can, with larger quotas, and publishes lessons to Explore.
+- admin: everything, including people, every lesson, support and the audit log.
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+
+
+class Role(StrEnum):
+    LEARNER = "learner"
+    EDUCATOR = "educator"
+    ADMIN = "admin"
+
+
+class Perm(StrEnum):
+    LESSON_CREATE = "lesson:create"
+    LESSON_PUBLISH = "lesson:publish"  # make a lesson public, in Explore
+    LESSON_ANY = "lesson:any"  # see, change and delete anyone's lesson
+    LESSON_FEATURE = "lesson:feature"
+    DOUBT_ASK = "doubt:ask"
+    SUPPORT_MANAGE = "support:manage"
+    USER_MANAGE = "user:manage"
+    AUDIT_READ = "audit:read"
+    ANALYTICS_READ = "analytics:read"
+    DEBUG = "debug"  # the pipeline's raw API, call logs, the DSL playground
+
+
+ROLE_PERMS: dict[Role, frozenset[Perm]] = {
+    Role.LEARNER: frozenset({Perm.LESSON_CREATE, Perm.DOUBT_ASK}),
+    Role.EDUCATOR: frozenset({Perm.LESSON_CREATE, Perm.DOUBT_ASK, Perm.LESSON_PUBLISH}),
+    Role.ADMIN: frozenset(Perm),
+}
+
+
+def perms_of(role: str) -> frozenset[Perm]:
+    try:
+        return ROLE_PERMS[Role(role)]
+    except ValueError:
+        return frozenset()
+
+
+def has(role: str, perm: Perm) -> bool:
+    return perm in perms_of(role)

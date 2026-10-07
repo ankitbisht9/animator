@@ -1992,3 +1992,117 @@ on average speed and an English lesson on a ball on a ramp):
 - Git tag `backup/before-doubts` (= v1.49), and `.env.backup-before-doubts`.
 - Full snapshot in `D:\animation-backups\v1.49-before-doubts` (git bundle, plus the working folder with
   `.env` and `var/`).
+
+## ADR-051 The platform: accounts, roles, a gateway in front of the pipeline, and a web app around it (2026-10-07)
+
+**Request.** Turn the engine and its pipeline into a platform to launch:
+- sign-up and sign-in, a dashboard, settings, a profile, support, help, and the pages an edtech platform needs;
+- an educational look in white and red (#d90429), light by default, professional and classic, with
+  interactions that feel alive without being showy;
+- the lesson page as the best part, its logic untouched;
+- a strong architecture: authentication, security, roles and permissions, middleware, an API gateway, async
+  work, optimised queries.
+
+The pipelines must not change.
+
+**Decision.**
+- **A database, at last (SQLite by default).** Accounts, sessions, roles, progress and support need durable,
+  queryable records, so the earlier "no database yet" (ADR-003) ends here:
+  - SQLAlchemy 2 async with aiosqlite, and Alembic migrations run at start;
+  - a file in `var/platform/` (no server, no Docker); WAL, foreign keys, a busy timeout;
+  - PostgreSQL by URL. Lessons stay in their JSON files: the database holds a catalog that points at them.
+- **Isolated** (`animator/platform/`, `apps/web/src/platform/`). Existing code changed only by additions:
+  - the app installs the platform when it builds itself from the environment (an app built with its own
+    settings, as every existing test does, is exactly as before);
+  - the generation page's stream logic moved, unchanged, into a hook shared with the new lesson page;
+  - the player gained `seek` and `duration` on its add-on control, starting preferences (speed, captions,
+    voice), and a class on its paused button;
+  - CORS allows the new methods and credentials;
+  - the old violet accents became the brand red.
+  - `PLATFORM_ENABLED=false` turns it all off.
+- **A gateway, not edits to the pipeline's routes.** One pure-ASGI layer in front of every route:
+  - request ids, body limits, Origin and double-submit CSRF checks;
+  - who is asking (httpOnly cookie or Bearer), per-person rate limits;
+  - security headers, metrics and an access log;
+  - and a table of access rules for the routes that existed before accounts, deny by default. Readers of a
+    lesson: its owner, anyone when shared, admins. Changers: the owner and admins. The pipeline's own create,
+    list and call logs: admins. Doubts: within a daily quota, continued only by their asker.
+  - Two response hooks record what the pipeline's routes did (a doubt asked; a lesson an admin made through
+    the raw API), so those routes did not change.
+- **Sessions.**
+  - Access token: 15-minute HS256 JWT naming the user and the session, checked against the session row (cached
+    10 s, so sign-out, suspension and role changes apply at once).
+  - Refresh token: 256-bit opaque, stored as SHA-256, rotated at every use. Replaying a replaced one ends the
+    session; a 30 s grace covers two tabs refreshing together.
+  - The page renews in the background and retries a 401 once, through one wrapper around `fetch`.
+  - Argon2id passwords; lockout after 5 failures; rate limits on every recovery path; answers that do not
+    reveal which emails have accounts.
+- **Roles as permissions.** learner, educator (publishes to Explore, larger quotas), admin (everything).
+  Quotas per role and per rolling 24 h for lessons, lesson length and doubt answers. Lessons are made through
+  `/api/v1/lessons`, which checks all of that and calls the runner's own `start` unchanged.
+- **The catalog follows the pipeline, never drives it.**
+  - At start it adds every lesson already on disk (195 here) for the first admin.
+  - While lessons are made, it reads their status and cost from the runner's memory every 3 s and notifies
+    the owner when one is ready or stops.
+  - Subjects come from keywords (no model call), and owners can change them.
+  - Deleting is soft; a lesson being made is cancelled so it stops spending.
+- **Queries.** Every list is one statement with its joins (lesson, owner name, this learner's progress and
+  saved flag), paged with limit + 1 instead of a count. Indexes match the filters and sorts:
+  - lessons: owner and date, visibility and date;
+  - progress: user and last watched;
+  - notes, doubts, notifications, tickets and the audit log likewise.
+- **The web app.** No router or data library added: a route table on the existing tiny router, and a cached
+  data hook (stale-while-revalidate, shared requests). Added: `lucide-react` (icons), and Inter and Source
+  Serif 4 from fontsource (no font CDN, CSP-friendly). The engine-heavy pages load on demand.
+  - **Look:** tokens for light (white and red, navy-grey ink) and dark; serif headings; subject-tinted lesson
+    covers drawn in SVG (no images); motion is short and purposeful (page fades, card lifts, bars growing,
+    progress stripes); everything stills for reduced motion.
+  - **The lesson page:**
+    - live progress while a lesson is made;
+    - save, share (private, link, public), download as MP4, report a problem;
+    - "continue from 2:31";
+    - progress saved as you watch (it feeds streaks and the dashboard);
+    - notes pinned to moments (`N`), jumping back on click;
+    - your doubts on this lesson;
+    - a lesson-complete card with a star rating;
+    - the player restyled (red controls, the contents list, transcript, quick checks, a compact paused pill
+      that leaves the picture visible).
+  - **Development comforts:** the first account on an empty platform is an admin, and any localhost or
+    127.0.0.1 origin is accepted. Production turns both off.
+
+**Not done (deliberately).**
+- No payments or subscriptions: "Plans and limits" is a support category and quotas are settings.
+- No OAuth sign-in or 2FA.
+- No classrooms or assignments.
+- Rate limits and caches are per process; several API processes would need Redis.
+- Mail is SMTP or a development outbox folder.
+- Terms and privacy are templates for a lawyer to review.
+
+**Measured.**
+- **Tests.** 18 new Python tests:
+  - sign-up, sign-in, refresh rotation and theft, lockout, reset and confirmation by mail;
+  - profile, devices, export and deletion;
+  - the gateway's rules, headers, CSRF, origin, body and rate limits;
+  - a lesson from creation through sharing, Explore, progress, notes, saved and ratings to deletion, with the
+    real engine;
+  - doubts through the gateway with ownership and quota;
+  - support; administration; the import of existing lessons; the off switch; the first account; local origins.
+  - Existing tests pass unchanged (247 Python, plus the TypeScript suites).
+- **Browser, end to end** (test servers on 8011 and 5180, a scratch database):
+  - the landing page with the live engine preview;
+  - sign-up, onboarding, the dashboard;
+  - the 195 existing lessons as the admin's;
+  - the lesson page: play, pause, a note with `N`, share by link, publish, the lesson-complete card and rating;
+  - Explore, Create, Progress, Library, Profile, every settings tab, dark mode, help, global search;
+  - a learner: no admin pages, the shared lesson, a real doubt answered through the gateway, a support ticket;
+  - the admin's queue reply, which reached the learner as a notification; the overview, people, lessons,
+    audit and system pages;
+  - phone width with no sideways scroll; a signed-out visitor watching the shared lesson and redirected to
+    sign in for the dashboard; sign-out.
+  - No console errors.
+
+**Rollback.**
+- `PLATFORM_ENABLED=false` restores the API as it was, without accounts. The new web app needs the platform.
+- Git tag `backup/before-platform` (= v1.50), `.env.backup-before-platform`.
+- Full snapshot in `D:\animation-backups\v1.50-before-platform` (git bundle, plus the working folder with
+  `.env` and `var/`).

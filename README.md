@@ -5,6 +5,9 @@ flat, vector-style **2D animated explanation**. An LLM directs (plans the lesson
 structured data); a deterministic TypeScript engine renders (layout, physics, interpolation, SVG). No
 image or video generation models are involved.
 
+It runs as a learning platform: accounts and roles, a dashboard, Explore, a library, progress and streaks,
+notes, doubts, support and an admin console, behind an API gateway (see [docs/PLATFORM.md](docs/PLATFORM.md)).
+
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DECISIONS.md](docs/DECISIONS.md) and
 [PROGRESS.md](PROGRESS.md).
 
@@ -97,7 +100,8 @@ identical frames and a byte-identical MP4 on the same machine. The pinned Docker
 ## Creating a lesson
 
 1. Put a working `OPENAI_API_KEY` in `.env` (see below), then run `make dev`.
-2. Open the web app, type a topic ("Explain Archimedes' principle"), choose the audience, the length and the
+2. Open the web app and create an account (the first account on a new platform is its administrator and owns
+   the lessons made before accounts; docs/PLATFORM.md). Choose **Create lesson**, type a topic ("Explain Archimedes' principle"), choose the audience, the length and the
    spoken language (English, or Hinglish: the everyday Hindi-English mix; the voice and captions follow it, and
    everything drawn stays English), and click **Create lesson**.
 3. The lesson page shows live progress: planning, storyboarding each chapter, then writing, checking and fixing
@@ -107,7 +111,8 @@ identical frames and a byte-identical MP4 on the same machine. The pinned Docker
    each scene's brief, every attempt with the engine's issues, the scene DSL (open it in the Playground), and every
    AI call with tokens, cost and latency.
 
-Generations are saved as JSON under `var/generations/` (no database). A lesson in progress when the server stops
+Generations are saved as JSON under `var/generations/`; accounts, the lesson catalog and learning records are
+in `var/platform/platform.db` (SQLite). A lesson in progress when the server stops
 resumes when it starts again. **Resume** continues a paused one, for example after an outage or after you fix the
 key.
 

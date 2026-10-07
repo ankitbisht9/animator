@@ -4,14 +4,20 @@ version = "0.1.0"
 description = "AI-directed 2D educational animation: API, LLM pipeline, export orchestration"
 requires-python = ">=3.13"
 dependencies = [
+    "aiosqlite==0.22.1",
+    "alembic==1.20.0",
     "animator-contracts",
+    "argon2-cffi==25.1.0",
     "edge-tts==7.2.8",
+    "email-validator==2.3.0",
     "fastapi==0.141.1",
     "httpx2==2.13.1",
     "openai==3.19.2",
     "playwright==1.63.0",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
+    "pyjwt==2.15.1",
+    "sqlalchemy[asyncio]==2.1.3",
     "structlog==26.1.0",
     "uvicorn[standard]==0.53.0",
 ]

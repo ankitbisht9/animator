@@ -29,6 +29,8 @@ from animator.jobs.store import FileStore, GenerationStore, MemoryStore
 from animator.llm import LLMClient, build_llm
 from animator.observability import setup_logging
 from animator.pipeline.generator import KeyframeSource, Pipeline
+from animator.platform import Platform, PlatformSettings, serve_web
+from animator.platform import install as install_platform
 from animator.tts import TTSProvider, build_speech, env_duplicates, tts_problem
 
 log = logging.getLogger("animator.api")
@@ -41,12 +43,17 @@ def create_app(
     keyframes: KeyframeSource | None = None,
     resume_on_start: bool = True,
     tts: TTSProvider | None = None,
+    platform: PlatformSettings | None = None,
 ) -> FastAPI:
     s = settings or get_settings()
     setup_logging(s.log_level, s.log_format)
     # The .env the settings came from (checked for narration settings written twice); none when the
     # caller passes its own settings (tests).
     env_file = REPO_ROOT / ".env" if settings is None else None
+    # The platform (ADR-051): accounts, roles and the gateway, from PLATFORM_* settings for the served
+    # app. An app built with its own settings and no platform (the pipeline's tests) is as before.
+    ps = platform if platform is not None else (PlatformSettings() if settings is None else None)
+    plat = Platform(ps) if ps is not None and ps.enabled else None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -80,6 +87,8 @@ def create_app(
             DoubtService(engine, llm_client, s, speech, the_store) if s.animator_doubts_enabled else None
         )
         app.state.exports = ExportJobs(s)
+        if plat is not None:
+            await plat.start(runner, s, app.state.doubts, pool)
         if resume_on_start:
             resumed = await runner.resume_all()
             if resumed:
@@ -87,6 +96,8 @@ def create_app(
         try:
             yield
         finally:
+            if plat is not None:
+                await plat.close()
             await runner.close()
             await app.state.exports.close()
             if owned_frames is not None:
@@ -96,11 +107,15 @@ def create_app(
             await pool.close()
 
     app = FastAPI(title="Animator API", version="0.1.0", lifespan=lifespan)
+    origins = [o.strip() for o in s.cors_origins.split(",") if o.strip()]
+    if plat is not None:
+        install_platform(app, plat, origins)  # inside CORS: preflights never reach the gateway
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[o.strip() for o in s.cors_origins.split(",") if o.strip()],
-        allow_methods=["GET", "POST"],
+        allow_origins=origins,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
+        allow_credentials=plat is not None,
     )
     app.include_router(generations_router)
     app.include_router(tts_router)
@@ -153,6 +168,8 @@ def create_app(
             },
         }
 
+    if plat is not None:
+        serve_web(app, plat)  # last: the web app answers every path the API does not
     return app
 
 
