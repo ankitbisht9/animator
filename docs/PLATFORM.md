@@ -56,6 +56,8 @@ The numbers are settings (`PLATFORM_LESSONS_PER_DAY_LEARNER`, ...). Permissions 
   out everywhere), All lessons (feature, unpublish, remove, restore), Support queue (reply, status, priority),
   Audit log, System (engine workers, services, busiest routes with p50/p95), DSL playground, and each lesson's
   pipeline view and debug page.
+- On a lesson page the sidebar folds to icons so the lesson gets the room (one click opens it). The
+  lesson screen is kept as light per frame as before the platform (ADR-052).
 - Keyboard: `Space`, `←`/`→`, `C`, `M`, `F` in the player as before; `D` raises a hand; `N` writes a note at the
   current moment; `Ctrl K` or `/` searches lessons.
 

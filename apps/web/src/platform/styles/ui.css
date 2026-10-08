@@ -1214,7 +1214,7 @@ a {
   fill: var(--brand);
   transform-origin: bottom;
   transform-box: fill-box;
-  animation: bar-grow 600ms var(--ease) both;
+  animation: bar-grow 600ms var(--ease) backwards;
 }
 
 .ui-bars-bar:hover {

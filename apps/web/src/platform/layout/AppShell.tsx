@@ -89,6 +89,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { path } = useLocation();
   const [drawer, setDrawer] = useState(false);
   const [collapsed, setCollapsed] = useState(readCollapsed);
+  // A lesson gets the room: the sidebar folds to icons on lesson pages (one click opens it).
+  const lessonPage = /^\/(lessons\/g_|samples\/)/.test(path);
+  const [lessonOpen, setLessonOpen] = useState(false);
+  const folded = lessonPage ? !lessonOpen : collapsed;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset when these change
   useEffect(() => setDrawer(false), [path]);
@@ -113,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             exact={i.exact}
             className="side-link"
             activeClassName="active"
-            title={collapsed ? i.label : undefined}
+            title={folded ? i.label : undefined}
           >
             <i.icon size={19} />
             <span>{i.label}</span>
@@ -124,11 +128,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className={`shell ${collapsed ? "collapsed" : ""} ${drawer ? "drawer-open" : ""}`}>
+    <div className={`shell ${folded ? "collapsed" : ""} ${drawer ? "drawer-open" : ""}`}>
       <aside className="sidebar" aria-label="Main">
         <div className="sidebar-head">
           <Link href="/dashboard" className="sidebar-brand" aria-label="Animator home">
-            <Logo size={30} withName={!collapsed} />
+            <Logo size={30} withName={!folded} />
           </Link>
           <button
             type="button"
@@ -145,7 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {section("Administration", ADMIN)}
         </nav>
         <div className="sidebar-foot">
-          <Link href="/profile" className="sidebar-user" title={collapsed ? user.name : undefined}>
+          <Link href="/profile" className="sidebar-user" title={folded ? user.name : undefined}>
             <Avatar name={user.name} color={user.avatar} size={34} />
             <span className="sidebar-user-text">
               <b>{user.name}</b>
@@ -157,9 +161,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             className="ui-icon-btn sidebar-collapse"
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand" : "Collapse"}
+            onClick={() => (lessonPage ? setLessonOpen((o) => !o) : setCollapsed((c) => !c))}
+            aria-label={folded ? "Expand sidebar" : "Collapse sidebar"}
+            title={folded ? "Expand" : "Collapse"}
           >
             <ChevronLeft size={18} />
           </button>

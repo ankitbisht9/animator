@@ -2106,3 +2106,57 @@ The pipelines must not change.
 - Git tag `backup/before-platform` (= v1.50), `.env.backup-before-platform`.
 - Full snapshot in `D:\animation-backups\v1.50-before-platform` (git bundle, plus the working folder with
   `.env` and `var/`).
+
+## ADR-052 Lesson playback as light as before the platform (2026-10-08)
+
+**Report.** After the platform (ADR-051), lessons felt less smooth (objects appearing and moving with
+latency and jumps), with worse placement, in both layouts; asked to revert anything on the path from
+creating a lesson to the screen that plays it, including the interface.
+
+**What was checked.**
+- **The pipeline and the engine.** No change since v1.50 to the engine, the scene components, the
+  pipeline, the LLM layer, the runner or the voice. The new lessons' requests had the same fields and
+  values the old page sent, the same models, the same pipeline and comparable calls and corrections.
+- **What the engine draws.** Every sampled frame of the two new lessons and an older one was rendered
+  through the v1.50 web build and the v2.0 build, the way the visual critic and the export render
+  them: **byte-identical** (48 frames). The critic therefore judged exactly the same pictures.
+- **Playback.** The same lesson was played in the v1.50 build (old API) and the v2.0 build (platform),
+  measuring frames, style, layout, script and paint work. Both kept 60 fps on this machine, but v2.0
+  did about 35% more main-thread work per frame. Traces, and swapping stylesheets on a live page, located
+  it:
+  - the lesson page's own pieces (progress saving, "continue from", the lesson-complete card) rendered
+    with every animation frame (twice in development builds);
+  - CSS transitions on the player's controls that change every frame (the scrubber and its knob), which
+    doubled the style work. This, not the larger stylesheet, was the style cost: removing all platform
+    rules changed nothing, removing transitions restored it;
+  - while a lesson is made, a striped progress bar animated by background position (main-thread paint
+    every frame);
+  - a translucent, blurred top bar;
+  - finished animations that stayed attached to the page around the stage, and reduced-motion rules
+    written with universal selectors;
+  - the stage was about 27% smaller (about 760 px wide against v1.50's 1,046 at 1440 px), next to the new
+    sidebar.
+
+**Decision.** Keep the platform's look and make the lesson screen as light as v1.50's:
+- only the doubt add-on renders with the player's frames, as before; the platform's pieces look at the
+  playhead four times a second through a ref and draw into the stage through a portal;
+- no transitions on the player's controls, contents list or transcript;
+- a plain progress bar while a lesson is made; solid top bars;
+- page animations fill `backwards` only, and reduced motion names the platform's animated elements;
+- layout containment for the controls bar and the contents list; the content below the player is
+  skipped while off screen;
+- on lesson pages the sidebar folds to icons, so the stage is about 978 px wide at 1440 px (v1.50:
+  about 1,046); one click opens the sidebar.
+
+**Measured** (the same lesson, 12 s of playback, production builds):
+- style work is v1.50's: 0.13 s against 0.11 s, and with the CPU slowed 4x 0.45-0.49 s against
+  0.44-0.51 s;
+- script work is v1.50's: 1.04-1.08 s against 0.98-1.02 s;
+- 60 fps in both, and comparable dropped frames with the CPU slowed 4x;
+- total main-thread time within run-to-run noise of v1.50 on a loaded machine (3.7-3.9 s against
+  3.2-3.7 s), about 0.6 s more on a quiet one, from the page around the player.
+
+**Not changed.** The engine, the pipeline, the prompts and the player's code paths (its additions in
+ADR-051 stay: `seek`, `duration` and starting preferences).
+
+**Rollback.** Git tag `backup/before-visual-smoothness` (= v2.0), `.env.backup-before-visual-smoothness`.

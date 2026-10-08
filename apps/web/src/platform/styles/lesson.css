@@ -1,9 +1,9 @@
 /* The lesson page and the player's look (the player's markup and behaviour are unchanged). */
 
 .lesson-page {
-  max-width: 1480px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 18px 28px 64px;
+  padding: 18px 24px 64px;
 }
 
 .public-main .lesson-page {
@@ -188,7 +188,6 @@
 .gen-steps li.on span {
   background: var(--brand);
   color: #fff;
-  animation: pulse-dot 1.6s ease-in-out infinite;
 }
 
 .gen-steps li.done {
@@ -209,23 +208,13 @@
   height: 7px;
 }
 
+/* A plain bar while a lesson is made: the page stays calm (and cheap) while scenes play beside it. */
 .gen-progress .ui-progress > span {
-  background-size: 40px 40px;
-  background-image:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.22) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.22) 75%, transparent 75%),
-    linear-gradient(90deg, var(--brand-600), var(--brand-400));
-  animation: stripes 1s linear infinite;
+  background: linear-gradient(90deg, var(--brand-600), var(--brand-400));
 }
 
 .gen-progress.stopped .ui-progress > span {
-  animation: none;
   background: var(--warning);
-}
-
-@keyframes stripes {
-  to {
-    background-position: 40px 0, 0 0;
-  }
 }
 
 .gen-progress-line {
@@ -277,11 +266,6 @@
   color: var(--muted);
 }
 
-.player {
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 20px;
-}
-
 .stage {
   border-radius: 18px;
   background: #fff;
@@ -300,9 +284,6 @@
   font-size: 16px;
   box-shadow: 0 16px 40px rgba(217, 4, 41, 0.38);
   opacity: 1;
-  transition:
-    transform var(--dur) var(--ease),
-    background var(--dur) var(--ease);
   animation: fade-in 260ms var(--ease);
 }
 
@@ -367,6 +348,7 @@
 }
 
 .controls {
+  contain: layout;
   margin-top: 12px;
   padding: 8px 12px;
   gap: 10px;
@@ -383,9 +365,6 @@
   border-radius: 10px;
   background: transparent;
   color: var(--text);
-  transition:
-    background var(--dur) var(--ease),
-    color var(--dur) var(--ease);
 }
 
 .icon-btn:hover {
@@ -421,13 +400,9 @@
 .scrubber {
   height: 8px;
   background: var(--surface-3);
-  transition: height 160ms var(--ease);
 }
 
-.scrubber:hover,
-.scrubber:focus-visible {
-  height: 12px;
-}
+/* No hover growth: the scrubber changes on every frame, and a transition there costs every frame. */
 
 .scrubber .segment {
   border-right: 2px solid var(--surface);
@@ -443,11 +418,6 @@
   margin: -9px 0 0 -9px;
   border: 3px solid var(--brand);
   box-shadow: var(--shadow-sm);
-  transition: transform 160ms var(--ease);
-}
-
-.scrubber:hover .knob {
-  transform: scale(1.18);
 }
 
 .speed {
@@ -462,6 +432,7 @@
 }
 
 .scene-list {
+  contain: layout;
   border-radius: 18px;
   padding: 16px 12px;
   box-shadow: var(--shadow-xs);
@@ -494,7 +465,6 @@
   padding: 9px 10px;
   border-radius: 11px;
   color: var(--text);
-  transition: background var(--dur) var(--ease);
 }
 
 .scene-item.active {
@@ -509,7 +479,6 @@
 .scene-dot {
   background: var(--surface-3);
   color: var(--muted);
-  transition: all var(--dur) var(--ease);
 }
 
 .scene-dot.playing {
@@ -532,9 +501,6 @@
 
 .beat {
   border-radius: 10px;
-  transition:
-    background var(--dur) var(--ease),
-    color var(--dur) var(--ease);
 }
 
 .beat:hover {
@@ -582,7 +548,6 @@
 
 .choice {
   border-radius: 12px;
-  transition: all var(--dur) var(--ease);
 }
 
 .choice:hover:not(:disabled) {
@@ -665,7 +630,7 @@
   background: linear-gradient(135deg, #f9c74f, #f4a100);
   color: #fff;
   box-shadow: 0 12px 30px rgba(244, 161, 0, 0.4);
-  animation: badge-in 700ms var(--ease) both;
+  animation: badge-in 700ms var(--ease) backwards;
 }
 
 @keyframes badge-in {
@@ -742,7 +707,10 @@
 
 /* ---------------- below the player ---------------- */
 
+/* Off screen while the lesson plays: the browser skips laying it out and painting it each frame. */
 .lesson-below {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -953,7 +921,7 @@
   padding: 10px;
   border-radius: 12px;
   transition: background var(--dur) var(--ease);
-  animation: pop-in 220ms var(--ease) both;
+  animation: pop-in 220ms var(--ease) backwards;
 }
 
 .notes-list li:hover {
@@ -1089,7 +1057,7 @@
   color: #fff;
   box-shadow: var(--shadow-lg);
   font-size: 14px;
-  animation: pop-in 400ms var(--ease) both;
+  animation: pop-in 400ms var(--ease) backwards;
 }
 
 :root[data-theme="dark"] .signin-nudge {

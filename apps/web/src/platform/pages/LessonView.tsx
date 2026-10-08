@@ -37,7 +37,14 @@ import { ago, clock, minutes } from "../format";
 import { invalidate, useResource, useTitle } from "../hooks";
 import { HttpError } from "../http";
 import { refreshLessonLists } from "../lesson/actions";
-import { CompleteCard, GenerationProgress, ProgressTracker, ResumePrompt, StarRating } from "../lesson/Extras";
+import {
+  CompleteCard,
+  GenerationProgress,
+  ProgressTracker,
+  ResumePrompt,
+  StageExtras,
+  StarRating,
+} from "../lesson/Extras";
 import { type NotesHandle, NotesPanel } from "../lesson/NotesPanel";
 import { ShareDialog } from "../lesson/ShareDialog";
 import { Link, navigate } from "../nav";
@@ -109,6 +116,7 @@ function LessonBody({ id }: { id: string }) {
   const [exportJob, setExportJob] = useState<ExportJob | null>(null);
   const controlRef = useRef<PlayerControl | null>(null);
   const notesRef = useRef<NotesHandle>(null);
+  const playerHost = useRef<HTMLDivElement>(null);
   const owner = !!info?.can_edit;
 
   // Statuses change while a lesson is made: keep the platform's record fresh too.
@@ -347,7 +355,7 @@ function LessonBody({ id }: { id: string }) {
       )}
 
       {summary ? (
-        <div className="lesson-player">
+        <div className="lesson-player" ref={playerHost}>
           <Player
             lesson={lesson}
             pending={pending}
@@ -356,37 +364,40 @@ function LessonBody({ id }: { id: string }) {
             initial={prefs ? { rate: prefs.playback_rate, captions: prefs.captions, voice: prefs.voice } : undefined}
             addon={(control) => {
               controlRef.current = control;
-              return (
-                <>
-                  {signedIn && (
-                    <DoubtFeature
-                      control={control}
-                      lessonId={id}
-                      language={summary.request.language || "English"}
-                      audience={summary.request.audience}
-                      durationMin={summary.request.duration_min}
-                    />
-                  )}
-                  {signedIn && <ProgressTracker control={control} lessonId={id} total={lesson.duration} />}
-                  {signedIn && info?.progress && !info.progress.completed && (
-                    <ResumePrompt control={control} position={info.progress.position_s} />
-                  )}
-                  {!running && ready && lesson.scenes.length > 0 && (
-                    <CompleteCard
-                      control={control}
-                      lessonId={id}
-                      myStars={info?.my_rating?.stars ?? 0}
-                      signedIn={signedIn}
-                      onNotes={() => {
-                        setTab("notes");
-                        notesRef.current?.focus();
-                      }}
-                    />
-                  )}
-                </>
-              );
+              // As before the platform: only the doubt add-on renders with every frame.
+              return signedIn ? (
+                <DoubtFeature
+                  control={control}
+                  lessonId={id}
+                  language={summary.request.language || "English"}
+                  audience={summary.request.audience}
+                  durationMin={summary.request.duration_min}
+                />
+              ) : null;
             }}
           />
+          <StageExtras controlRef={controlRef} host={playerHost}>
+            {(control) => (
+              <>
+                {signedIn && <ProgressTracker control={control} lessonId={id} total={lesson.duration} />}
+                {signedIn && info?.progress && !info.progress.completed && (
+                  <ResumePrompt control={control} position={info.progress.position_s} />
+                )}
+                {!running && ready && lesson.scenes.length > 0 && (
+                  <CompleteCard
+                    control={control}
+                    lessonId={id}
+                    myStars={info?.my_rating?.stars ?? 0}
+                    signedIn={signedIn}
+                    onNotes={() => {
+                      setTab("notes");
+                      notesRef.current?.focus();
+                    }}
+                  />
+                )}
+              </>
+            )}
+          </StageExtras>
         </div>
       ) : (
         <div className="lesson-player placeholder" aria-busy="true">

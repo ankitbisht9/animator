@@ -1,7 +1,8 @@
 /** Pieces of the lesson page that ride along with the player: progress saving, "continue from",
  * the lesson-complete card, generation progress, star ratings. */
 import { CircleCheck, Compass, PenLine, Play, RotateCcw, Star, Trophy, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { GenerationSummary } from "../../api";
 import type { PlayerControl } from "../../player/Player";
 import { v1 } from "../api";
@@ -12,6 +13,38 @@ import { Button, ProgressBar } from "../ui/core";
 import { useToast } from "../ui/overlay";
 
 const FLUSH_EVERY_S = 12;
+const LOOK_EVERY_MS = 250;
+
+/**
+ * The platform's pieces on the stage (progress saving, "continue from", the lesson-complete card), kept
+ * out of the player's per-frame render: they look at the playhead four times a second through a ref
+ * and draw into the stage through a portal. Only the doubt add-on renders with every frame, as before.
+ */
+export function StageExtras({
+  controlRef,
+  host,
+  children,
+}: {
+  controlRef: RefObject<PlayerControl | null>;
+  host: RefObject<HTMLElement | null>;
+  children: (control: PlayerControl) => ReactNode;
+}) {
+  const [stage, setStage] = useState<HTMLElement | null>(null);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const look = () => {
+      const el = host.current?.querySelector<HTMLElement>(".stage") ?? null;
+      setStage((s) => (s === el ? s : el));
+      setTick((n) => n + 1);
+    };
+    look();
+    const h = window.setInterval(look, LOOK_EVERY_MS);
+    return () => window.clearInterval(h);
+  }, [host]);
+  const control = controlRef.current;
+  if (!control || !stage) return null;
+  return createPortal(children(control), stage);
+}
 
 /** Saves where the learner is and how long they watched (every few seconds of playback, on pause,
  * when the tab hides and when they leave). */

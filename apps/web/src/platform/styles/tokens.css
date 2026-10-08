@@ -117,9 +117,7 @@ body {
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.55;
-  font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 
 ::selection {
@@ -215,26 +213,116 @@ code {
   }
 }
 
+/* "backwards": once the fade ends nothing stays applied to the page (it wraps the lesson stage). */
 .page-enter {
-  animation: page-enter 260ms var(--ease) both;
+  animation: page-enter 260ms var(--ease) backwards;
 }
 
-:root[data-motion="reduced"] *,
-:root[data-motion="reduced"] *::before,
-:root[data-motion="reduced"] *::after {
-  animation-duration: 1ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 1ms !important;
-  scroll-behavior: auto !important;
+/* Reduced motion (the learner's setting or the device's): the interface's own animations stop. Each
+   selector names a platform element: a universal selector here would be matched against every element
+   of a playing scene on every frame. */
+:root[data-motion="reduced"] .page-enter,
+:root[data-motion="reduced"] .ui-spin,
+:root[data-motion="reduced"] .live-dot,
+:root[data-motion="reduced"] .ui-skeleton,
+:root[data-motion="reduced"] .ui-alert,
+:root[data-motion="reduced"] .ui-menu,
+:root[data-motion="reduced"] .ui-modal-backdrop,
+:root[data-motion="reduced"] .ui-modal,
+:root[data-motion="reduced"] .ui-toast,
+:root[data-motion="reduced"] .ui-bars-bar,
+:root[data-motion="reduced"] .boot,
+:root[data-motion="reduced"] .bell-dot,
+:root[data-motion="reduced"] .gsearch-panel,
+:root[data-motion="reduced"] .orbit-spin,
+:root[data-motion="reduced"] .kicker-pill,
+:root[data-motion="reduced"] .hero h1,
+:root[data-motion="reduced"] .hero-lead,
+:root[data-motion="reduced"] .hero-ask,
+:root[data-motion="reduced"] .hero-secondary,
+:root[data-motion="reduced"] .hero-visual,
+:root[data-motion="reduced"] .hero-preview-stage.loading,
+:root[data-motion="reduced"] .hero-float,
+:root[data-motion="reduced"] .feature,
+:root[data-motion="reduced"] .faq-list details p,
+:root[data-motion="reduced"] .help-section details p,
+:root[data-motion="reduced"] .help-results details p,
+:root[data-motion="reduced"] .lesson-card,
+:root[data-motion="reduced"] .streak-pill svg,
+:root[data-motion="reduced"] .continue-card,
+:root[data-motion="reduced"] .advanced,
+:root[data-motion="reduced"] .onboard-step,
+:root[data-motion="reduced"] .settings-body,
+:root[data-motion="reduced"] .thread li,
+:root[data-motion="reduced"] .gen-progress,
+:root[data-motion="reduced"] .gen-steps li.on span,
+:root[data-motion="reduced"] .gen-progress .ui-progress > span,
+:root[data-motion="reduced"] .stage-play,
+:root[data-motion="reduced"] .stage-play::before,
+:root[data-motion="reduced"] .scene-dot.pending.busy,
+:root[data-motion="reduced"] .inspector,
+:root[data-motion="reduced"] .checkpoint,
+:root[data-motion="reduced"] .checkpoint-card,
+:root[data-motion="reduced"] .resume-pill,
+:root[data-motion="reduced"] .complete-layer,
+:root[data-motion="reduced"] .complete-card,
+:root[data-motion="reduced"] .complete-badge,
+:root[data-motion="reduced"] .lesson-tab,
+:root[data-motion="reduced"] .notes-list li,
+:root[data-motion="reduced"] .signin-nudge {
+  animation: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
-    scroll-behavior: auto !important;
+  .page-enter,
+  .ui-spin,
+  .live-dot,
+  .ui-skeleton,
+  .ui-alert,
+  .ui-menu,
+  .ui-modal-backdrop,
+  .ui-modal,
+  .ui-toast,
+  .ui-bars-bar,
+  .boot,
+  .bell-dot,
+  .gsearch-panel,
+  .orbit-spin,
+  .kicker-pill,
+  .hero h1,
+  .hero-lead,
+  .hero-ask,
+  .hero-secondary,
+  .hero-visual,
+  .hero-preview-stage.loading,
+  .hero-float,
+  .feature,
+  .faq-list details p,
+  .help-section details p,
+  .help-results details p,
+  .lesson-card,
+  .streak-pill svg,
+  .continue-card,
+  .advanced,
+  .onboard-step,
+  .settings-body,
+  .thread li,
+  .gen-progress,
+  .gen-steps li.on span,
+  .gen-progress .ui-progress > span,
+  .stage-play,
+  .stage-play::before,
+  .scene-dot.pending.busy,
+  .inspector,
+  .checkpoint,
+  .checkpoint-card,
+  .resume-pill,
+  .complete-layer,
+  .complete-card,
+  .complete-badge,
+  .lesson-tab,
+  .notes-list li,
+  .signin-nudge {
+    animation: none !important;
   }
 }
