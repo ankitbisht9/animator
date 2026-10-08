@@ -81,9 +81,15 @@ export function AdminOverview() {
         />
         <Stat
           icon={DollarSign}
-          label="AI spend"
+          label="Spend (AI and voice)"
           value={money(o.ai_cost_usd)}
-          sub={`${money(o.ai_cost_7d_usd)} this week`}
+          sub={
+            can("usage:read") ? (
+              <Link href="/admin/credits">{money(o.ai_cost_7d_usd)} in the last 7 days</Link>
+            ) : (
+              `${money(o.ai_cost_7d_usd)} in the last 7 days`
+            )
+          }
           tone="warning"
         />
         <Stat
