@@ -2304,3 +2304,51 @@ folder (`conftest.py`).
     copied, so nothing cascades. Tested on a copy of this machine's database: every lesson, rating and
     progress row stays; or
   - put the snapshot's `platform.db` back in `var/platform/`. This loses what changed after the snapshot.
+
+## ADR-054 Deploying on Render: a free demo from a Blueprint (2026-10-08)
+
+**Asked.** Deploy the project to the user's Render account, on the free plan if possible. The code was
+not in any Git repository (no remote), and Render builds only from GitHub, GitLab or Bitbucket. The user
+chose a public GitHub repository and a Blueprint.
+
+**Free plan, measured against the project.**
+- Render's free instance has 0.1 CPU and 512 MB. It sleeps after 15 minutes without inbound traffic
+  (about a minute to wake), and its files are wiped on every sleep, restart and deploy. There is no disk
+  and no shell.
+- The API takes about 146 MB idle and each engine worker about 68 MB. Four workers (the default) plus
+  the visual critic's browser do not fit in 512 MB; one worker without the critic does (213 MB idle).
+- So the free plan is a demo: accounts, lessons and audio are lost whenever the service sleeps.
+
+**Decision.**
+- **`deploy/render/Dockerfile`**, built by Render. It uses `docker/export.Dockerfile`'s pinned Node
+  24.11.1, Python 3.14.7 and uv 0.12.19, plus ffmpeg (narration).
+  - No browser, so no visual critic or video export.
+  - The API runs as a non-root user.
+  - It keeps the repository's layout (editable install), so the API finds the web build, config and the
+    engine worker as on a development machine.
+- **`deploy/render/start.sh`** maps Render's `RENDER_EXTERNAL_URL` to the platform's public address and
+  allowed origins, and runs one uvicorn process on `$PORT` behind Render's proxy.
+- **`render.yaml`** (Blueprint), validated against Render's schema:
+  - one free web service in Singapore, health check `/api/health`;
+  - production mode, the web app served by the API;
+  - the creation form asks for three values: `OPENAI_API_KEY`, `ELEVENLABS_API_KEY` and
+    `PLATFORM_ADMIN_EMAILS`;
+  - Render generates `PLATFORM_SECRET_KEY`;
+  - the lesson and voice settings mirror the development `.env`, except for the free instance: one
+    engine worker, one lesson at a time, 120 s per engine call, and no visual critic.
+- **Invite-only by default.** A public address would let anyone spend the owner's OpenAI and ElevenLabs
+  keys.
+  - With `PLATFORM_ALLOW_SIGNUP=false`, the emails in `PLATFORM_ADMIN_EMAILS`, and those in the new
+    `PLATFORM_INVITE_EMAILS` (emails or `@domain`), may still sign up. Before this, closed sign-ups
+    refused everyone, and an admin could only be made from a shell.
+  - The sign-up page keeps its form for them, with a note (public info: `invite_only`).
+- **Guide:** docs/DEPLOY_RENDER.md, including the paid setup (plan standard and a disk at `/app/var`).
+
+**Checked before pushing.**
+- No key is in the code or its history: the only key-like string is the tests' fake key, and no `.env`
+  file was ever committed.
+- `start.sh` was dry-run in production mode on this machine: web app and deep links served, invite-only
+  sign-up (a stranger 403, the admin email 201 as admin), strict CSP and HSTS.
+
+**Not changed.** The pipeline, the engine and the lessons' logic; local development (`make dev`) is as
+before.

@@ -51,10 +51,14 @@ class PlatformSettings(BaseSettings):
     cookie_domain: str | None = None
 
     # --- Accounts
+    # false: invite-only. Only `admin_emails` and `invite_emails` may sign up (a private demo).
     allow_signup: bool = True
     # Emails that are admins as soon as they sign up (comma separated). Or: python -m animator.platform
     # create-admin.
     admin_emails: str = ""
+    # Who may sign up while sign-ups are closed, as learners: emails, or "@school.org" for a whole domain
+    # (comma separated).
+    invite_emails: str = ""
     # The first account on an empty platform becomes an admin. Empty: on in development (so the person
     # running it owns the lessons made before accounts), off in production (use create-admin).
     first_user_admin: bool | None = None
@@ -172,6 +176,14 @@ class PlatformSettings(BaseSettings):
     @property
     def admin_list(self) -> set[str]:
         return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
+
+    def may_sign_up(self, email: str) -> bool:
+        """Open sign-ups, or (closed) an admin email or an invited email or domain."""
+        email = email.strip().lower()
+        if self.allow_signup or email in self.admin_list:
+            return True
+        invited = {e.strip().lower() for e in self.invite_emails.split(",") if e.strip()}
+        return email in invited or any(e.startswith("@") and email.endswith(e) for e in invited)
 
     def lessons_per_day(self, role: str) -> int:
         return int(getattr(self, f"lessons_per_day_{role}", 0))

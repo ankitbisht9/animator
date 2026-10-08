@@ -173,7 +173,8 @@ All optional; defaults suit development.
 | `PLATFORM_SECRET_KEY` | generated into `var/platform/secret.key` | set it in production (48+ random chars) |
 | `PLATFORM_ADMIN_EMAILS` | (empty) | comma-separated emails that are admins on sign-up |
 | `PLATFORM_FIRST_USER_ADMIN` | on in development | the first account on an empty platform is an admin |
-| `PLATFORM_ALLOW_SIGNUP` | true | false: invite-only (admins create accounts with the CLI) |
+| `PLATFORM_ALLOW_SIGNUP` | true | false: invite-only (only admin and invited emails may sign up; others with the CLI) |
+| `PLATFORM_INVITE_EMAILS` | (empty) | who may sign up as learners while sign-ups are closed: emails, or `@domain` |
 | `PLATFORM_REQUIRE_VERIFIED_EMAIL` | false | true: confirm the email before creating lessons |
 | `PLATFORM_PUBLIC_BASE_URL` | http://localhost:5173 | used in mail links; also an allowed origin |
 | `PLATFORM_SMTP_HOST`, `_PORT`, `_USER`, `_PASSWORD`, `_FROM`, `_STARTTLS` | (empty) | outgoing mail; empty: the outbox folder |
@@ -196,6 +197,8 @@ All optional; defaults suit development.
 | `PLATFORM_DOCS` | true | `/docs` for admins; false hides it |
 
 ## Going to production
+
+On Render, the Blueprint in the repository does most of this: docs/DEPLOY_RENDER.md.
 
 1. `PLATFORM_ENVIRONMENT=production`, a `PLATFORM_SECRET_KEY`, `PLATFORM_PUBLIC_BASE_URL=https://your.domain`,
    `CORS_ORIGINS` the same, `PLATFORM_TRUSTED_HOSTS=your.domain`, `PLATFORM_HSTS=true`.

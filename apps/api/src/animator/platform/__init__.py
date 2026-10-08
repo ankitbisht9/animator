@@ -27,8 +27,12 @@ async def info(request: Request) -> dict[str, Any]:
 
     platform: Platform = request.app.state.platform
     st = platform.app_settings
+    ps = platform.settings
+    invited = bool(ps.admin_list) or bool(ps.invite_emails.strip())
     return {
-        "signup": platform.settings.allow_signup,
+        # The sign-up form is shown when anyone, or someone invited, may sign up.
+        "signup": ps.allow_signup or invited,
+        "invite_only": not ps.allow_signup,
         "mail": platform.mailer.delivers,
         "doubts": platform.doubts is not None,
         "voice": bool(st and st.animator_tts_enabled),

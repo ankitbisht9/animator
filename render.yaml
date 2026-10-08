@@ -1,0 +1,208 @@
+# Render Blueprint: the platform as one Docker web service (docs/DEPLOY_RENDER.md, ADR-054).
+#
+# The free plan is a demo:
+# - the service sleeps after 15 minutes without visitors and takes about a minute to wake;
+# - its files are wiped on every sleep, restart and deploy: accounts, lessons and their audio go;
+# - 0.1 CPU and 512 MB: one engine worker and no visual critic (the image has no browser), so lessons
+#   take longer than on a development machine.
+# For a lasting platform, docs/DEPLOY_RENDER.md shows the paid setup (more CPU and memory, a disk).
+services:
+  - type: web
+    name: animator
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      # Asked for when the Blueprint is created. They never go in this file.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      # Your email: you sign up with it and are the administrator.
+      - key: PLATFORM_ADMIN_EMAILS
+        sync: false
+      - key: PLATFORM_SECRET_KEY
+        generateValue: true
+
+      # The platform: production mode, the web app served by the API on one origin, invite-only (only
+      # PLATFORM_ADMIN_EMAILS and PLATFORM_INVITE_EMAILS may sign up, so nobody else spends the keys).
+      - key: PLATFORM_ENVIRONMENT
+        value: production
+      - key: PLATFORM_SERVE_WEB
+        value: "true"
+      - key: PLATFORM_HSTS
+        value: "true"
+      - key: PLATFORM_ALLOW_SIGNUP
+        value: "false"
+
+      # The free instance (512 MB, 0.1 CPU): one engine worker, one lesson at a time, no visual critic,
+      # and more time for each engine call.
+      - key: ENGINE_WORKER_POOL_SIZE
+        value: "1"
+      - key: ENGINE_WORKER_CALL_TIMEOUT_S
+        value: "120"
+      - key: ANIMATOR_GENERATION_CONCURRENCY
+        value: "1"
+      - key: ANIMATOR_TEACHING_VISUAL_CRITIC
+        value: "false"
+
+      # Lessons: as on the development machine (.env).
+      - key: ANIMATOR_PIPELINE
+        value: teaching
+      - key: ANIMATOR_LLM_PROVIDER
+        value: openai
+      - key: ANIMATOR_MODEL_ANIMATION_PLANNER
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_CORRECTION
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_CORRECTION_FINAL
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_CRITIC
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_DIRECTOR
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_EDUCATIONAL_PLANNER
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_LIGHTWEIGHT
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_REVIEWER
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_STORYBOARD
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_TEACHER
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_VISUAL_CRITIC
+        value: gpt-6-luna
+      - key: ANIMATOR_MODEL_FALLBACKS
+        value: gpt-5-mini,gpt-4.1-mini
+      - key: ANIMATOR_EFFORT_ANIMATION_PLANNER
+        value: low
+      - key: ANIMATOR_EFFORT_CORRECTION
+        value: low
+      - key: ANIMATOR_EFFORT_CORRECTION_FINAL
+        value: low
+      - key: ANIMATOR_EFFORT_CRITIC
+        value: medium
+      - key: ANIMATOR_EFFORT_DIRECTOR
+        value: medium
+      - key: ANIMATOR_EFFORT_EDUCATIONAL_PLANNER
+        value: low
+      - key: ANIMATOR_EFFORT_LIGHTWEIGHT
+        value: low
+      - key: ANIMATOR_EFFORT_REVIEWER
+        value: low
+      - key: ANIMATOR_EFFORT_STORYBOARD
+        value: low
+      - key: ANIMATOR_EFFORT_TEACHER
+        value: medium
+      - key: ANIMATOR_EFFORT_TEACHING_SCENE
+        value: medium
+      - key: ANIMATOR_EFFORT_VISUAL_CRITIC
+        value: medium
+      - key: ANIMATOR_ENABLE_LLM_CRITIC
+        value: "false"
+      - key: ANIMATOR_ENABLE_VISUAL_CRITIC
+        value: "false"
+      - key: ANIMATOR_AUTO_FRAME
+        value: "true"
+      - key: ANIMATOR_BUFFER_TARGET_SECONDS
+        value: "90"
+      - key: ANIMATOR_CHUNK_MAX_DURATION_S
+        value: "120"
+      - key: ANIMATOR_CHUNK_TARGET_DURATION_S
+        value: "75"
+      - key: ANIMATOR_CORRECTION_DRAFTS
+        value: "2"
+      - key: ANIMATOR_DURATION_TOLERANCE
+        value: "0.15"
+      - key: ANIMATOR_LAYOUT_POLISH
+        value: "true"
+      - key: ANIMATOR_MAX_CORRECTION_ATTEMPTS
+        value: "3"
+      - key: ANIMATOR_MIN_READY_SCENES
+        value: "2"
+      - key: ANIMATOR_OUTLINE_MAX_DURATION_S
+        value: "150"
+      - key: ANIMATOR_PATCH_CORRECTIONS
+        value: "true"
+      - key: ANIMATOR_SCENE_CONCURRENCY
+        value: "8"
+      - key: ANIMATOR_SCENE_DRAFTS
+        value: "2"
+      - key: ANIMATOR_SCENE_MAX_OUTPUT_TOKENS
+        value: "48000"
+      - key: ANIMATOR_SCENE_MODE
+        value: parallel
+      - key: ANIMATOR_SCRIPT_REVIEW
+        value: "true"
+      - key: ANIMATOR_STORAGE_BACKEND
+        value: files
+      - key: ANIMATOR_TEACHING_CRITIC_ROUNDS
+        value: "1"
+      - key: ANIMATOR_TEACHING_MAX_DURATION_S
+        value: "600"
+      - key: ANIMATOR_VISUAL_CRITIC_KEYFRAMES
+        value: "3"
+      - key: LLM_BUDGET_TOKENS_PER_GENERATION
+        value: "2000000"
+      - key: LLM_BUDGET_USD_PER_GENERATION
+        value: "5.00"
+      - key: LLM_MAX_CONCURRENCY
+        value: "16"
+      - key: OPENAI_MAX_RETRIES
+        value: "4"
+      - key: OPENAI_SERVICE_TIER
+        value: priority
+      - key: OPENAI_STORE
+        value: "false"
+      - key: OPENAI_TIMEOUT_S
+        value: "120"
+
+      # The voice: ElevenLabs, as on the development machine (.env).
+      - key: ANIMATOR_TTS_ENABLED
+        value: "1"
+      - key: ANIMATOR_TTS_PROVIDER
+        value: elevenlabs
+      - key: ANIMATOR_TTS_MODEL
+        value: eleven_v4
+      - key: ANIMATOR_TTS_VOICE
+        value: 3OUAuH7CeDSQhCCijs1Y
+      - key: ANIMATOR_TTS_VOICE_HINGLISH
+        value: 3OUAuH7CeDSQhCCijs1Y
+      - key: ANIMATOR_TTS_SCRIPT
+        value: hinglish
+      - key: ANIMATOR_TTS_CONCURRENCY
+        value: "4"
+      - key: ANIMATOR_TTS_TIMEOUT_S
+        value: "60"
+      - key: ANIMATOR_TTS_ONE_TAKE
+        value: "1"
+      - key: ANIMATOR_TTS_FIT_BEATS
+        value: "1"
+      - key: ANIMATOR_TTS_PROSODY
+        value: "1"
+      - key: ANIMATOR_TTS_SYNC_HIGHLIGHTS
+        value: "1"
+      - key: ANIMATOR_TTS_SPEED
+        value: "1.0"
+      - key: ANIMATOR_TTS_STABILITY
+        value: "0.4"
+      - key: ANIMATOR_TTS_STYLE
+        value: "0.3"
+      - key: ANIMATOR_TTS_PAUSE_S
+        value: "0.35"
+      - key: ANIMATOR_TTS_SCENE_PAUSE_S
+        value: "1.0"
+      - key: ANIMATOR_TTS_SENTENCE_PAUSE_S
+        value: "0.4"
+      - key: ANIMATOR_TTS_COMMA_PAUSE_S
+        value: "0.18"
+      - key: ANIMATOR_TTS_KEY_PAUSE_S
+        value: "0.35"
+      - key: ANIMATOR_TTS_SLOW_TEMPO
+        value: "0.9"
+      - key: LOG_LEVEL
+        value: INFO

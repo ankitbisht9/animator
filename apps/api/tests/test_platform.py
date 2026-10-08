@@ -663,3 +663,19 @@ def test_local_origins_in_development_only(tmp_path: Path, worker_script: Path) 
         assert c.patch("/api/v1/me", json={"bio": "x"}, headers=local).status_code == 200
         far = {**csrf(c), "origin": "https://example.net"}
         assert c.patch("/api/v1/me", json={"bio": "x"}, headers=far).status_code == 403
+
+
+def test_invite_only_sign_ups(tmp_path: Path, worker_script: Path) -> None:
+    """Closed sign-ups (a private demo): admin and invited emails (or domains) may still sign up."""
+    with make_app(tmp_path, allow_signup=False, invite_emails="guest@school.org, @partner.edu") as c:
+        info = c.get("/api/v1/public/info").json()
+        assert info["signup"] is True and info["invite_only"] is True  # the form stays, for the invited
+        stranger = c.post(
+            "/api/v1/auth/register", json={"name": "Eve", "email": "eve@example.org", "password": PASSWORD}
+        )
+        assert stranger.status_code == 403
+        assert register(other(c), "admin@school.org", "Head Teacher")["role"] == "admin"
+        assert register(other(c), "guest@school.org", "Guest")["role"] == "learner"
+        assert register(other(c), "teacher@partner.edu", "Teacher")["role"] == "learner"
+    with make_app(tmp_path / "closed", allow_signup=False, admin_emails="") as c:
+        assert c.get("/api/v1/public/info").json()["signup"] is False  # nobody invited: closed page

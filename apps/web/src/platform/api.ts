@@ -204,6 +204,8 @@ export interface DeviceSession {
 
 export interface PublicInfo {
   signup: boolean;
+  /** Sign-ups are closed except for invited emails (the form stays for them). */
+  invite_only: boolean;
   mail: boolean;
   doubts: boolean;
   voice: boolean;

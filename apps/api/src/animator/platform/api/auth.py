@@ -62,11 +62,11 @@ async def register(
     body: RegisterIn, request: Request, response: Response, platform: Plat, s: DB
 ) -> dict[str, Any]:
     ps = platform.settings
-    if not ps.allow_signup:
+    email = str(body.email).lower()
+    if not ps.may_sign_up(email):
         raise HTTPException(403, "Sign-ups are closed. Ask an administrator for an account.")
     ip = client_ip(request)
     _limit(platform, f"register:{ip}", 10, 3600, "Too many sign-ups from this network. Try again later.")
-    email = str(body.email).lower()
     problem = password_problem(body.password, email, body.name, ps.password_min_length)
     if problem:
         raise HTTPException(422, problem)

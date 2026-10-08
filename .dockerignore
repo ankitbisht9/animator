@@ -1,16 +1,23 @@
-# Keep the build context small and secrets out of images.
+# What a Docker build may read (deploy/render/Dockerfile, docker/export.Dockerfile). Never secrets.
 .env
 .env.*
 !.env.example
+
+# Version control, dependencies and builds: the images install and build their own.
 .git
-.venv
 **/node_modules
+**/dist
+.venv
 **/__pycache__
 **/.pytest_cache
 **/.mypy_cache
 **/.ruff_cache
+**/*.tsbuildinfo
+
+# Runtime output and local tools.
 var
-apps/web/dist
-packages/*/dist
+test-results
+playwright-report
 scripts/spikes/out
+Kokoro-FastAPI
 *.log

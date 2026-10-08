@@ -156,6 +156,9 @@ export function SignupPage() {
         </>
       }
     >
+      {info.data?.invite_only && (
+        <Alert tone="info">This platform is invite-only: sign up with the email you were invited with.</Alert>
+      )}
       {error && <Alert tone="danger">{error}</Alert>}
       <form className="auth-form" onSubmit={submit} noValidate>
         <TextField
