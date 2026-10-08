@@ -3,7 +3,11 @@ do is decided here, in one table.
 
 - learner: watches, creates lessons within a daily quota, asks doubts, shares privately (a link).
 - educator: everything a learner can, with larger quotas, and publishes lessons to Explore.
-- admin: everything, including people, every lesson, support and the audit log.
+- admin: everything, including people, every lesson, support, the audit log, credits and cost,
+  ratings and what Explore lists.
+
+A new role (a curator, a finance viewer) is one more line in ROLE_PERMS: the routes already ask for
+the permission they need.
 """
 
 from __future__ import annotations
@@ -28,6 +32,11 @@ class Perm(StrEnum):
     AUDIT_READ = "audit:read"
     ANALYTICS_READ = "analytics:read"
     DEBUG = "debug"  # the pipeline's raw API, call logs, the DSL playground
+    USAGE_READ = "usage:read"  # everyone's credits and cost (ADR-053)
+    CREDITS_MANAGE = "credits:manage"  # a person's monthly credits, credits given back
+    RATINGS_READ = "ratings:read"  # every lesson's ratings and comments
+    EXPLORE_CURATE = "explore:curate"  # add any lesson to Explore, or keep one out
+    REVIEW_MANAGE = "review:manage"  # flag a lesson for the team to improve
 
 
 ROLE_PERMS: dict[Role, frozenset[Perm]] = {

@@ -4,6 +4,7 @@
     uv run python -m animator.platform create-admin --email you@example.org --name "Your Name"
     uv run python -m animator.platform set-role someone@example.org educator
     uv run python -m animator.platform revision -m "what changed"     (a new migration, for developers)
+    uv run python -m animator.platform downgrade 0001                 (before going back to an older version)
 
 create-admin asks for the password (it never appears on the command line or in the shell history).
 """
@@ -29,6 +30,18 @@ from animator.platform.settings import PlatformSettings
 async def _migrate(platform: Platform) -> None:
     await platform.db.migrate()
     print(f"database is up to date: {platform.db.url.split('///')[-1]}")
+
+
+async def _downgrade(platform: Platform, target: str) -> None:
+    """Take the schema back to an older revision (its downgrade removes what came after it), so an older
+    version of the code, which does not know the newer revisions, can start on it."""
+
+    def down(conn: Connection) -> None:
+        command.downgrade(alembic_config(conn), target)
+
+    async with platform.db.engine.begin() as conn:
+        await conn.run_sync(down)
+    print(f"database is at revision {target}: {platform.db.url.split('///')[-1]}")
 
 
 async def _revision(platform: Platform, message: str) -> None:
@@ -88,6 +101,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="python -m animator.platform")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("migrate")
+    down = sub.add_parser("downgrade")
+    down.add_argument("revision", help="e.g. 0001 (the platform before credits and Explore, v2.1)")
     rev = sub.add_parser("revision")
     rev.add_argument("-m", "--message", required=True)
     ca = sub.add_parser("create-admin")
@@ -103,6 +118,9 @@ def main() -> int:
         try:
             if args.cmd == "migrate":
                 await _migrate(platform)
+                return 0
+            if args.cmd == "downgrade":
+                await _downgrade(platform, args.revision)
                 return 0
             if args.cmd == "revision":
                 await _revision(platform, args.message)

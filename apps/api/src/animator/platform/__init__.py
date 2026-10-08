@@ -40,7 +40,7 @@ async def info(request: Request) -> dict[str, Any]:
 
 def install(app: FastAPI, platform: Platform, origins: list[str]) -> None:
     """Gateway and routes. Call before the CORS middleware is added, so CORS stays outermost."""
-    from animator.platform.api import account, admin, auth, learning, lessons, support
+    from animator.platform.api import account, admin, auth, credits, learning, lessons, ratings, support
     from animator.platform.gateway import Gateway
 
     app.state.platform = platform
@@ -48,7 +48,7 @@ def install(app: FastAPI, platform: Platform, origins: list[str]) -> None:
     hosts = [h.strip() for h in platform.settings.trusted_hosts.split(",") if h.strip()]
     if hosts and hosts != ["*"]:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
-    for module in (auth, account, lessons, learning, support, admin):
+    for module in (auth, account, lessons, learning, support, admin, credits, ratings):
         app.include_router(module.router)
     app.include_router(public)
 

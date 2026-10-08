@@ -8,8 +8,9 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
-from sqlalchemy import func, select, update
+from sqlalchemy import case, func, select, update
 
+from animator.platform import curation, usage
 from animator.platform.accounts import clear_cookies, me_out, preferences_of, revoke_sessions
 from animator.platform.deps import DB, Me, Plat, client_ip
 from animator.platform.models import (
@@ -23,6 +24,7 @@ from animator.platform.models import (
     Saved,
     Ticket,
     TicketMessage,
+    UsageEntry,
     User,
 )
 from animator.platform.schemas import DeleteAccountIn, PasswordIn, ProfileIn
@@ -134,6 +136,63 @@ async def end_other_sessions(request: Request, p: Me, platform: Plat, s: DB) -> 
     return {"signed_out": n}
 
 
+@router.get("/credits")
+async def my_credits(p: Me, platform: Plat, s: DB) -> dict[str, Any]:
+    """This month's credits: the allowance, what they went to (per lesson made, per lesson asked
+    about) and credits an admin gave back or charged, with the reason."""
+    user = await _user(s, p)
+    allowance = await usage.allowance(s, platform.settings, user)
+    mine = (UsageEntry.user_id == user.id, UsageEntry.created_at >= allowance.period_start)
+    area = case(
+        (UsageEntry.kind.in_(("lesson_ai", "lesson_voice")), "create"),
+        (UsageEntry.kind == "adjustment", "adjustment"),
+        else_="learn",
+    ).label("area")
+    # The totals over the whole month (the lists below show only the latest).
+    by_area = {"create": 0, "learn": 0, "adjustment": 0}
+    for kind, milli in (
+        await s.execute(select(area, func.sum(UsageEntry.credits_milli)).where(*mine).group_by(area))
+    ).all():
+        by_area[str(kind)] = int(milli or 0)
+    last = func.max(UsageEntry.created_at)
+    rows = (
+        await s.execute(
+            select(UsageEntry.lesson_id, Lesson.title, area, func.sum(UsageEntry.credits_milli), last)
+            .outerjoin(Lesson, Lesson.id == UsageEntry.lesson_id)
+            .where(*mine, UsageEntry.kind != "adjustment")
+            .group_by(UsageEntry.lesson_id, Lesson.title, area)
+            .order_by(last.desc())
+            .limit(50)
+        )
+    ).all()
+    adjustments = (
+        await s.scalars(
+            select(UsageEntry)
+            .where(*mine, UsageEntry.kind == "adjustment")
+            .order_by(UsageEntry.created_at.desc())
+            .limit(20)
+        )
+    ).all()
+    return {
+        **allowance.out(),
+        "by_area": {k: usage.credits(v) for k, v in by_area.items()},
+        "items": [
+            {
+                "area": str(kind),
+                "lesson_id": lesson_id,
+                "lesson_title": title or ("Speech input" if lesson_id is None else "A removed lesson"),
+                "credits": usage.credits(int(milli or 0)),
+                "at": float(at or 0),
+            }
+            for lesson_id, title, kind, milli, at in rows
+        ],
+        "adjustments": [
+            {"credits": -usage.credits(e.credits_milli), "note": e.note, "at": e.created_at}
+            for e in adjustments
+        ],
+    }
+
+
 @router.get("/export")
 async def export(p: Me, platform: Plat, s: DB) -> JSONResponse:
     """Everything the platform keeps about the person, as one JSON file."""
@@ -205,6 +264,20 @@ async def export(p: Me, platform: Plat, s: DB) -> JSONResponse:
             "title",
             "created_at",
         ),
+        "credits_used": [
+            {
+                "kind": e.kind,
+                "lesson_id": e.lesson_id,
+                "credits": usage.credits(e.credits_milli),
+                "note": e.note if e.kind == "adjustment" else "",
+                "created_at": e.created_at,
+            }
+            for e in (
+                await s.scalars(
+                    select(UsageEntry).where(UsageEntry.user_id == uid).order_by(UsageEntry.created_at)
+                )
+            ).all()
+        ],
         "tickets": [
             {
                 "subject": t.subject,
@@ -236,13 +309,34 @@ async def delete_account(body: DeleteAccountIn, request: Request, p: Me, platfor
         )
         if (admins or 0) <= 1:
             raise HTTPException(409, "You are the only admin. Make someone else an admin first.")
-    # Their lessons leave the platform with them (the files stay, for the operator).
+    owned = list((await s.scalars(select(Lesson.id).where(Lesson.owner_id == user.id))).all())
+    rated = list((await s.scalars(select(Rating.lesson_id).where(Rating.user_id == user.id))).all())
+    # Their lessons leave the platform with them, Explore included (the files stay, for the operator).
     await s.execute(
-        update(Lesson).where(Lesson.owner_id == user.id).values(deleted_at=time.time(), visibility="private")
+        update(Lesson)
+        .where(Lesson.owner_id == user.id)
+        .values(
+            deleted_at=time.time(),
+            visibility="private",
+            explore_listed=False,
+            explore_source="",
+            explore_at=None,
+        )
     )
     await s.delete(user)
+    await s.flush()  # their ratings go with them (ON DELETE CASCADE); what they spent stays, unnamed
+    if rated:
+        await curation.recount(s, rated)
+        await curation.refresh(s, platform.settings, rated)  # a lesson may fall below the rule
     await s.commit()
     platform.forget(user_id=p.user_id)
+    for lesson_id in owned:
+        platform.forget_lesson(lesson_id)
+    runner = platform.runner
+    if runner is not None:
+        for lesson_id in owned:
+            if runner.running(lesson_id):
+                await runner.cancel(lesson_id)  # stop spending on lessons nobody can watch
     await platform.audit("user.deleted", p.user_id, p.user_id, client_ip(request))
     out = Response(status_code=204)
     clear_cookies(out, platform)

@@ -41,7 +41,7 @@ import {
 } from "../ui/core";
 import { Confirm, useToast } from "../ui/overlay";
 
-function Forbidden() {
+export function Forbidden() {
   return <Alert tone="danger">You do not have access to this page.</Alert>;
 }
 
@@ -385,7 +385,7 @@ export function AdminUsers() {
   );
 }
 
-function Pager({
+export function Pager({
   offset,
   size,
   total,

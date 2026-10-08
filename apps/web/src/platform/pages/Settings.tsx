@@ -2,6 +2,7 @@
 import {
   Bell,
   CirclePlay,
+  Coins,
   Download,
   GraduationCap,
   KeyRound,
@@ -18,12 +19,25 @@ import {
 import { type FormEvent, useEffect, useState } from "react";
 import { type Preferences, type ThemePref, v1 } from "../api";
 import { useAuth, useUser } from "../auth";
-import { ago, device } from "../format";
+import { ago, credits, date, device } from "../format";
 import { useResource, useTitle } from "../hooks";
 import { Link, navigate } from "../nav";
 import { applyTheme } from "../theme";
 import { AUDIENCES, SUBJECTS } from "../ui/brand";
-import { Alert, Avatar, Badge, Button, Card, PasswordField, Segmented, Switch, TextArea, TextField } from "../ui/core";
+import {
+  Alert,
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  PasswordField,
+  ProgressBar,
+  Segmented,
+  Spinner,
+  Switch,
+  TextArea,
+  TextField,
+} from "../ui/core";
 import { Modal, useToast } from "../ui/overlay";
 
 const TABS = [
@@ -32,6 +46,7 @@ const TABS = [
   { key: "playback", label: "Playback", icon: CirclePlay },
   { key: "appearance", label: "Appearance", icon: Palette },
   { key: "notifications", label: "Notifications", icon: Bell },
+  { key: "credits", label: "Credits", icon: Coins },
   { key: "security", label: "Security", icon: Shield },
   { key: "privacy", label: "Privacy & data", icon: Download },
 ] as const;
@@ -69,6 +84,7 @@ export function SettingsPage({ tab }: { tab?: string }) {
           {current === "playback" && <PlaybackTab />}
           {current === "appearance" && <AppearanceTab />}
           {current === "notifications" && <NotificationsTab />}
+          {current === "credits" && <CreditsTab />}
           {current === "security" && <SecurityTab />}
           {current === "privacy" && <PrivacyTab />}
         </div>
@@ -610,6 +626,98 @@ function PrivacyTab() {
           <TextField label='Type "DELETE" to confirm' value={typed} onChange={(e) => setTyped(e.target.value)} />
         </div>
       </Modal>
+    </>
+  );
+}
+
+/** This month's credits (ADR-053): what is left, what they went to, and credits given back. */
+function CreditsTab() {
+  const res = useResource("me:credits", v1.myCredits, 20_000);
+  const c = res.data;
+  if (!c) return res.error ? <Alert tone="danger">{res.error.message}</Alert> : <Spinner />;
+  const used = Math.max(0, c.used);
+  const adjusted = c.by_area.adjustment;
+  return (
+    <>
+      <Card>
+        <h2 className="card-h">Credits this month</h2>
+        {c.blocked ? (
+          <Alert tone="warning" title="Your account cannot use credits at the moment">
+            You can still watch lessons. Contact support if this is unexpected.
+          </Alert>
+        ) : c.unlimited ? (
+          <p className="credits-now-note">Your account has no monthly limit. You have used {credits(used)} so far.</p>
+        ) : (
+          <div className="credits-now">
+            <div className="credits-big">
+              <b>{credits(Math.max(0, c.remaining ?? 0))}</b>
+              <span>of {credits(c.limit)} credits left</span>
+            </div>
+            <ProgressBar value={c.limit ? used / c.limit : 1} label="Credits used this month" />
+            <p className="muted small">
+              {credits(used)} used. They renew on {date(c.resets_at)}.
+            </p>
+          </div>
+        )}
+        <ul className="kv-list credits-areas">
+          <li>
+            <span>Making lessons</span>
+            <b>{credits(c.by_area.create)}</b>
+          </li>
+          <li>
+            <span>Learning (doubt answers, speech input)</span>
+            <b>{credits(c.by_area.learn)}</b>
+          </li>
+          {adjusted !== 0 && (
+            <li>
+              <span>{adjusted < 0 ? "Given back to you" : "Charged by an administrator"}</span>
+              <b>{credits(Math.abs(adjusted))}</b>
+            </li>
+          )}
+        </ul>
+        <p className="muted small">
+          Credits stand for what the AI and the voice cost to make your lessons and answer your doubts. Watching lessons
+          costs nothing.
+        </p>
+      </Card>
+      <Card>
+        <h2 className="card-h">Where they went</h2>
+        {c.items.length === 0 && c.adjustments.length === 0 ? (
+          <p className="muted">Nothing yet this month.</p>
+        ) : (
+          <ul className="kv-list credits-items">
+            {c.adjustments.map((a) => (
+              <li key={`adj-${a.at}`}>
+                <span>
+                  <b>{a.credits > 0 ? "Given back" : "Charged"}</b>
+                  <small>
+                    {a.note} · {ago(a.at)}
+                  </small>
+                </span>
+                <b className={a.credits > 0 ? "plus" : ""}>
+                  {a.credits > 0 ? "+" : "−"}
+                  {credits(Math.abs(a.credits))}
+                </b>
+              </li>
+            ))}
+            {c.items.map((i) => (
+              <li key={`${i.area}-${i.lesson_id ?? "speech"}`}>
+                <span>
+                  {i.lesson_id ? (
+                    <Link href={`/lessons/${i.lesson_id}`}>{i.lesson_title}</Link>
+                  ) : (
+                    <b>{i.lesson_title}</b>
+                  )}
+                  <small>
+                    {i.area === "create" ? "Making the lesson" : "Doubts and speech"} · {ago(i.at)}
+                  </small>
+                </span>
+                <b>{credits(i.credits)}</b>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
     </>
   );
 }

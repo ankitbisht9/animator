@@ -201,18 +201,20 @@ export function StarRating({
   );
 }
 
-/** At the end of a finished lesson: well done, rate it, and what next. */
+/** At the end of a finished lesson: well done, rate it (not one's own), and what next. */
 export function CompleteCard({
   control,
   lessonId,
   myStars,
   signedIn,
+  canRate,
   onNotes,
 }: {
   control: PlayerControl;
   lessonId: string;
   myStars: number;
   signedIn: boolean;
+  canRate: boolean;
   onNotes: () => void;
 }) {
   const toast = useToast();
@@ -244,7 +246,7 @@ export function CompleteCard({
         </div>
         <h2>Lesson complete</h2>
         <p>Nicely done. A minute to reflect makes it stick.</p>
-        {signedIn && (
+        {canRate && (
           <div className="complete-rate">
             <span>How clear was it?</span>
             <StarRating value={stars} onChange={(n) => void rate(n)} />

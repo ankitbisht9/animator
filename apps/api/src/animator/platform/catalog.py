@@ -2,9 +2,12 @@
 length, cost), kept in step with the pipeline's own records, which it only reads.
 
 - At start: lessons made before accounts (or while the platform was off) are added, owned by the
-  first admin (or by nobody until there is one: then only admins see them).
+  first admin (or by nobody until there is one: then only admins see them). What every lesson and
+  doubt spent that the usage ledger does not have yet is posted (ADR-053); ratings are recounted and
+  what Explore lists is decided again (its rule may have changed).
 - While the API runs: lessons being generated are followed from the runner's memory every few
-  seconds; when one is ready (or stops), its owner gets a notification.
+  seconds, their spend posted to their owner (at most every minute, and once more when they stop);
+  when one is ready (or stops), its owner gets a notification and Explore is updated.
 """
 
 from __future__ import annotations
@@ -13,11 +16,15 @@ import asyncio
 import contextlib
 import logging
 import re
-from typing import TYPE_CHECKING
+import time
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import select, update
+from sqlalchemy import literal, select, update
 
-from animator.platform.models import Lesson, User
+from animator.platform import curation, usage
+from animator.platform.db import chunked
+from animator.platform.models import DoubtLog, Lesson, UsageEntry, User
 
 if TYPE_CHECKING:
     from animator.pipeline.models import Generation
@@ -27,6 +34,7 @@ log = logging.getLogger("animator.platform.catalog")
 
 ACTIVE = ("queued", "planning", "generating", "paused")
 SYNC_EVERY_S = 3.0
+BILL_EVERY_S = 60.0  # a running lesson's spend is posted at most this often (and when it stops)
 
 SUBJECTS: dict[str, str] = {
     "physics": "Physics",
@@ -197,12 +205,10 @@ class Catalog:
     def __init__(self, platform: Platform) -> None:
         self.platform = platform
         self._watched: set[str] = set()
+        self._billed_at: dict[str, float] = {}
 
     async def run(self, stop: asyncio.Event) -> None:
-        try:
-            await self.import_existing()
-        except Exception:
-            log.exception("importing existing lessons failed (they appear after the next restart)")
+        await self.startup()
         while not stop.is_set():
             try:
                 await self.sync_active()
@@ -210,6 +216,29 @@ class Catalog:
                 log.exception("catalog sync failed")
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(stop.wait(), SYNC_EVERY_S)
+
+    async def startup(self) -> None:
+        """Bring the catalog up to date. Each step stands alone: one failing does not stop the others,
+        and it runs again at the next start (every step is idempotent)."""
+        gens: list[Generation] = []
+        runner = self.platform.runner
+        if runner is not None:
+            try:
+                gens = await runner.store.recent(limit=100_000)
+            except Exception:
+                log.exception("catalog: reading the lessons failed")
+        steps: list[tuple[str, Callable[[], Awaitable[Any]]]] = [
+            ("adding lessons made before accounts", lambda: self.import_existing(gens)),
+            ("posting what lessons spent", lambda: self.reconcile_lessons(gens)),
+            ("posting what doubts spent", self.reconcile_doubts),
+            ("counting ratings", self.recount_ratings),
+            ("deciding what Explore lists", self.refresh_explore),
+        ]
+        for what, step in steps:
+            try:
+                await step()
+            except Exception:
+                log.exception("catalog: %s failed (tried again at the next start)", what)
 
     async def first_admin(self) -> str | None:
         async with self.platform.db.session() as s:
@@ -220,11 +249,12 @@ class Catalog:
                 .limit(1)
             )
 
-    async def import_existing(self) -> int:
+    async def import_existing(self, gens: list[Generation] | None = None) -> int:
         runner = self.platform.runner
         if runner is None:
             return 0
-        gens = await runner.store.recent(limit=100_000)
+        if gens is None:
+            gens = await runner.store.recent(limit=100_000)
         async with self.platform.db.session() as s:
             known = set((await s.scalars(select(Lesson.id))).all())
         missing = [g for g in gens if g.id not in known]
@@ -238,24 +268,133 @@ class Catalog:
         log.info("catalog: %d existing lesson(s) added%s", len(missing), "" if owner else " (no admin yet)")
         return len(missing)
 
-    async def claim_orphans(self, admin_id: str) -> int:
-        """Lessons nobody owns (made before accounts) go to the first admin."""
+    def voice_provider(self, language: str) -> str:
+        """The voice the pipeline uses for a language (when a lesson's record does not say)."""
+        st = self.platform.app_settings
+        if st is None:
+            return ""
+        if language.strip().lower() == "hinglish" and st.animator_tts_provider_hinglish:
+            return str(st.animator_tts_provider_hinglish)
+        return str(st.animator_tts_provider)
+
+    async def reconcile_lessons(self, gens: list[Generation]) -> int:
+        """Post what each lesson has spent and the ledger does not have yet (all of it, the first
+        time), dated when the lesson was last worked on. Lessons nobody owns wait for an owner."""
+        ps = self.platform.settings
+        by_id = {g.id: g for g in gens}
+        added = 0
+        for chunk in chunked(by_id):
+            async with self.platform.db.session() as s:
+                rows = (
+                    await s.scalars(select(Lesson).where(Lesson.id.in_(chunk), Lesson.owner_id.is_not(None)))
+                ).all()
+                for row in rows:
+                    gen = by_id[row.id]
+                    at = gen.updated_at or row.updated_at or row.created_at
+                    added += await usage.bill_lesson(s, ps, row, gen, at, self.voice_provider(row.language))
+                await s.commit()
+        if added:
+            log.info("usage: %d entr%s posted for lessons", added, "y" if added == 1 else "ies")
+        return added
+
+    async def reconcile_doubts(self) -> int:
+        """Doubt answers asked before the ledger existed are posted once (with their voice, from the
+        doubt's own record when it is still there)."""
+        ps = self.platform.settings
+        key = literal("doubt:") + DoubtLog.id + literal(":ai")
         async with self.platform.db.session() as s:
-            result = await s.execute(
-                update(Lesson)
-                .where(Lesson.owner_id.is_(None), Lesson.deleted_at.is_(None))
-                .values(owner_id=admin_id)
-            )
+            missing = (
+                await s.scalars(
+                    select(DoubtLog)
+                    .outerjoin(UsageEntry, UsageEntry.source == key)
+                    .where(UsageEntry.id.is_(None))
+                    .order_by(DoubtLog.created_at)
+                    .limit(50_000)
+                )
+            ).all()
+            added = 0
+            for d in missing:
+                turn = await asyncio.to_thread(self._doubt_turn, d.lesson_id, d.session_id, d.turn)
+                if turn is None:
+                    turn = {"cost_usd": d.cost_usd}
+                added += await usage.bill_doubt(s, ps, d.id, d.user_id, d.lesson_id, turn, d.created_at)
             await s.commit()
-        n = int(getattr(result, "rowcount", 0) or 0)
-        if n:
-            log.info("catalog: %d lesson(s) without an owner now belong to the first admin", n)
-        return n
+        if added:
+            log.info("usage: %d entr%s posted for doubts", added, "y" if added == 1 else "ies")
+        return added
+
+    def _doubt_turn(self, lesson_id: str, session_id: str, n: int) -> dict[str, Any] | None:
+        doubts = self.platform.doubts
+        if doubts is None or not session_id:
+            return None
+        try:
+            session = doubts.sessions.load(lesson_id, session_id)
+        except Exception:
+            return None
+        for turn in (session or {}).get("turns") or []:
+            if isinstance(turn, dict) and int(turn.get("n") or 0) == n:
+                return turn
+        return None
+
+    async def recount_ratings(self) -> int:
+        async with self.platform.db.session() as s:
+            changed = await curation.recount(s)
+            await s.commit()
+        if changed:
+            log.info("ratings: %d lesson(s) recounted", changed)
+        return changed
+
+    async def refresh_explore(self) -> int:
+        async with self.platform.db.session() as s:
+            listed = await curation.refresh_all(s, self.platform.settings)
+            await s.commit()
+        await curation.announce(self.platform, listed)
+        return len(listed)
+
+    async def claim_orphans(self, admin_id: str) -> int:
+        """Lessons nobody owns (made before accounts) go to the first admin, with what they spent
+        (posted now: a lesson's spend waits for an owner)."""
+        ps = self.platform.settings
+        runner = self.platform.runner
+        listed: list[curation.Listed] = []
+        async with self.platform.db.session() as s:
+            ids = list(
+                (
+                    await s.scalars(
+                        select(Lesson.id).where(Lesson.owner_id.is_(None), Lesson.deleted_at.is_(None))
+                    )
+                ).all()
+            )
+            for chunk in chunked(ids):
+                await s.execute(
+                    update(Lesson)
+                    .where(Lesson.id.in_(chunk), Lesson.owner_id.is_(None))
+                    .values(owner_id=admin_id)
+                )
+            if ids:
+                await curation.recount(s, ids)  # an owner's own ratings do not count
+                listed = await curation.refresh(s, ps, ids)
+            await s.commit()
+            if ids and runner is not None:
+                for chunk in chunked(ids):
+                    rows = (await s.scalars(select(Lesson).where(Lesson.id.in_(chunk)))).all()
+                    for row in rows:
+                        gen = await runner.get(row.id)
+                        if gen is not None:
+                            at = gen.updated_at or row.created_at
+                            await usage.bill_lesson(s, ps, row, gen, at, self.voice_provider(row.language))
+                    await s.commit()
+        if ids:
+            log.info("catalog: %d lesson(s) without an owner now belong to the first admin", len(ids))
+            await curation.announce(self.platform, listed)
+        return len(ids)
 
     async def sync_active(self) -> None:
         runner = self.platform.runner
         if runner is None:
             return
+        ps = self.platform.settings
+        now = time.time()
         async with self.platform.db.session() as s:
             rows = list(
                 (
@@ -269,6 +408,7 @@ class Catalog:
             if finishing:
                 rows += list((await s.scalars(select(Lesson).where(Lesson.id.in_(finishing)))).all())
             notices: list[tuple[str, str, str, str]] = []
+            changed: list[str] = []
             for row in rows:
                 running = runner.running(row.id)
                 if not running and row.id not in self._watched:
@@ -281,7 +421,18 @@ class Catalog:
                     self._watched.add(row.id)
                 else:
                     self._watched.discard(row.id)
-                if apply(row, gen) and row.owner_id:
+                status_changed = apply(row, gen)
+                if row.owner_id is not None and (
+                    not running or now - self._billed_at.get(row.id, 0.0) >= BILL_EVERY_S
+                ):
+                    await usage.bill_lesson(s, ps, row, gen, now, self.voice_provider(row.language))
+                    if running:
+                        self._billed_at[row.id] = now
+                if not running:
+                    self._billed_at.pop(row.id, None)
+                if status_changed:
+                    changed.append(row.id)
+                if status_changed and row.owner_id:
                     if gen.status == "complete":
                         notices.append(
                             (
@@ -300,12 +451,15 @@ class Catalog:
                                 f"/lessons/{row.id}",
                             )
                         )
+            # Ready (or stopped): a published or well rated lesson enters (or leaves) Explore.
+            listed = await curation.refresh(s, ps, changed, now) if changed else []
             await s.commit()
         for user_id, kind, title, link in notices:
             body = (
                 "Open it to watch, share or ask doubts." if kind == "lesson_ready" else "Open it to resume."
             )
             await self.platform.notify(user_id, kind, title, body, link)
+        await curation.announce(self.platform, listed)
 
     def follow(self, lesson_id: str) -> None:
         self._watched.add(lesson_id)

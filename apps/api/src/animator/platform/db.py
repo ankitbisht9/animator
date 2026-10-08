@@ -7,7 +7,7 @@ unchanged: the queries are plain SQLAlchemy.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterable, Iterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -19,6 +19,18 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 MIGRATIONS = Path(__file__).parent / "migrations"
+
+
+def chunked[T](items: Iterable[T], size: int = 500) -> Iterator[list[T]]:
+    """Distinct items in lists of `size` (an IN (...) stays well under every database's limit)."""
+    batch: list[T] = []
+    for item in dict.fromkeys(items):
+        batch.append(item)
+        if len(batch) == size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
 
 
 def alembic_config(connection: Connection | None = None) -> Config:

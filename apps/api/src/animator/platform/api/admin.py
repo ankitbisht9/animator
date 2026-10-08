@@ -10,8 +10,10 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy import func, select
 
+from animator.platform import curation
 from animator.platform.accounts import revoke_sessions
 from animator.platform.api.lessons import _joined, _rows, _search
+from animator.platform.catalog import SUBJECTS
 from animator.platform.deps import DB, Admin, Analyst, Auditor, Moderator, Plat, client_ip
 from animator.platform.models import (
     ActivityDay,
@@ -19,7 +21,9 @@ from animator.platform.models import (
     DoubtLog,
     Lesson,
     Progress,
+    Rating,
     Ticket,
+    UsageEntry,
     User,
 )
 from animator.platform.schemas import AdminLessonPatchIn, UserPatchIn
@@ -52,9 +56,14 @@ async def overview(p: Admin, s: DB) -> dict[str, Any]:
     )
     lessons = await one(select(func.count()).select_from(Lesson).where(Lesson.deleted_at.is_(None)))
     new_lessons = await one(select(func.count()).select_from(Lesson).where(Lesson.created_at > week))
-    cost = await one(select(func.coalesce(func.sum(Lesson.cost_usd), 0)))
-    cost_week = await one(select(func.coalesce(func.sum(Lesson.cost_usd), 0)).where(Lesson.created_at > week))
-    doubt_cost = await one(select(func.coalesce(func.sum(DoubtLog.cost_usd), 0)))
+    # Spend from the usage ledger (ADR-053): AI and voice, making lessons and learning.
+    cost = await one(select(func.coalesce(func.sum(UsageEntry.cost_micros), 0))) / 1_000_000
+    cost_week = (
+        await one(
+            select(func.coalesce(func.sum(UsageEntry.cost_micros), 0)).where(UsageEntry.created_at > week)
+        )
+        / 1_000_000
+    )
     doubts = await one(select(func.count()).select_from(DoubtLog))
     tickets = await one(
         select(func.count()).select_from(Ticket).where(Ticket.status.in_(("open", "pending")))
@@ -104,7 +113,7 @@ async def overview(p: Admin, s: DB) -> dict[str, Any]:
         "active_users_7d": int(active),
         "lessons": int(lessons),
         "new_lessons_7d": int(new_lessons),
-        "ai_cost_usd": round(cost + doubt_cost, 4),
+        "ai_cost_usd": round(cost, 4),
         "ai_cost_7d_usd": round(cost_week, 4),
         "doubts": int(doubts),
         "open_tickets": int(tickets),
@@ -194,13 +203,22 @@ async def patch_user(
     if body.role is not None and body.role != user.role:
         changes["role"] = [user.role, body.role]
         user.role = body.role
+    listed: list[curation.Listed] = []
     if body.status is not None and body.status != user.status:
         changes["status"] = [user.status, body.status]
         user.status = body.status
         if body.status == "suspended":
             await revoke_sessions(s, platform, user.id, "suspended")
+        # A suspended account's ratings stop counting and its lessons leave Explore (unless an admin
+        # added them); both come back when it is active again.
+        await s.flush()
+        rated = (await s.scalars(select(Rating.lesson_id).where(Rating.user_id == user.id))).all()
+        owned = (await s.scalars(select(Lesson.id).where(Lesson.owner_id == user.id))).all()
+        await curation.recount(s, rated)
+        listed = await curation.refresh(s, platform.settings, [*rated, *owned])
     await s.commit()
     platform.forget(user_id=user.id)
+    await curation.announce(platform, listed)
     if changes:
         await platform.audit("user.update", p.user_id, user.id, client_ip(request), **changes)
         if "role" in changes:
@@ -250,19 +268,25 @@ async def moderate(
     row = await s.get(Lesson, lesson_id)
     if row is None:
         raise HTTPException(404, "No such lesson.")
+    if body.subject is not None and body.subject not in SUBJECTS:
+        raise HTTPException(422, "Unknown subject.")
     if body.visibility is not None:
         if body.visibility == "public" and row.status != "complete":
             raise HTTPException(409, "A lesson can be published once it is ready.")
         row.visibility = body.visibility
     if body.featured is not None:
         row.featured = body.featured
+    if body.subject is not None:
+        row.subject = body.subject
     if body.deleted is not None:
         row.deleted_at = time.time() if body.deleted else None
         if body.deleted:
             row.visibility = "private"
             row.featured = False
+    listed = await curation.refresh(s, platform.settings, [row.id])
     await s.commit()
     platform.forget_lesson(row.id)
+    await curation.announce(platform, listed)
     await platform.audit(
         "lesson.moderate", p.user_id, row.id, client_ip(request), **body.model_dump(exclude_none=True)
     )

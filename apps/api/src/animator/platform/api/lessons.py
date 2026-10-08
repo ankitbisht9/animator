@@ -17,11 +17,13 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from animator.pipeline.models import GenerationRequest
+from animator.platform import curation, usage
 from animator.platform.catalog import SUBJECTS, new_row
 from animator.platform.core import Principal
 from animator.platform.deps import DB, MaybeMe, Me, Plat, client_ip
 from animator.platform.models import (
     ActivityDay,
+    Curation,
     DoubtLog,
     Lesson,
     Note,
@@ -43,6 +45,8 @@ from animator.platform.schemas import (
 router = APIRouter(prefix="/api/v1", tags=["lessons"])
 
 DONE_AT = 0.95  # watched this share of a lesson: complete
+# Explore: the stored decision (curation.decide), with its plain conditions again as a safety net.
+IN_EXPLORE = (Lesson.explore_listed.is_(True), Lesson.deleted_at.is_(None), Lesson.status == "complete")
 
 
 def lesson_out(
@@ -54,6 +58,7 @@ def lesson_out(
 ) -> dict[str, Any]:
     mine = me is not None and row.owner_id == me.user_id
     staff = me is not None and me.can(Perm.LESSON_ANY)
+    curator = me is not None and me.can(Perm.EXPLORE_CURATE)
     return {
         "id": row.id,
         "title": row.title or row.topic,
@@ -79,6 +84,15 @@ def lesson_out(
         "owner": {"id": row.owner_id, "name": owner_name or "Animator"} if row.owner_id else None,
         "mine": mine,
         "can_edit": mine or staff,
+        "can_rate": me is not None and not mine and row.status == "complete",
+        "in_explore": row.explore_listed,
+        # Why it is in Explore (owner: published; auto: its ratings; admin: added by an admin) and the
+        # owner's choice not to be listed by ratings: for the owner and the people who curate.
+        "explore": (
+            {"source": row.explore_source, "since": row.explore_at, "opt_out": row.explore_opt_out}
+            if (mine or staff or curator)
+            else None
+        ),
         "cost_usd": row.cost_usd if (mine or staff) else None,
         "progress": (
             {
@@ -154,6 +168,9 @@ async def create_lesson(
     longest = ps.max_minutes(p.role)
     if body.duration_min > longest:
         raise HTTPException(422, f"Lessons can be at most {longest:g} minutes long on your plan.")
+    refused = await usage.check(s, ps, p.user_id)
+    if refused is not None:
+        raise HTTPException(402, refused)
     wait = platform.limiter.hit(f"create:{p.user_id}", 6, 600)
     if wait is not None:
         raise HTTPException(429, "You started several lessons just now. Wait a few minutes.")
@@ -238,9 +255,7 @@ async def explore(
     limit: int = 24,
 ) -> dict[str, Any]:
     limit = max(1, min(limit, 60))
-    stmt = _joined(me).where(
-        Lesson.visibility == "public", Lesson.deleted_at.is_(None), Lesson.status == "complete"
-    )
+    stmt = _joined(me).where(*IN_EXPLORE)
     if subject and subject in SUBJECTS:
         stmt = stmt.where(Lesson.subject == subject)
     if (cond := _search(q)) is not None:
@@ -260,13 +275,7 @@ async def explore(
 async def subjects(s: DB) -> list[dict[str, Any]]:
     counts = dict(
         (
-            await s.execute(
-                select(Lesson.subject, func.count())
-                .where(
-                    Lesson.visibility == "public", Lesson.deleted_at.is_(None), Lesson.status == "complete"
-                )
-                .group_by(Lesson.subject)
-            )
+            await s.execute(select(Lesson.subject, func.count()).where(*IN_EXPLORE).group_by(Lesson.subject))
         ).all()
     )
     return [{"key": k, "label": v, "count": int(counts.get(k, 0))} for k, v in SUBJECTS.items()]
@@ -276,7 +285,7 @@ async def subjects(s: DB) -> list[dict[str, Any]]:
 async def featured(me: MaybeMe, s: DB) -> list[dict[str, Any]]:
     stmt = (
         _joined(me)
-        .where(Lesson.visibility == "public", Lesson.deleted_at.is_(None), Lesson.status == "complete")
+        .where(*IN_EXPLORE)
         .order_by(Lesson.featured.desc(), Lesson.views.desc(), Lesson.created_at.desc())
         .limit(8)
     )
@@ -287,13 +296,25 @@ async def featured(me: MaybeMe, s: DB) -> list[dict[str, Any]]:
 
 
 @router.get("/lessons/{lesson_id}")
-async def get_lesson(lesson_id: str, me: MaybeMe, s: DB) -> dict[str, Any]:
+async def get_lesson(lesson_id: str, me: MaybeMe, platform: Plat, s: DB) -> dict[str, Any]:
     row = await readable(s, lesson_id, me)
     result = await s.execute(_joined(me).where(Lesson.id == row.id))
     out = _rows(result, me)[0]
     if me is not None:
         mine = await s.get(Rating, (me.user_id, row.id))
         out["my_rating"] = {"stars": mine.stars, "comment": mine.comment} if mine else None
+    if out["explore"] is not None:
+        ps = platform.settings
+        pin = await s.scalar(select(Curation.pin).where(Curation.lesson_id == row.id))
+        out["explore"].update(
+            included=pin == "include",
+            excluded=pin == "exclude",
+            rule={
+                "auto": ps.explore_auto,
+                "min_raters": ps.explore_min_raters,
+                "min_average": ps.explore_min_average,
+            },
+        )
     return out
 
 
@@ -302,24 +323,51 @@ async def patch_lesson(
     lesson_id: str, body: LessonPatchIn, request: Request, p: Me, platform: Plat, s: DB
 ) -> dict[str, Any]:
     row = await editable(s, lesson_id, p)
-    if body.visibility is not None and body.visibility != row.visibility:
-        if body.visibility == "public" and not p.can(Perm.LESSON_PUBLISH):
-            raise HTTPException(403, "Only educators can publish to Explore. Share it with a link instead.")
-        if body.visibility == "public" and row.status != "complete":
-            raise HTTPException(409, "A lesson can be published once it is ready.")
-        row.visibility = body.visibility
-        await platform.audit("lesson.visibility", p.user_id, row.id, client_ip(request), to=body.visibility)
+    # Every check first, then the changes: a refusal leaves nothing half done.
+    visibility = body.visibility if body.visibility not in (None, row.visibility) else None
+    opt_out = body.explore_opt_out if body.explore_opt_out not in (None, row.explore_opt_out) else None
+    if visibility == "public" and not p.can(Perm.LESSON_PUBLISH):
+        raise HTTPException(403, "Only educators can publish to Explore. Share it with a link instead.")
+    if visibility == "public" and row.status != "complete":
+        raise HTTPException(409, "A lesson can be published once it is ready.")
+    if opt_out is not None and row.owner_id != p.user_id:
+        raise HTTPException(403, "Only the lesson's owner can choose this.")
+    if body.subject is not None and body.subject not in SUBJECTS:
+        raise HTTPException(422, "Unknown subject.")
+    if body.featured is not None and not p.can(Perm.LESSON_FEATURE):
+        raise HTTPException(403, "Only admins can feature lessons.")
+    if visibility == "private":
+        # Private is private: an admin's "add to Explore" ends with it (sharing it again later does not
+        # bring it back by surprise).
+        cur = await s.get(Curation, row.id)
+        if cur is not None and cur.pin == "include":
+            cur.pin, cur.pin_note, cur.pinned_by, cur.pinned_at = (
+                "",
+                "Made private by its owner",
+                p.user_id,
+                time.time(),
+            )
+    if visibility is not None:
+        row.visibility = visibility
+    if opt_out is not None:
+        row.explore_opt_out = opt_out
     if body.subject is not None:
-        if body.subject not in SUBJECTS:
-            raise HTTPException(422, "Unknown subject.")
         row.subject = body.subject
     if body.featured is not None:
-        if not p.can(Perm.LESSON_FEATURE):
-            raise HTTPException(403, "Only admins can feature lessons.")
         row.featured = body.featured
+    relist = visibility is not None or opt_out is not None
+    listed = await curation.refresh(s, platform.settings, [row.id]) if relist else []
     await s.commit()
     platform.forget_lesson(row.id)
-    return await get_lesson(row.id, p, s)
+    # Records after the commit: they are written on their own connection, which would otherwise wait
+    # for this request's open transaction (SQLite has one writer).
+    ip = client_ip(request)
+    if visibility is not None:
+        await platform.audit("lesson.visibility", p.user_id, row.id, ip, to=visibility)
+    if opt_out is not None:
+        await platform.audit("lesson.explore_opt_out", p.user_id, row.id, ip, opt_out=opt_out)
+    await curation.announce(platform, listed)
+    return await get_lesson(row.id, p, platform, s)
 
 
 @router.delete("/lessons/{lesson_id}", status_code=204)
@@ -328,6 +376,7 @@ async def delete_lesson(lesson_id: str, request: Request, p: Me, platform: Plat,
     row.deleted_at = time.time()
     row.visibility = "private"
     row.featured = False
+    await curation.refresh(s, platform.settings, [row.id])  # out of Explore
     await s.commit()
     platform.forget_lesson(row.id)
     runner = platform.runner
@@ -466,24 +515,33 @@ async def delete_note(note_id: str, p: Me, s: DB) -> Response:
 
 
 @router.put("/lessons/{lesson_id}/rating")
-async def rate(lesson_id: str, body: RatingIn, p: Me, s: DB) -> dict[str, Any]:
+async def rate(lesson_id: str, body: RatingIn, p: Me, platform: Plat, s: DB) -> dict[str, Any]:
     row = await readable(s, lesson_id, p)
     if row.status != "complete":
         raise HTTPException(409, "Rate a lesson once it is ready.")
-    old = await s.get(Rating, (p.user_id, row.id))
-    if old is None:
-        s.add(Rating(user_id=p.user_id, lesson_id=row.id, stars=body.stars, comment=body.comment))
-        row.rating_sum += body.stars
-        row.rating_count += 1
+    if row.owner_id == p.user_id:
+        raise HTTPException(403, "You cannot rate your own lesson.")
+    if platform.limiter.hit(f"rating:{p.user_id}", 60, 3600) is not None:
+        raise HTTPException(429, "You changed many ratings just now. Try again in a while.")
+    # One rating at a time per lesson: the row lock serializes them (PostgreSQL; SQLite has one writer).
+    await s.execute(select(Lesson.id).where(Lesson.id == row.id).with_for_update())
+    mine = await s.get(Rating, (p.user_id, row.id))
+    if mine is None:
+        mine = Rating(user_id=p.user_id, lesson_id=row.id, stars=body.stars, comment=body.comment or "")
+        s.add(mine)
     else:
-        row.rating_sum += body.stars - old.stars
-        old.stars = body.stars
-        old.comment = body.comment
+        mine.stars = body.stars
+        if body.comment is not None:
+            mine.comment = body.comment
+    await s.flush()
+    await curation.recount(s, [row.id])  # from the ratings themselves: the numbers cannot drift
+    listed = await curation.refresh(s, platform.settings, [row.id])
     await s.commit()
+    await curation.announce(platform, listed)
     return {
         "rating": round(row.rating_sum / row.rating_count, 2) if row.rating_count else None,
         "rating_count": row.rating_count,
-        "my_rating": {"stars": body.stars, "comment": body.comment},
+        "my_rating": {"stars": mine.stars, "comment": mine.comment},
     }
 
 

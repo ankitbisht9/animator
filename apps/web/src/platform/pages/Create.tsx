@@ -15,10 +15,11 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { ApiConfig } from "../../api";
 import { type Visibility, v1 } from "../api";
 import { useAuth, useUser } from "../auth";
+import { credits, date } from "../format";
 import { useResource, useTitle } from "../hooks";
 import { HttpError } from "../http";
 import { refreshLessonLists } from "../lesson/actions";
-import { navigate, useLocation } from "../nav";
+import { Link, navigate, useLocation } from "../nav";
 import { AUDIENCES, SUBJECTS } from "../ui/brand";
 import { Alert, Button, Card, Checkbox, Segmented, TextArea, TextField } from "../ui/core";
 
@@ -86,7 +87,9 @@ export function CreatePage() {
   const quota = user.limits.lessons_per_day;
   const used = user.usage.lessons;
   const left = quota > 0 ? Math.max(0, quota - used) : null;
-  const blocked = left === 0 || (user.limits.require_verified && !user.verified);
+  const wallet = user.credits;
+  const noCredits = wallet.blocked || wallet.exhausted;
+  const blocked = left === 0 || noCredits || (user.limits.require_verified && !user.verified);
   const lengths = LENGTHS.filter((l) => l <= user.limits.max_minutes);
   const scenes = useMemo(() => Math.max(2, Math.round((minutes * 60) / 22)), [minutes]);
   const notReady = config.data && !config.data.openai_key_configured;
@@ -139,16 +142,32 @@ export function CreatePage() {
             Describe what you want to understand. We plan the lesson, draw every scene and narrate it.
           </p>
         </div>
-        {left !== null && (
-          <div className="quota" title="Lessons you can still create in the next 24 hours">
-            <span className="quota-num">{left}</span>
-            <span>
-              of {quota} lessons
-              <br />
-              left today
-            </span>
-          </div>
-        )}
+        <div className="quota-row">
+          {left !== null && (
+            <div className="quota" title="Lessons you can still create in the next 24 hours">
+              <span className="quota-num">{left}</span>
+              <span>
+                of {quota} lessons
+                <br />
+                left today
+              </span>
+            </div>
+          )}
+          {!wallet.unlimited && (
+            <Link
+              href="/settings/credits"
+              className={`quota quota-credits ${noCredits ? "over" : ""}`}
+              title={`Credits left this month; they renew on ${date(wallet.resets_at)}`}
+            >
+              <span className="quota-num">{wallet.blocked ? 0 : credits(Math.max(0, wallet.remaining ?? 0))}</span>
+              <span>
+                of {credits(wallet.limit ?? 0)} credits
+                <br />
+                left this month
+              </span>
+            </Link>
+          )}
+        </div>
       </header>
 
       {notReady && (
@@ -160,6 +179,18 @@ export function CreatePage() {
       )}
       {config.data?.tts?.problem && can("debug") && (
         <Alert tone="warning">Narration voice is off: {config.data.tts.problem}</Alert>
+      )}
+      {noCredits && (
+        <Alert
+          tone="warning"
+          title={
+            wallet.blocked ? "Your account cannot use credits at the moment" : "You have used this month's credits"
+          }
+        >
+          {wallet.blocked
+            ? "Watching lessons is still open to you. Contact support if this is unexpected."
+            : `They renew on ${date(wallet.resets_at)}. Watching lessons is still open to you.`}
+        </Alert>
       )}
       {user.limits.require_verified && !user.verified && (
         <Alert tone="info">Confirm your email to create lessons. We sent you a link when you signed up.</Alert>
@@ -371,7 +402,7 @@ export function CreatePage() {
               iconRight={ArrowRight}
               disabled={blocked || !!notReady || topic.trim().length < 3}
             >
-              {left === 0 ? "Daily limit reached" : "Create lesson"}
+              {left === 0 ? "Daily limit reached" : noCredits ? "No credits left" : "Create lesson"}
             </Button>
             <p className="summary-note">
               <Info size={14} /> The first scene is usually ready in a minute or two and starts playing while the rest

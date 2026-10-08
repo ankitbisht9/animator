@@ -502,3 +502,24 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   - dark mode, phone layouts.
   - The lesson page: progress, notes, sharing, resume, a lesson-complete card, a restyled player.
 - Guide: docs/PLATFORM.md.
+
+## Credits and cost; Explore by ratings (ADR-053)
+
+- **Credits and cost.**
+  - Every spend is recorded in an append-only ledger: lesson AI, lesson voice, doubt answers and speech
+    input. Existing lessons and doubts are posted at the first start.
+  - Administration → Credits & cost shows spend today, this week, this month and so far; people and lessons
+    by spend; and a CSV export.
+  - Monthly credits per role or per person (their own, no limit, or none). Credits given back or charged,
+    with a reason.
+  - Anything that spends is refused once the credits are used up. Learners see their credits on Create
+    and in Settings.
+- **Explore.**
+  - A lesson shared with a link joins Explore by itself once at least 21 people rate it 4.0 or more on
+    average (owners can opt out).
+  - Admins add any lesson or keep any out.
+  - Administration → Ratings & Explore monitors well and poorly rated lessons, with comments, the reason
+    each is listed or not, and review flags for the team.
+- **Permissions** for each of these (`usage:read`, `credits:manage`, `ratings:read`, `explore:curate`,
+  `review:manage`).
+

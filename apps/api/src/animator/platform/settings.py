@@ -4,15 +4,22 @@ environment variables (and `.env`); separate from the pipeline's settings, which
 from __future__ import annotations
 
 import contextlib
+import json
+import logging
 import secrets
+import time
+from datetime import tzinfo
 from functools import cached_property
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Any, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from animator import REPO_ROOT
+
+log = logging.getLogger("animator.platform")
 
 
 class PlatformSettings(BaseSettings):
@@ -76,6 +83,30 @@ class PlatformSettings(BaseSettings):
     doubts_per_day_educator: int = 120
     doubts_per_day_admin: int = 0
 
+    # --- Credits and cost (ADR-053). Every spend (AI, voice, speech input) is recorded in dollars and
+    # in credits: one credit is `credit_usd` dollars, at the price of the day it was spent.
+    credit_usd: float = Field(default=0.01, gt=0, le=100)
+    # Credits a person may spend per calendar month, by role (0 = no limit). An admin can give one
+    # person an allowance of their own, no limit, or none.
+    monthly_credits_learner: int = Field(default=1000, ge=0)
+    monthly_credits_educator: int = Field(default=5000, ge=0)
+    monthly_credits_admin: int = Field(default=0, ge=0)
+    # The clock of the reports (today, this week from Monday, this month) and of the monthly
+    # allowance: "local" (this computer's) or a time zone name such as "Asia/Kolkata" or "UTC".
+    timezone: str = "local"
+    # Voice prices in USD per million characters, by provider, over VOICE_PRICES below, as JSON:
+    # PLATFORM_VOICE_PRICES={"elevenlabs": 165}. Voice and speech input are estimates (characters and
+    # recording size); the AI's cost is counted from the tokens of each call.
+    voice_prices: Annotated[dict[str, float], NoDecode] = Field(default_factory=dict)
+    transcribe_usd_per_min: float = Field(default=0.003, ge=0)
+
+    # --- Explore (ADR-053): a lesson shared with a link whose ratings average at least
+    # `explore_min_average` from at least `explore_min_raters` people is listed in Explore by itself
+    # (its owner can opt out). Admins can add any lesson or keep any out.
+    explore_auto: bool = True
+    explore_min_raters: int = Field(default=21, ge=1, le=100_000)
+    explore_min_average: float = Field(default=4.0, ge=1, le=5)
+
     # --- Gateway
     # Requests per minute per signed-in user (or per address when signed out), on the whole API.
     rate_limit_per_min: int = 600
@@ -87,6 +118,19 @@ class PlatformSettings(BaseSettings):
     # Serve the built web app (apps/web/dist) from the API, one origin (production).
     serve_web: bool = False
     hsts: bool = False
+
+    @field_validator("voice_prices", mode="before")
+    @classmethod
+    def _voice_prices(cls, v: Any) -> Any:
+        """JSON from the environment; an empty value is no override (as `.env.example` leaves it)."""
+        if isinstance(v, str):
+            if not v.strip():
+                return {}
+            try:
+                return json.loads(v)
+            except ValueError as e:
+                raise ValueError('PLATFORM_VOICE_PRICES must be JSON, e.g. {"elevenlabs": 165}') from e
+        return v
 
     @property
     def production(self) -> bool:
@@ -137,3 +181,44 @@ class PlatformSettings(BaseSettings):
 
     def doubts_per_day(self, role: str) -> int:
         return int(getattr(self, f"doubts_per_day_{role}", 0))
+
+    def monthly_credits(self, role: str) -> int:
+        """A role's credits per month; 0 is no limit."""
+        return int(getattr(self, f"monthly_credits_{role}", 0))
+
+    def voice_price(self, provider: str) -> float:
+        """USD per million characters of speech from this provider (0 for free and local voices)."""
+        prices = {**VOICE_PRICES, **{k.lower(): v for k, v in self.voice_prices.items()}}
+        return max(0.0, float(prices.get(provider.lower(), 0.0)))
+
+    @cached_property
+    def zone(self) -> tzinfo | None:
+        """The reports' time zone; None is this computer's own (daylight saving included)."""
+        name = self.timezone.strip()
+        if not name or name.lower() == "local":
+            return None
+        try:
+            return ZoneInfo(name)
+        except (ZoneInfoNotFoundError, ValueError):
+            log.warning("PLATFORM_TIMEZONE=%r is not a time zone; using this computer's", name)
+            return None
+
+    @property
+    def zone_name(self) -> str:
+        if self.zone is not None:
+            return self.timezone.strip()
+        return time.tzname[time.localtime().tm_isdst > 0] or "local"
+
+
+# Speech, USD per million characters (October 2026, list prices; plans differ: set PLATFORM_VOICE_PRICES).
+# ElevenLabs bills about a credit per character: Creator $22 for 100k credits; Pro $99 for 500k.
+VOICE_PRICES: dict[str, float] = {
+    "elevenlabs": 200.0,
+    "openai": 15.0,
+    "google": 16.0,
+    "azure": 16.0,
+    "edge": 0.0,  # free
+    "kokoro": 0.0,  # runs on this machine
+    "http": 0.0,
+    "fake": 0.0,
+}

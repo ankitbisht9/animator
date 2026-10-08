@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+import os
 import shutil
+import tempfile
 from collections.abc import AsyncIterator
 from pathlib import Path
+
+# The platform's database is never the developer's in tests. The served app (`animator.api.app:app`,
+# started by test_api_health) reads the real settings: without this it would migrate and write
+# var/platform/platform.db. Set before any test module imports the app.
+os.environ["PLATFORM_DATA_DIR"] = tempfile.mkdtemp(prefix="animator-platform-tests-")
+os.environ["PLATFORM_DATABASE_URL"] = ""
 
 import pytest
 

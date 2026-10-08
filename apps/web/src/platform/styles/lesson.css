@@ -1156,3 +1156,42 @@
     flex-wrap: wrap;
   }
 }
+
+/* For the owner: whether the lesson is in Explore, and whether its ratings may list it (ADR-053). */
+.share-explore {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.share-explore > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.share-explore.on > svg {
+  color: var(--success);
+}
+
+.share-explore > div {
+  display: grid;
+  gap: 4px;
+}
+
+.share-explore b {
+  color: var(--ink);
+}
+
+.share-explore small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.share-explore .ui-check {
+  margin-top: 6px;
+}

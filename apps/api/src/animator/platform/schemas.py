@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 Visibility = Literal["private", "unlisted", "public"]
 Theme = Literal["light", "dark", "system"]
@@ -112,6 +112,8 @@ class LessonPatchIn(_In):
     visibility: Visibility | None = None
     subject: str | None = Field(default=None, max_length=32)
     featured: bool | None = None  # admins
+    # The owner: do not list it in Explore because of its ratings (ADR-053).
+    explore_opt_out: bool | None = None
 
 
 class ProgressIn(_In):
@@ -134,7 +136,8 @@ class NotePatchIn(_In):
 
 class RatingIn(_In):
     stars: int = Field(ge=1, le=5)
-    comment: str = Field(default="", max_length=1000)
+    # None keeps the comment already given (changing the stars does not erase it).
+    comment: str | None = Field(default=None, max_length=1000)
 
 
 # ---------------------------------------------------------------------- support
@@ -168,6 +171,59 @@ class AdminLessonPatchIn(_In):
     visibility: Visibility | None = None
     featured: bool | None = None
     deleted: bool | None = None
+    subject: str | None = Field(default=None, max_length=32)
+
+
+# ---------------------------------------------------------------------- credits and Explore (ADR-053)
+
+
+class CreditsIn(_In):
+    """A person's monthly credits: their role's, their own number, no limit, or none (may watch
+    and learn from what exists, not start anything that costs)."""
+
+    mode: Literal["role", "custom", "unlimited", "blocked"]
+    limit: int | None = Field(default=None, ge=1, le=10_000_000)
+
+    @model_validator(mode="after")
+    def _limit(self) -> CreditsIn:
+        if self.mode == "custom" and self.limit is None:
+            raise ValueError("Give the number of credits per month.")
+        if self.mode != "custom":
+            self.limit = None
+        return self
+
+
+class AdjustmentIn(_In):
+    """Credits given back to a person (positive) or charged (negative), with the reason."""
+
+    credits: float = Field(ge=-1_000_000, le=1_000_000)
+    note: str = Field(min_length=3, max_length=200)
+
+    @field_validator("credits")
+    @classmethod
+    def _nonzero(cls, v: float) -> float:
+        if round(v * 1000) == 0:
+            raise ValueError("Give a number of credits other than 0.")
+        return v
+
+
+class ExploreIn(_In):
+    """An admin's decision about a lesson in Explore. include: listed whatever its ratings say;
+    exclude: never listed; automatic: back to the rule. `share` confirms that a private lesson becomes
+    shared with a link (people must be able to open what Explore shows)."""
+
+    action: Literal["include", "exclude", "automatic"]
+    note: str = Field(default="", max_length=300)
+    share: bool = False
+    subject: str | None = Field(default=None, max_length=32)
+
+
+class ReviewIn(_In):
+    """The team's follow-up on a lesson: flagged (needs work), working (someone is on it), resolved,
+    or "" (no review)."""
+
+    status: Literal["", "flagged", "working", "resolved"]
+    note: str = Field(default="", max_length=500)
 
 
 class Page(BaseModel):

@@ -2160,3 +2160,147 @@ creating a lesson to the screen that plays it, including the interface.
 ADR-051 stay: `seek`, `duration` and starting preferences).
 
 **Rollback.** Git tag `backup/before-visual-smoothness` (= v2.0), `.env.backup-before-visual-smoothness`.
+
+## ADR-053 Credits and cost; Explore by ratings and by hand (2026-10-08)
+
+**Asked.**
+- An administration tab for credits and cost: what each person spends making lessons and learning;
+  totals so far, this month, this week and today; and control over how many credits each person may use.
+- Explore: a lesson rated 4 or more by more than 20 people joins Explore by itself, under its subject.
+- Administrators can add any lesson to Explore or take any out, rated or not.
+- A page to monitor ratings, so the team can see which lessons do well and work on the poor ones.
+- Everything ready for finer roles later (RBAC).
+
+**Decision: one ledger of spend.**
+- `usage_ledger` is append-only: one row per spend, never edited. A correction is a new row.
+- What it records:
+  - each lesson's AI, exact, from the tokens of its calls (the lesson's own record, as before);
+  - each lesson's voice, estimated: characters spoken times the provider's price per million
+    characters (`PLATFORM_VOICE_PRICES` over defaults; ElevenLabs $200, about the Creator and Pro plans);
+  - each doubt answer's AI (exact) and voice (estimated);
+  - speech input, estimated from the recording's size;
+  - adjustments: credits an admin gives back or charges, with a reason the person sees (no dollars).
+- Amounts are integers, so sums are exact: millionths of a dollar and thousandths of a credit.
+  - One credit is `PLATFORM_CREDIT_USD` ($0.01).
+  - An entry's credits are fixed when it is posted: a new price changes only what comes after.
+- **Lessons are posted as they are made:**
+  - at most once a minute while running, and once more when they stop;
+  - each time, only the difference against two counters on the lesson (`cost_billed_micros`,
+    `voice_chars_billed`), moved by compare-and-set in the same transaction. Two posters (a restart,
+    or two API processes) cannot count a lesson twice.
+- **At every start, whatever the ledger lacks is posted:**
+  - each lesson, dated when it was last worked on (the first start after this change posts all history);
+  - each doubt, once, keyed by its record. Its voice comes from the doubt's own file when it is still
+    there.
+- Lessons nobody owns (made before accounts) are posted when the first admin claims them.
+- A closed account's spend stays in the totals, as "No account".
+
+**Decision: periods and monthly credits.**
+- The reports use the platform's clock, `PLATFORM_TIMEZONE`: "local" (default) or a zone name. The
+  `tzdata` package provides the zones on Windows.
+- Periods are today, this week (from Monday), this month, and all time.
+- Days are summed in the database in 15-minute buckets, then placed on local days. Midnight in every
+  time zone falls on a 15-minute boundary.
+- Credits per calendar month, by role (`PLATFORM_MONTHLY_CREDITS_*`): learners 1,000, educators 5,000,
+  admins no limit.
+- An admin can give one person their own number, no limit, or none (blocked: they may watch but not spend).
+- The check runs before anything that spends: creating a lesson, resuming one, asking a doubt, speech input.
+  - The answer is 402 with the day the credits renew.
+  - Work already running finishes, so the last lesson of a month may go past the limit.
+
+**Decision: Explore.**
+- Whether a lesson is in Explore is decided in one function (`curation.decide`) and stored on the
+  lesson (`explore_listed`, `explore_source`), so Explore stays one indexed query.
+- The checks run in order; the first that applies decides:
+  1. removed, or not ready: no;
+  2. private: no (an admin cannot list a private lesson without sharing it);
+  3. kept out by an admin: no, whatever else says;
+  4. added by an admin: yes, whatever its ratings say;
+  5. owner suspended: no;
+  6. published by its owner (public): yes;
+  7. shared with a link, its owner has not opted out, and the rule holds: yes (by ratings).
+- **The rule** ("4 or more from more than 20 people"):
+  - an average of at least `PLATFORM_EXPLORE_MIN_AVERAGE` (4.0) from at least
+    `PLATFORM_EXPLORE_MIN_RATERS` (21) people;
+  - checked with whole numbers (`sum × 100 ≥ 400 × count`), so 4.0 is exactly 4.0;
+  - `PLATFORM_EXPLORE_AUTO=false` turns it off.
+- **Ratings that count** are by active accounts other than the lesson's owner:
+  - owners cannot rate their own lessons;
+  - a lesson's numbers are recounted from its ratings, never added to: on each rating, when a rater
+    is suspended or active again, when an account closes, when owners change, and at start.
+- The decision is refreshed whenever an input changes: a rating, sharing, a pin, an owner's suspension,
+  the lesson finishing or being removed. At start the rule's settings may have changed, so every
+  candidate is decided again.
+- **Admins** add a lesson (shared with a link first, after confirming), keep one out, or hand it back
+  to the rule, with an optional reason. They can also file it under another subject.
+- **Owners:**
+  - a checkbox in Share lets them opt out of being listed by ratings;
+  - making a lesson private ends an admin's "add";
+  - they are told when it first enters Explore (once; compare-and-set again) and when an admin takes
+    it out.
+
+**Decision: monitoring.**
+- Ratings & Explore lists lessons by view: all rated, top, poor (below 3), meeting the rule, almost there
+  (high enough but too few ratings), in Explore, kept out, under review, and all lessons.
+- Each lesson shows:
+  - its average and the spread of its stars;
+  - a weighted score (the average pulled to the platform's mean until it has about 10 ratings), so one
+    5-star rating does not top the list;
+  - why it is or is not in Explore;
+  - its comments (marking those that do not count) and its curation history.
+- The team flags a lesson "needs work", then "being improved", then "improved".
+
+**Decision: permissions.**
+- Five new permissions: `usage:read`, `credits:manage`, `ratings:read`, `explore:curate`,
+  `review:manage`.
+- Admins have all five. A finance viewer or a curator would be one line in `rbac.py`: the routes
+  already ask for the permission, not the role.
+
+**Pages.**
+- Administration → Credits & cost: the four periods, spend per day, where it went, monthly credits,
+  averages, people and lessons by spend, each person's detail with their credits, and a CSV of the ledger.
+- Administration → Ratings & Explore.
+- Settings → Credits: what is left this month and where it went.
+- Credits left on Create.
+- The owner's Explore note in Share.
+
+**Edge cases handled.**
+- Owners rating their own lessons, and earlier self-ratings (no longer counted).
+- Suspended raters: their ratings come back when they return. Closed accounts: their ratings go.
+- Ownership changes when the first admin claims ownerless lessons.
+- Concurrent ratings: a row lock on PostgreSQL; SQLite has one writer.
+- The rule's settings changing; flapping around the bar (the owner is told once).
+- An admin's "add" on a private lesson; "keep out" over the owner's own publishing.
+- Negative or corrected spend; the price of a credit changing.
+- An unknown time zone falls back to the computer's clock.
+- Spreadsheet formulas in the CSV: cells that start with `=`, `+`, `-` or `@` are quoted.
+- Audit and notification writes happen after the request's commit. With SQLite's single writer, a write
+  on a second connection would otherwise wait for the request's own open transaction.
+
+**Also fixed.** Changing the stars no longer erases a comment: the web sent an empty comment with every
+star click, and an omitted comment now keeps the old one.
+
+**Measured on a copy of this machine's data** (202 lessons, one doubt):
+- the first start posted 283 lesson entries and 2 doubt entries;
+- the AI totals $18.31985, exactly the sum of the lessons' own records;
+- the voice is 81,602 ElevenLabs characters, about $16.32 at the default price. Another 8,950
+  characters were on free voices (Edge, Kokoro);
+- in all about $34.71 (3,471 credits). Voice is nearly half of what lessons cost;
+- the two ratings in the database were the first admin's own, on their own lessons: they no longer count.
+
+**Not changed.** The pipeline, the engine, and how lessons are made and played. The doubts module is
+unchanged: the gateway reads its answers as it already did.
+
+**Also fixed.** `test_api_health` started the served app with the real settings, so every test run
+migrated and wrote `var/platform/platform.db` (since ADR-051). The tests now use a temporary platform
+folder (`conftest.py`).
+
+**Rollback.**
+- Git tag `backup/before-usage-explore` (= v2.1), `.env.backup-before-usage-explore`.
+- Snapshot in `D:\animation-backups\v2.1-before-usage-explore`, which includes `platform.db` (revision 0001).
+- The database must go back too: v2.1 does not know revision 0002 and would not start on it. Either:
+  - with this version's code, run `uv run python -m animator.platform downgrade 0001`, then check out
+    v2.1. The downgrade removes the new tables and columns with native `DROP COLUMN`; no table is
+    copied, so nothing cascades. Tested on a copy of this machine's database: every lesson, rating and
+    progress row stays; or
+  - put the snapshot's `platform.db` back in `var/platform/`. This loses what changed after the snapshot.

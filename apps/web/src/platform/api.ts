@@ -1,5 +1,5 @@
 /** The platform API (/api/v1): types and calls. */
-import { http, qs } from "./http";
+import { HttpError, http, qs } from "./http";
 
 export type Role = "learner" | "educator" | "admin";
 export type Visibility = "private" | "unlisted" | "public";
@@ -39,6 +39,26 @@ export interface User {
   permissions: string[];
   limits: { lessons_per_day: number; doubts_per_day: number; max_minutes: number; require_verified: boolean };
   usage: { lessons: number; doubts: number };
+  credits: Credits;
+}
+
+/** Credits per calendar month (ADR-053): a role's allowance, a person's own, no limit, or none. */
+export interface Credits {
+  mode: "role" | "custom" | "unlimited" | "blocked";
+  limit: number | null;
+  used: number;
+  remaining: number | null;
+  unlimited: boolean;
+  blocked: boolean;
+  exhausted: boolean;
+  period_start: number;
+  resets_at: number;
+}
+
+export interface MyCredits extends Credits {
+  by_area: { create: number; learn: number; adjustment: number };
+  items: { area: "create" | "learn"; lesson_id: string | null; lesson_title: string; credits: number; at: number }[];
+  adjustments: { credits: number; note: string; at: number }[];
 }
 
 export interface LessonProgress {
@@ -77,6 +97,28 @@ export interface Lesson {
   progress: LessonProgress | null;
   saved: boolean;
   my_rating?: { stars: number; comment: string } | null;
+  can_rate: boolean;
+  in_explore: boolean;
+  /** For the owner and the people who curate: why it is in Explore, and the owner's choice. */
+  explore: LessonExplore | null;
+}
+
+export interface ExploreRule {
+  auto: boolean;
+  min_raters: number;
+  min_average: number;
+}
+
+export type ExploreSource = "" | "owner" | "auto" | "admin";
+
+export interface LessonExplore {
+  source: ExploreSource;
+  since: number | null;
+  opt_out: boolean;
+  /** Only on a single lesson (not in lists). */
+  included?: boolean;
+  excluded?: boolean;
+  rule?: ExploreRule;
 }
 
 export interface PageOf<T> {
@@ -230,6 +272,168 @@ export interface SystemInfo {
   };
 }
 
+// ---------------------------------------------------------------------- credits and cost (admin)
+
+export type UsageKind = "lesson_ai" | "lesson_voice" | "doubt_ai" | "doubt_voice" | "transcription" | "adjustment";
+export type UsagePeriod = "today" | "week" | "month" | "total";
+type Money = { cost_usd: number; credits: number };
+
+export interface UsageTotals extends Money {
+  entries: number;
+  estimated_usd: number;
+  by_kind: Partial<Record<UsageKind, Money & { count: number }>>;
+  by_area: Record<"create" | "learn" | "adjustment", Money>;
+}
+
+export interface UsageDay extends Money {
+  day: string;
+  create_usd: number;
+  learn_usd: number;
+}
+
+export interface UsageSummary {
+  timezone: string;
+  credit_usd: number;
+  now: number;
+  starts: Record<"today" | "week" | "month", number>;
+  resets_at: number;
+  periods: Record<UsagePeriod, UsageTotals>;
+  daily: UsageDay[];
+  people: { spending_this_month: number; over_limit: number; near_limit: number; blocked: number };
+  top: ({ id: string; name: string; email: string } & Money)[];
+  averages: { lesson_usd: number | null; doubt_usd: number | null };
+  unattributed_usd: number;
+  allowances: Record<Role, number | null>;
+  prices: {
+    voices: { provider: string; usd_per_million_chars: number; configured: boolean }[];
+    transcribe_usd_per_min: number;
+  };
+}
+
+export interface PersonCredits {
+  mode: Credits["mode"];
+  limit: number | null;
+  role_limit: number | null;
+  used: number;
+  percent: number | null;
+  exhausted: boolean;
+}
+
+export interface UsagePerson {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  status: "active" | "suspended";
+  avatar: string;
+  credits: PersonCredits;
+  spent: Money & { create_usd: number; learn_usd: number; last_at: number | null };
+  lessons: number;
+  doubts: number;
+}
+
+export interface UsageEntryItem extends Money {
+  id: string;
+  kind: UsageKind;
+  lesson_id: string | null;
+  lesson_title: string | null;
+  estimated: boolean;
+  quantity: number;
+  note: string;
+  by: string | null;
+  at: number;
+}
+
+export interface UsagePersonDetail {
+  user: { id: string; name: string; email: string; role: Role; status: string; avatar: string; created_at: number };
+  credits: Credits & { role_limit: number | null };
+  periods: Record<UsagePeriod, UsageTotals>;
+  daily: UsageDay[];
+  lessons: ({ id: string; title: string; removed: boolean; made: boolean; last_at: number } & Money)[];
+  recent: UsageEntryItem[];
+}
+
+export interface UsageLesson extends Money {
+  id: string;
+  title: string;
+  subject: string | null;
+  status: string | null;
+  removed: boolean;
+  owner: string | null;
+  create_usd: number;
+  learn_usd: number;
+  answers: number;
+  last_at: number;
+}
+
+// ---------------------------------------------------------------------- ratings and Explore (admin)
+
+export type ReviewStatus = "" | "flagged" | "working" | "resolved";
+export type RatingsView = "all" | "rated" | "top" | "poor" | "rule" | "near" | "listed" | "excluded" | "review";
+
+export interface RatedLesson {
+  id: string;
+  title: string;
+  subject: string;
+  subject_label: string;
+  status: Lesson["status"];
+  visibility: Visibility;
+  featured: boolean;
+  views: number;
+  created_at: number;
+  owner: { id: string; name: string | null; status: string | null } | null;
+  rating: {
+    average: number | null;
+    count: number;
+    score: number;
+    stars: number[];
+    last_rated_at: number | null;
+    meets_rule: boolean;
+  };
+  explore: {
+    listed: boolean;
+    source: ExploreSource;
+    since: number | null;
+    pin: "" | "include" | "exclude";
+    pin_note: string;
+    pinned_at: number | null;
+    opt_out: boolean;
+    reason: string;
+    reason_text: string;
+  };
+  review: { status: ReviewStatus; note: string; at: number | null };
+}
+
+export interface RatedLessonDetail extends RatedLesson {
+  rule: ExploreRule;
+  ratings_total: number;
+  ratings: { name: string; stars: number; comment: string; at: number; counts: boolean; why_not: string | null }[];
+  history: { action: string; by: string | null; detail: Record<string, unknown>; at: number }[];
+}
+
+export interface RatingsSummary {
+  rule: ExploreRule;
+  rated_lessons: number;
+  ratings: number;
+  average: number | null;
+  platform_mean: number;
+  stars: number[];
+  in_explore: { total: number; owner: number; auto: number; admin: number };
+  meets_rule: number;
+  near_rule: number;
+  poor: number;
+  excluded: number;
+  review: Record<"flagged" | "working" | "resolved", number>;
+  recent_comments: {
+    lesson_id: string;
+    lesson_title: string;
+    name: string;
+    stars: number;
+    comment: string;
+    at: number;
+  }[];
+}
+
 export interface CreateLesson {
   topic: string;
   audience: string;
@@ -267,14 +471,17 @@ export const v1 = {
   sessions: () => http.get<DeviceSession[]>("/api/v1/me/sessions"),
   endSession: (id: string) => http.del<void>(`/api/v1/me/sessions/${id}`),
   endOtherSessions: () => http.post<{ signed_out: number }>("/api/v1/me/sessions/revoke-others"),
+  myCredits: () => http.get<MyCredits>("/api/v1/me/credits"),
   deleteAccount: (password: string) => http.del<void>("/api/v1/me", { password, confirm: "DELETE" }),
   // lessons
   createLesson: (body: CreateLesson) => http.post<Lesson>("/api/v1/lessons", body),
   myLessons: (p: { q?: string; status?: string; sort?: string; offset?: number; limit?: number }) =>
     http.get<PageOf<Lesson>>(`/api/v1/lessons${qs(p)}`),
   lesson: (id: string) => http.get<Lesson>(`/api/v1/lessons/${id}`),
-  patchLesson: (id: string, body: { visibility?: Visibility; subject?: string; featured?: boolean }) =>
-    http.patch<Lesson>(`/api/v1/lessons/${id}`, body),
+  patchLesson: (
+    id: string,
+    body: { visibility?: Visibility; subject?: string; featured?: boolean; explore_opt_out?: boolean },
+  ) => http.patch<Lesson>(`/api/v1/lessons/${id}`, body),
   deleteLesson: (id: string) => http.del<void>(`/api/v1/lessons/${id}`),
   explore: (p: { q?: string; subject?: string; sort?: string; offset?: number; limit?: number }) =>
     http.get<PageOf<Lesson>>(`/api/v1/explore${qs(p)}`),
@@ -291,7 +498,8 @@ export const v1 = {
   addNote: (id: string, t_s: number, text: string) => http.post<Note>(`/api/v1/lessons/${id}/notes`, { t_s, text }),
   editNote: (noteId: string, text: string) => http.patch<Note>(`/api/v1/notes/${noteId}`, { text }),
   deleteNote: (noteId: string) => http.del<void>(`/api/v1/notes/${noteId}`),
-  rate: (id: string, stars: number, comment = "") =>
+  /** Without a comment, the comment already given stays. */
+  rate: (id: string, stars: number, comment?: string) =>
     http.put<{ rating: number | null; rating_count: number }>(`/api/v1/lessons/${id}/rating`, { stars, comment }),
   lessonDoubts: (id: string) => http.get<DoubtItem[]>(`/api/v1/lessons/${id}/doubts`),
   // learning
@@ -319,11 +527,76 @@ export const v1 = {
   endUserSessions: (id: string) => http.post<{ signed_out: number }>(`/api/v1/admin/users/${id}/revoke-sessions`),
   adminLessons: (p: { q?: string; status?: string; visibility?: string; deleted?: boolean; offset?: number }) =>
     http.get<PageOf<Lesson>>(`/api/v1/admin/lessons${qs(p)}`),
-  moderate: (id: string, body: { visibility?: Visibility; featured?: boolean; deleted?: boolean }) =>
+  moderate: (id: string, body: { visibility?: Visibility; featured?: boolean; deleted?: boolean; subject?: string }) =>
     http.patch<Lesson>(`/api/v1/admin/lessons/${id}`, body),
   queue: (p: { status?: string; q?: string }) => http.get<PageOf<Ticket>>(`/api/v1/admin/tickets${qs(p)}`),
   triage: (id: string, body: { status?: string; priority?: string }) =>
     http.patch<Ticket>(`/api/v1/admin/tickets/${id}`, body),
   audit: (p: { action?: string; offset?: number }) => http.get<PageOf<AuditItem>>(`/api/v1/admin/audit${qs(p)}`),
   system: () => http.get<SystemInfo>("/api/v1/admin/system"),
+  // credits and cost
+  usageSummary: (days = 30) => http.get<UsageSummary>(`/api/v1/admin/usage/summary${qs({ days })}`),
+  usagePeople: (p: {
+    period: UsagePeriod;
+    q?: string;
+    role?: string;
+    sort?: string;
+    active?: boolean;
+    offset?: number;
+  }) => http.get<PageOf<UsagePerson>>(`/api/v1/admin/usage/people${qs(p)}`),
+  usagePerson: (id: string) => http.get<UsagePersonDetail>(`/api/v1/admin/usage/people/${id}`),
+  setCredits: (id: string, mode: Credits["mode"], limit?: number) =>
+    http.put<Credits & { role_limit: number | null }>(`/api/v1/admin/usage/people/${id}/credits`, {
+      mode,
+      limit: mode === "custom" ? limit : undefined,
+    }),
+  /** Positive: credits given back; negative: charged. */
+  adjustCredits: (id: string, credits: number, note: string) =>
+    http.post<Credits & { role_limit: number | null }>(`/api/v1/admin/usage/people/${id}/adjustments`, {
+      credits,
+      note,
+    }),
+  usageLessons: (p: { period: UsagePeriod; q?: string; offset?: number }) =>
+    http.get<PageOf<UsageLesson>>(`/api/v1/admin/usage/lessons${qs(p)}`),
+  // ratings and Explore
+  ratingsSummary: () => http.get<RatingsSummary>("/api/v1/admin/ratings/summary"),
+  ratedLessons: (p: { view: RatingsView; subject?: string; q?: string; sort?: string; offset?: number }) =>
+    http.get<PageOf<RatedLesson> & { rule: ExploreRule; sort: string }>(`/api/v1/admin/ratings/lessons${qs(p)}`),
+  ratedLesson: (id: string, p: { stars?: number; offset?: number } = {}) =>
+    http.get<RatedLessonDetail>(`/api/v1/admin/ratings/lessons/${id}${qs(p)}`),
+  curate: (
+    id: string,
+    body: { action: "include" | "exclude" | "automatic"; note?: string; share?: boolean; subject?: string },
+  ) => http.put<RatedLesson>(`/api/v1/admin/explore/${id}`, body),
+  review: (id: string, status: ReviewStatus, note: string) =>
+    http.put<{ status: ReviewStatus; note: string; at: number }>(`/api/v1/admin/ratings/lessons/${id}/review`, {
+      status,
+      note,
+    }),
 };
+
+/** The usage ledger of a period as a CSV file, downloaded through the session-aware fetch (it renews an
+ * expired sign-in like every other request). */
+export async function downloadUsageCsv(period: UsagePeriod): Promise<void> {
+  const res = await fetch(`/api/v1/admin/usage/export.csv${qs({ period })}`);
+  if (!res.ok) {
+    let detail = `Export failed (${res.status})`;
+    try {
+      const data = (await res.json()) as { detail?: unknown };
+      if (typeof data.detail === "string") detail = data.detail;
+    } catch {
+      /* not JSON */
+    }
+    throw new HttpError(detail, res.status);
+  }
+  const blob = await res.blob();
+  const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? `usage-${period}.csv`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+}

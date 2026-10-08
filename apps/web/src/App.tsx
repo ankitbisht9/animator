@@ -34,6 +34,8 @@ const AdminLessons = lazy(async () => ({ default: (await import("./platform/page
 const AdminSupport = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminSupport }));
 const AdminAudit = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminAudit }));
 const AdminSystem = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminSystem }));
+const AdminCredits = lazy(async () => ({ default: (await import("./platform/pages/AdminCredits")).AdminCredits }));
+const AdminRatings = lazy(async () => ({ default: (await import("./platform/pages/AdminRatings")).AdminRatings }));
 const Playground = lazy(async () => ({ default: (await import("./pages/Playground")).Playground }));
 const DebugPage = lazy(async () => ({ default: (await import("./pages/DebugPage")).DebugPage }));
 const GenerationPage = lazy(async () => ({ default: (await import("./pages/GenerationPage")).GenerationPage }));
@@ -154,6 +156,8 @@ function Routes() {
   if (staffTicket) return admin("support:manage", <TicketThread key={staffTicket} id={staffTicket} staff />);
   if (path === "/admin/audit") return admin("audit:read", <AdminAudit />);
   if (path === "/admin/system") return admin("analytics:read", <AdminSystem />);
+  if (path === "/admin/credits") return admin("usage:read", <AdminCredits />);
+  if (path === "/admin/ratings") return admin("ratings:read", <AdminRatings />);
   if (path === "/admin/playground")
     return admin(
       "debug",

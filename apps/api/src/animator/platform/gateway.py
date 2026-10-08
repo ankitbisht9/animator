@@ -34,8 +34,9 @@ from starlette.requests import cookie_parser
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from animator.platform import usage
 from animator.platform.core import Platform, Principal
-from animator.platform.models import DoubtLog, Lesson
+from animator.platform.models import DoubtLog, Lesson, new_id
 from animator.platform.rbac import Perm
 
 log = logging.getLogger("animator.gateway")
@@ -68,10 +69,18 @@ class Rule:
     access: str  # public | signed_in | perm | reader | owner | doubt_ask | doubt_read | docs
     perm: Perm | None = None
     hook: str | None = None
+    spends: bool = False  # starts paid work: refused when the person's credits are used up (ADR-053)
 
 
-def _rule(methods: str, pattern: str, access: str, perm: Perm | None = None, hook: str | None = None) -> Rule:
-    return Rule(frozenset(methods.split("|")), re.compile(pattern), access, perm, hook)
+def _rule(
+    methods: str,
+    pattern: str,
+    access: str,
+    perm: Perm | None = None,
+    hook: str | None = None,
+    spends: bool = False,
+) -> Rule:
+    return Rule(frozenset(methods.split("|")), re.compile(pattern), access, perm, hook, spends)
 
 
 # The routes that existed before accounts. /api/v1 checks itself (FastAPI dependencies).
@@ -80,14 +89,15 @@ LEGACY: list[Rule] = [
     _rule("GET|HEAD", r"^/api/tts/[A-Za-z0-9_.-]+$", "public"),  # named by content, cached forever
     _rule("GET", r"^/api/config$", "signed_in"),
     _rule("GET", r"^/api/generations$", "perm", Perm.DEBUG),
-    _rule("POST", r"^/api/generations$", "perm", Perm.DEBUG, hook="lesson"),
+    _rule("POST", r"^/api/generations$", "perm", Perm.DEBUG, hook="lesson", spends=True),
     _rule("GET", rf"^/api/generations/(?P<gid>{GEN})$", "owner"),
     _rule("GET", rf"^/api/generations/(?P<gid>{GEN})/events$", "reader"),
-    _rule("POST", rf"^/api/generations/(?P<gid>{GEN})/(cancel|resume|playhead)$", "owner"),
+    _rule("POST", rf"^/api/generations/(?P<gid>{GEN})/(cancel|playhead)$", "owner"),
+    _rule("POST", rf"^/api/generations/(?P<gid>{GEN})/resume$", "owner", spends=True),
     _rule("GET", rf"^/api/generations/(?P<gid>{GEN})/calls$", "perm", Perm.DEBUG),
     _rule("GET|POST", rf"^/api/generations/(?P<gid>{GEN})/export(/video)?$", "owner"),
     _rule("GET", r"^/api/doubts/(config|phrases)$", "signed_in"),
-    _rule("POST", r"^/api/doubts/transcribe$", "perm", Perm.DOUBT_ASK),
+    _rule("POST", r"^/api/doubts/transcribe$", "perm", Perm.DOUBT_ASK, hook="transcribe", spends=True),
     _rule("POST", rf"^/api/doubts/(?P<gid>{GEN})$", "doubt_ask", hook="doubt"),
     _rule("GET", rf"^/api/doubts/(?P<gid>{GEN})/(?P<sid>{DOUBT})$", "doubt_read"),
     _rule("GET|HEAD", r"^/(docs|redoc|openapi\.json)(/.*)?$", "docs", Perm.DEBUG),
@@ -168,6 +178,7 @@ class Gateway:
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
+                state["body_bytes"] = received
                 if received > limit:
                     raise _TooLarge
             return message
@@ -327,9 +338,33 @@ class Gateway:
                     return denial, None, receive
                 return None, self._doubt_hook(p, gid), receive
 
+        if rule.spends and p is not None:
+            refused = await self._credit_gate(p, rid)
+            if refused is not None:
+                return refused, None, receive
         if rule.hook == "lesson" and p is not None:
             return None, self._lesson_hook(p), receive
+        if rule.hook == "transcribe" and p is not None:
+            return None, self._transcribe_hook(p, scope), receive
         return None, None, receive
+
+    # ------------------------------------------------------------------ credits (ADR-053)
+
+    async def _credit_gate(self, p: Principal, rid: str) -> Response | None:
+        """Refuse paid work once the person's monthly credits are used up (or their account may not
+        spend). Work already running finishes: the check is at the start."""
+        async with self.platform.db.session() as s:
+            reason = await usage.check(s, self.platform.settings, p.user_id)
+        return _deny(402, reason, rid) if reason is not None else None
+
+    def _transcribe_hook(self, p: Principal, scope: Scope) -> Hook:
+        async def record(_body: bytes) -> None:
+            size = int(scope.get("state", {}).get("body_bytes") or 0)
+            async with self.platform.db.session() as s:
+                await usage.bill_transcription(s, self.platform.settings, p.user_id, size)
+                await s.commit()
+
+        return record
 
     # ------------------------------------------------------------------ doubts
 
@@ -346,6 +381,9 @@ class Gateway:
         platform = self.platform
         if not p.can(Perm.DOUBT_ASK):
             return _deny(403, "Your account cannot ask doubts.", rid), receive
+        refused = await self._credit_gate(p, rid)
+        if refused is not None:
+            return refused, receive
         wait = platform.limiter.hit(f"doubt:{p.user_id}", 30, 3600)
         if wait is not None:
             return _deny(429, "You have asked many doubts this hour. Take a short break.", rid, wait), receive
@@ -391,9 +429,12 @@ class Gateway:
     def _doubt_hook(self, p: Principal, gid: str) -> Hook:
         async def record(body: bytes) -> None:
             data = json.loads(body)
+            log_id = new_id()
+            at = time.time()
             async with self.platform.db.session() as s:
                 s.add(
                     DoubtLog(
+                        id=log_id,
                         user_id=p.user_id,
                         lesson_id=gid,
                         session_id=str(data.get("session_id", ""))[:16],
@@ -402,8 +443,11 @@ class Gateway:
                         kind=str(data.get("kind", ""))[:16],
                         title=str(data.get("title", ""))[:200],
                         cost_usd=float(data.get("cost_usd", 0) or 0),
+                        created_at=at,
                     )
                 )
+                # Its cost goes on the ledger in the same transaction: both are written, or neither.
+                await usage.bill_doubt(s, self.platform.settings, log_id, p.user_id, gid, data, at)
                 await s.commit()
 
         return record

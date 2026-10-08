@@ -3,7 +3,8 @@
 The lesson pipeline (plan, scenes, voice, doubts) is wrapped in a learning platform. People sign up and
 sign in; lessons belong to someone and are shared on purpose; learners keep progress, notes, a library and
 streaks; support and administration have their own pages. The pipeline's code is unchanged: the platform
-calls it, reads its records and guards its routes. Decisions and measurements: ADR-051.
+calls it, reads its records and guards its routes. Decisions and measurements: ADR-051, ADR-052,
+ADR-053 (credits, cost, Explore).
 
 ## First run
 
@@ -31,15 +32,19 @@ Without SMTP settings, mails (confirm your email, reset your password) are writt
 
 | | Learner | Educator | Admin |
 |---|---|---|---|
-| Watch, save, take notes, rate, ask doubts | yes | yes | yes |
+| Watch, save, take notes, ask doubts | yes | yes | yes |
+| Rate lessons (not their own) | yes | yes | yes |
 | Create lessons (per 24 h; longest lesson) | 5; 10 min | 25; 20 min | no limit; 20 min |
 | Doubt answers per 24 h | 40 | 120 | no limit |
+| Credits per month (making lessons, doubts, speech input) | 1,000 | 5,000 | no limit |
 | Share a lesson with a link | yes | yes | yes |
 | Publish to Explore | no | yes | yes |
 | People, every lesson, featuring, support queue, audit log, system | no | no | yes |
+| Credits & cost, ratings & Explore (ADR-053) | no | no | yes |
 | The pipeline's raw API, call logs, debug pages, DSL playground | no | no | yes |
 
-The numbers are settings (`PLATFORM_LESSONS_PER_DAY_LEARNER`, ...). Permissions live in one table
+The numbers are settings (`PLATFORM_LESSONS_PER_DAY_LEARNER`, `PLATFORM_MONTHLY_CREDITS_LEARNER`, ...); an
+admin can give one person their own monthly credits. Permissions live in one table
 (`animator/platform/rbac.py`); code asks for a permission, never for a role.
 
 ## Pages
@@ -52,10 +57,18 @@ The numbers are settings (`PLATFORM_LESSONS_PER_DAY_LEARNER`, ...). Permissions 
   (minutes, streaks, a 12-week calendar, achievements), Profile, Notifications, Settings (account, learning,
   playback, appearance, notifications, security with signed-in devices, privacy with data download and account
   deletion), Support (tickets with replies).
-- **Administration:** overview (people, lessons, hours learned, AI spend, charts), People (roles, suspend, sign
-  out everywhere), All lessons (feature, unpublish, remove, restore), Support queue (reply, status, priority),
-  Audit log, System (engine workers, services, busiest routes with p50/p95), DSL playground, and each lesson's
-  pipeline view and debug page.
+- **Administration:**
+  - overview (people, lessons, hours learned, spend, charts);
+  - People (roles, suspend, sign out everywhere);
+  - All lessons (feature, unpublish, remove, restore);
+  - Ratings & Explore (ratings by lesson, what Explore lists and why, add or keep out, review flags);
+  - Credits & cost (spend today, this week, this month and so far; people and lessons by spend; each
+    person's monthly credits; credits given back; the ledger as CSV);
+  - Support queue (reply, status, priority);
+  - Audit log;
+  - System (engine workers, services, busiest routes with p50/p95);
+  - DSL playground, and each lesson's pipeline view and debug page.
+- **Settings → Credits:** what is left this month and where it went. Create shows the credits left.
 - On a lesson page the sidebar folds to icons so the lesson gets the room (one click opens it). The
   lesson screen is kept as light per frame as before the platform (ADR-052).
 - Keyboard: `Space`, `←`/`→`, `C`, `M`, `F` in the player as before; `D` raises a hand; `N` writes a note at the
@@ -111,14 +124,42 @@ Lessons stay where the pipeline writes them (`var/generations/<id>/`). The platf
 | saved, notes, ratings, doubt_log | the library, notes pinned to moments, star ratings, doubts asked |
 | notifications, tickets, ticket_messages | in-app notices; support conversations |
 | audit_log | security and administration events |
+| usage_ledger | every spend (AI, voice, speech input) and credit adjustment, append-only (ADR-053) |
+| lesson_curation | admins' Explore decisions (add, keep out) and the team's review of a lesson |
 
 - The schema is migrated by Alembic at start (`animator/platform/migrations/`).
 - A new migration: `uv run python -m animator.platform revision -m "what changed"`.
+- Back to an older revision (before running an older version of the code):
+  `uv run python -m animator.platform downgrade 0001`.
 - Every list is one query with its joins, indexed on what it filters and sorts by (owner and date,
   visibility and date, user and time).
 - SQLite runs in WAL mode with foreign keys on.
 - PostgreSQL works by setting `PLATFORM_DATABASE_URL=postgresql+asyncpg://...` (install `asyncpg`).
 - Back up SQLite with `sqlite3 var/platform/platform.db ".backup backup.db"` while it runs.
+
+## Credits, cost and Explore (ADR-053)
+
+- **Every spend is a row of the usage ledger:**
+  - each lesson's AI (exact, from its calls' tokens) and voice (estimated: characters times the
+    provider's price), posted while it is made;
+  - each doubt answer (AI exact, voice estimated) and speech input (estimated from the recording);
+  - credits an admin gives back or charges.
+  The first start after the update posts all earlier lessons and doubts, dated when they were made.
+- **Credits:** one is `PLATFORM_CREDIT_USD` of spend.
+  - Each person has a monthly allowance: their role's, their own, no limit, or none.
+  - Creating or resuming a lesson, asking a doubt and speech input are refused (402) once it is used
+    up. Something already running finishes.
+  - Credits renew on the 1st, in `PLATFORM_TIMEZONE`.
+- **Explore lists a lesson when:**
+  - its owner published it; or
+  - it is shared with a link and rated at least 4.0 on average by at least 21 people (not counting
+    its owner, nor suspended accounts); or
+  - an admin added it.
+  An admin's "keep it out" wins over all of these; private lessons are never listed. Owners can opt out
+  of being listed by ratings (in Share). They are told when the lesson first enters Explore, and when an
+  admin takes it out.
+- **The decision is stored on the lesson** and refreshed whenever a rating, its sharing, a pin or its
+  owner changes, and at start.
 
 ## Settings
 
@@ -139,6 +180,13 @@ All optional; defaults suit development.
 | `PLATFORM_LESSONS_PER_DAY_LEARNER` / `_EDUCATOR` / `_ADMIN` | 5 / 25 / 0 | 0: no limit |
 | `PLATFORM_MAX_MINUTES_LEARNER` / `_EDUCATOR` / `_ADMIN` | 10 / 20 / 20 | longest lesson |
 | `PLATFORM_DOUBTS_PER_DAY_LEARNER` / `_EDUCATOR` / `_ADMIN` | 40 / 120 / 0 | |
+| `PLATFORM_CREDIT_USD` | 0.01 | dollars per credit (fixed per entry when posted) |
+| `PLATFORM_MONTHLY_CREDITS_LEARNER` / `_EDUCATOR` / `_ADMIN` | 1000 / 5000 / 0 | 0: no limit |
+| `PLATFORM_TIMEZONE` | local | the reports' days and the month the credits renew on, e.g. `Asia/Kolkata` |
+| `PLATFORM_VOICE_PRICES` | ElevenLabs 200, OpenAI 15, Google 16, Azure 16 | USD per million characters, JSON, e.g. `{"elevenlabs": 165}` |
+| `PLATFORM_TRANSCRIBE_USD_PER_MIN` | 0.003 | speech input |
+| `PLATFORM_EXPLORE_AUTO` | true | lessons shared with a link join Explore by their ratings |
+| `PLATFORM_EXPLORE_MIN_RATERS`, `PLATFORM_EXPLORE_MIN_AVERAGE` | 21, 4.0 | the rule: at least 21 people, average 4.0 |
 | `PLATFORM_RATE_LIMIT_PER_MIN` | 600 | requests per person (or address) per minute |
 | `PLATFORM_ACCESS_TTL_MIN`, `PLATFORM_REFRESH_TTL_DAYS` | 15, 30 | token lifetimes |
 | `PLATFORM_MAX_FAILED_LOGINS`, `PLATFORM_LOCKOUT_MINUTES` | 5, 15 | |
@@ -166,11 +214,13 @@ All optional; defaults suit development.
 - API: `apps/api/src/animator/platform/`
   - `gateway.py`: the gateway;
   - `core.py`: the platform object, who is asking, caches;
-  - `api/`: the `/api/v1` routes (auth, account, lessons, learning, support, admin);
+  - `api/`: the `/api/v1` routes (auth, account, lessons, learning, support, admin, credits, ratings);
   - `accounts.py`: sessions and cookies;
   - `security.py`: passwords and tokens;
   - `rbac.py`: roles and permissions;
-  - `catalog.py`: the lesson catalog and subjects;
+  - `catalog.py`: the lesson catalog and subjects, and posting what lessons spend;
+  - `usage.py`: the usage ledger, periods and monthly credits;
+  - `curation.py`: what Explore lists, and rating counts;
   - `models.py`, `migrations/`: the database;
   - `mail.py`, `metrics.py`, `ratelimit.py`;
   - `web.py`: serving the built app;
@@ -185,4 +235,4 @@ All optional; defaults suit development.
   - `lesson/`: cards, sharing, notes, progress, the lesson-complete card;
   - `styles/`: tokens and styles.
 - Routes: `apps/web/src/App.tsx`.
-- Tests: `apps/api/tests/test_platform.py`.
+- Tests: `apps/api/tests/test_platform.py`, `apps/api/tests/test_platform_usage.py`.

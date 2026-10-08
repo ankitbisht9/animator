@@ -389,6 +389,7 @@ function LessonBody({ id }: { id: string }) {
                     lessonId={id}
                     myStars={info?.my_rating?.stars ?? 0}
                     signedIn={signedIn}
+                    canRate={signedIn && !!info?.can_rate}
                     onNotes={() => {
                       setTab("notes");
                       notesRef.current?.focus();
@@ -430,9 +431,8 @@ function LessonBody({ id }: { id: string }) {
               scenes={lesson.scenes.map((sc) => ({ title: sc.title, start: sc.start, duration: sc.duration }))}
               onSeek={seek}
               created={info?.created_at}
-              signedIn={signedIn}
+              canRate={signedIn && ready && !!info?.can_rate}
               lessonId={id}
-              ready={ready}
               myStars={info?.my_rating?.stars ?? 0}
             />
           )}
@@ -486,9 +486,8 @@ function Overview({
   scenes,
   onSeek,
   created,
-  signedIn,
+  canRate,
   lessonId,
-  ready,
   myStars,
 }: {
   topic: string;
@@ -496,9 +495,9 @@ function Overview({
   scenes: { title: string; start: number; duration: number }[];
   onSeek: (t: number) => void;
   created?: number;
-  signedIn: boolean;
+  /** Signed in, the lesson ready, and not one's own. */
+  canRate: boolean;
   lessonId: string;
-  ready: boolean;
   myStars: number;
 }) {
   const toast = useToast();
@@ -537,7 +536,7 @@ function Overview({
         )}
       </div>
       <aside className="overview-side">
-        {signedIn && ready && (
+        {canRate && (
           <div className="overview-rate">
             <h3>Rate this lesson</h3>
             <StarRating

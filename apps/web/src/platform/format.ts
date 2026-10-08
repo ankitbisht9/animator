@@ -65,6 +65,29 @@ export function money(usd: number | null | undefined): string {
   return usd < 0.01 && usd > 0 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
 }
 
+/** Dollars for the cost reports: cents, tenths of a cent below a cent, whole dollars from $1,000, and a
+ * minus sign for corrections. */
+export function usd(v: number | null | undefined): string {
+  if (v == null) return "–";
+  const a = Math.abs(v);
+  const s =
+    a === 0
+      ? "0.00"
+      : a < 0.01
+        ? a.toFixed(4)
+        : a < 1000
+          ? a.toFixed(2)
+          : a.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  return `${v < 0 ? "−" : ""}$${s}`;
+}
+
+/** Credits: whole numbers when large, a decimal or two when small. */
+export function credits(v: number | null | undefined): string {
+  if (v == null) return "–";
+  const a = Math.abs(v);
+  return v.toLocaleString(undefined, { maximumFractionDigits: a >= 100 ? 0 : a >= 10 ? 1 : 2 });
+}
+
 /** A short device description from a user agent. */
 export function device(ua: string): string {
   const browser = /Edg\//.test(ua)

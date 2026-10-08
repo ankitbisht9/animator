@@ -43,6 +43,10 @@ class User(Base):
     created_at: Mapped[float] = mapped_column(Float, default=now, index=True)
     updated_at: Mapped[float] = mapped_column(Float, default=now, onupdate=now)
     last_login_at: Mapped[float | None] = mapped_column(Float, default=None)
+    # Credits per month (ADR-053): role (the role's allowance) | custom (credit_limit) | unlimited |
+    # blocked (may watch, not spend).
+    credit_mode: Mapped[str] = mapped_column(String(12), default="role", server_default="role")
+    credit_limit: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class AuthSession(Base):
@@ -106,11 +110,70 @@ class Lesson(Base):
     updated_at: Mapped[float] = mapped_column(Float, default=now)
     completed_at: Mapped[float | None] = mapped_column(Float, default=None)
     deleted_at: Mapped[float | None] = mapped_column(Float, default=None)
+    # What of the lesson's spend is already in the usage ledger (ADR-053): AI in millionths of a
+    # dollar, voice in characters. The ledger gets the difference, so nothing is counted twice.
+    cost_billed_micros: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    voice_chars_billed: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # Explore (ADR-053). Derived by curation.decide() and stored, so Explore is one indexed query.
+    # source: owner (published) | auto (its ratings) | admin (added by an admin).
+    explore_listed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    explore_source: Mapped[str] = mapped_column(String(8), default="", server_default="")
+    explore_at: Mapped[float | None] = mapped_column(Float, default=None)  # listed since
+    explore_first_at: Mapped[float | None] = mapped_column(Float, default=None)  # first listed
+    explore_opt_out: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")  # owner
 
     __table_args__ = (
         Index("ix_lessons_owner_created", "owner_id", "created_at"),
         Index("ix_lessons_visibility_created", "visibility", "created_at"),
+        Index("ix_lessons_explore_subject", "explore_listed", "subject"),
+        Index("ix_lessons_rating_count", "rating_count"),
     )
+
+
+class Curation(Base):
+    """What curators decided about a lesson (ADR-053): kept in or out of Explore whatever its ratings
+    and sharing say (pin), and the team's review of a lesson that needs work."""
+
+    __tablename__ = "lesson_curation"
+
+    lesson_id: Mapped[str] = mapped_column(ForeignKey("lessons.id", ondelete="CASCADE"), primary_key=True)
+    pin: Mapped[str] = mapped_column(String(8), default="", index=True)  # "" | include | exclude
+    pin_note: Mapped[str] = mapped_column(String(300), default="")
+    pinned_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    pinned_at: Mapped[float | None] = mapped_column(Float, default=None)
+    review: Mapped[str] = mapped_column(
+        String(12), default="", index=True
+    )  # "" | flagged | working | resolved
+    review_note: Mapped[str] = mapped_column(String(500), default="")
+    reviewed_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    reviewed_at: Mapped[float | None] = mapped_column(Float, default=None)
+    updated_at: Mapped[float] = mapped_column(Float, default=now, onupdate=now)
+
+
+class UsageEntry(Base):
+    """One spend, append-only (ADR-053): what it cost in dollars (millionths, exact sums) and in
+    credits (thousandths) at the price of its day. Corrections are new entries, never edits.
+
+    kind: lesson_ai | lesson_voice (making lessons), doubt_ai | doubt_voice | transcription (learning),
+    adjustment (credits an admin gave back or charged; no dollars). `source` makes a one-off entry
+    idempotent (a doubt answer is recorded once however often it is seen)."""
+
+    __tablename__ = "usage_ledger"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    lesson_id: Mapped[str | None] = mapped_column(String(16), default=None, index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    cost_micros: Mapped[int] = mapped_column(Integer, default=0)
+    credits_milli: Mapped[int] = mapped_column(Integer, default=0)
+    estimated: Mapped[bool] = mapped_column(Boolean, default=False)
+    quantity: Mapped[int] = mapped_column(Integer, default=0)  # characters, seconds of audio
+    source: Mapped[str | None] = mapped_column(String(80), unique=True, default=None)
+    note: Mapped[str] = mapped_column(String(200), default="")
+    actor_id: Mapped[str | None] = mapped_column(String(32), default=None)  # who made an adjustment
+    created_at: Mapped[float] = mapped_column(Float, default=now, index=True)
+
+    __table_args__ = (Index("ix_usage_user_created", "user_id", "created_at"),)
 
 
 class Progress(Base):
@@ -172,6 +235,8 @@ class Rating(Base):
     comment: Mapped[str] = mapped_column(String(1000), default="")
     created_at: Mapped[float] = mapped_column(Float, default=now)
     updated_at: Mapped[float] = mapped_column(Float, default=now, onupdate=now)
+
+    __table_args__ = (Index("ix_ratings_lesson_updated", "lesson_id", "updated_at"),)
 
 
 class DoubtLog(Base):

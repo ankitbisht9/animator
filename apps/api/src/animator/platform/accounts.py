@@ -11,6 +11,7 @@ from fastapi import Request, Response
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from animator.platform import usage
 from animator.platform.core import Platform
 from animator.platform.gateway import ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE
 from animator.platform.models import AuthSession, DoubtLog, Lesson, OneTimeToken, User
@@ -223,4 +224,5 @@ async def me_out(s: AsyncSession, platform: Platform, user: User) -> dict[str, A
             "require_verified": ps.require_verified_email,
         },
         "usage": await usage_today(s, user.id),
+        "credits": (await usage.allowance(s, ps, user)).out(),
     }

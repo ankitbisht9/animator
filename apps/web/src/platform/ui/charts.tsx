@@ -5,11 +5,14 @@ export function BarChart({
   height = 160,
   unit = "",
   label,
+  format,
 }: {
   data: { label: string; value: number; hint?: string }[];
   height?: number;
   unit?: string;
   label: string;
+  /** How a value reads in its tooltip (default: the number and `unit`). */
+  format?: (v: number) => string;
 }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   const w = 100 / Math.max(1, data.length);
@@ -32,7 +35,7 @@ export function BarChart({
               className="ui-bars-bar"
               style={{ animationDelay: `${i * 25}ms` }}
             >
-              <title>{`${d.hint ?? d.label}: ${d.value}${unit}`}</title>
+              <title>{`${d.hint ?? d.label}: ${format ? format(d.value) : `${d.value}${unit}`}`}</title>
             </rect>
           );
         })}
@@ -100,10 +103,13 @@ export function Donut({
   parts,
   size = 140,
   label,
+  format = String,
 }: {
   parts: { label: string; value: number; color: string }[];
   size?: number;
   label: string;
+  /** How a value reads in the legend and tooltips. */
+  format?: (v: number) => string;
 }) {
   const total = parts.reduce((a, p) => a + p.value, 0) || 1;
   const r = size / 2 - 12;
@@ -128,7 +134,7 @@ export function Donut({
               strokeDashoffset={-acc}
               transform={`rotate(-90 ${size / 2} ${size / 2})`}
             >
-              <title>{`${p.label}: ${p.value}`}</title>
+              <title>{`${p.label}: ${format(p.value)}`}</title>
             </circle>
           );
           acc += len;
@@ -140,7 +146,7 @@ export function Donut({
           <li key={p.label}>
             <span style={{ background: p.color }} />
             {p.label}
-            <b>{p.value}</b>
+            <b>{format(p.value)}</b>
           </li>
         ))}
       </ul>
