@@ -1,0 +1,14 @@
+{
+ "id": "beaker",
+ "title": "Beaker",
+ "concept": "beaker",
+ "view": "from the side, half full",
+ "description": "A glass beaker with a spout and measuring marks, half full of liquid",
+ "aliases": ["beaker", "beakers", "glass beaker", "lab beaker", "measuring beaker"],
+ "context": ["lab", "experiment", "liquid", "solution", "chemical", "react", "mix", "water", "acid", "dissolv", "heat", "measure", "volume", "chemistry", "science"],
+ "not_for": ["beaker icon"],
+ "prefer": ["liquid", "measure", "pour", "volume"],
+ "subjects": ["chemistry"],
+ "parts": {"glass": "beaker", "liquid": "liquid", "marks": "measuring marks"},
+ "size": {"min": 80, "default": 180, "max": 360}
+}

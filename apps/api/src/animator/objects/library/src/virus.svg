@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <!-- A virus (like a coronavirus): a round envelope covered in spike proteins, its genetic material inside. -->
+  <g data-part="spike_proteins" data-fill="red" data-stroke="red.dark" stroke-width="2.5">
+    <g transform="rotate(0.00 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(25.71 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(51.43 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(77.14 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(102.86 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(128.57 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(154.29 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(180.00 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(205.71 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(231.43 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(257.14 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(282.86 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(308.57 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+    <g transform="rotate(334.29 160 160)"><path d="M155 62 L155 36 L165 36 L165 62 Z"/><circle cx="160" cy="28" r="13"/></g>
+  </g>
+  <circle data-part="envelope" cx="160" cy="160" r="102" data-fill="orange.soft" data-stroke="orange.dark" stroke-width="5"/>
+  <circle cx="160" cy="160" r="84" fill="none" data-stroke="orange.light" stroke-width="5" opacity="0.7"/>
+  <path data-part="genetic_material" d="M104 150 C116 120 140 132 146 150 C152 168 176 176 186 152 C196 128 222 136 222 160 C222 184 196 196 178 186 C160 176 136 196 128 180 C120 164 132 150 146 160" fill="none" data-stroke="purple" stroke-width="5"/>
+  <path d="M90 108 C106 84 132 70 160 68" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="8" opacity="0.4"/>
+</svg>

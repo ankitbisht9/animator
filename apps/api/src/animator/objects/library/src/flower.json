@@ -1,0 +1,78 @@
+{
+ "id": "flower",
+ "title": "Flower, cut in half",
+ "concept": "flower",
+ "view": "cut in half, from the side",
+ "description": "A flower cut in half and seen from the side, showing its parts: pink petals, green sepals, stamens (an anther with pollen on a filament), the pistil (stigma, style and an ovary with ovules), the receptacle, the stem and a leaf",
+ "aliases": [
+  "flower",
+  "flowers",
+  "parts of a flower",
+  "flower structure",
+  "flower cross section",
+  "blossom"
+ ],
+ "context": [
+  "petal",
+  "sepal",
+  "stamen",
+  "anther",
+  "filament",
+  "pistil",
+  "carpel",
+  "stigma",
+  "style",
+  "ovary",
+  "ovule",
+  "pollen",
+  "pollinat",
+  "seed",
+  "fertili",
+  "reproduc",
+  "bee",
+  "insect",
+  "nectar",
+  "fruit",
+  "botan",
+  "plant"
+ ],
+ "not_for": [
+  "flower pot",
+  "flower shop",
+  "flower bed",
+  "flower icon",
+  "sunflower oil"
+ ],
+ "prefer": [
+  "parts",
+  "stamen",
+  "pistil",
+  "carpel",
+  "ovary",
+  "pollinat",
+  "inside",
+  "cut"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "petal": "petal",
+  "sepal": "sepal",
+  "anther": "anther",
+  "filament": "filament",
+  "pollen": "pollen",
+  "stigma": "stigma",
+  "style": "style",
+  "ovary": "ovary",
+  "ovule": "ovules",
+  "receptacle": "receptacle",
+  "stem": "stem",
+  "leaf": "leaf"
+ },
+ "size": {
+  "min": 180,
+  "default": 300,
+  "max": 520
+ }
+}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 180">
+  <!-- A cylindrical battery (cell) lying on its side: negative end at the left, positive terminal at the right. -->
+  <rect data-part="negative_terminal" x="14" y="34" width="22" height="112" rx="8" fill="#9aa3b2" data-fill="#9aa3b2" data-stroke="text" stroke-width="3"/>
+  <rect data-part="casing" x="26" y="30" width="250" height="120" rx="10" fill="#2b2f3a" data-fill="#2b2f3a" data-stroke="text" stroke-width="3"/>
+  <rect data-part="casing" x="266" y="30" width="98" height="120" rx="10" fill="#e08a2c" data-fill="#e08a2c" data-stroke="text" stroke-width="3"/>
+  <rect data-part="positive_terminal" x="358" y="66" width="44" height="48" rx="10" fill="#c3c9d4" data-fill="#c3c9d4" data-stroke="text" stroke-width="3"/>
+  <path d="M40 46 L352 46" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="8" opacity="0.28"/>
+  <path d="M40 134 L352 134" fill="none" data-stroke="#000000" stroke="#000000" stroke-width="8" opacity="0.2"/>
+  <g data-part="plus_sign" fill="#ffffff" data-fill="#ffffff" stroke-width="0">
+    <rect x="300" y="84" width="34" height="10" rx="3"/>
+    <rect x="312" y="72" width="10" height="34" rx="3"/>
+  </g>
+  <rect data-part="minus_sign" x="62" y="84" width="34" height="10" rx="3" fill="#ffffff" data-fill="#ffffff" stroke-width="0"/>
+</svg>

@@ -35,26 +35,29 @@ export function catalogInfo() {
   return {
     engineVersion: ENGINE_VERSION,
     dslVersion: DSL_VERSION,
-    components: allSpecs().map((s) => {
-      const params = z.toJSONSchema(s.params, { io: "input", unrepresentable: "any" }) as Record<string, unknown>;
-      delete params.$schema;
-      return {
-        type: s.type,
-        category: s.category,
-        description: s.description,
-        params,
-        anchors: [...(s.anchors ?? [])],
-        dynamicAnchors: !!s.dynamicAnchors,
-        entrance: s.entrance,
-        draw: !!s.draw,
-        write: !!s.write,
-        labelLike: !!s.labelLike,
-        decorative: !!s.decorative,
-        worldSpace: !!s.worldSpace,
-        semanticRoles: [...s.semanticRoles],
-        examples: s.examples.map((e) => ({ ...e })),
-      };
-    }),
+    // Hidden components (the pipeline's `figure`) are not the model's to use.
+    components: allSpecs()
+      .filter((s) => !s.hidden)
+      .map((s) => {
+        const params = z.toJSONSchema(s.params, { io: "input", unrepresentable: "any" }) as Record<string, unknown>;
+        delete params.$schema;
+        return {
+          type: s.type,
+          category: s.category,
+          description: s.description,
+          params,
+          anchors: [...(s.anchors ?? [])],
+          dynamicAnchors: !!s.dynamicAnchors,
+          entrance: s.entrance,
+          draw: !!s.draw,
+          write: !!s.write,
+          labelLike: !!s.labelLike,
+          decorative: !!s.decorative,
+          worldSpace: !!s.worldSpace,
+          semanticRoles: [...s.semanticRoles],
+          examples: s.examples.map((e) => ({ ...e })),
+        };
+      }),
     actions: [...ACTION_TYPES],
     easings: [...EASING_NAMES],
     colorRoles: [...COLOR_ROLES],

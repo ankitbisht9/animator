@@ -1,0 +1,290 @@
+{
+ "id": "sun",
+ "version": 1,
+ "title": "Sun",
+ "concept": "sun",
+ "description": "The Sun as a bright yellow disk with orange rays and a soft glow",
+ "view": "glowing, with rays",
+ "aliases": [
+  "sun",
+  "the sun",
+  "sunshine",
+  "our star"
+ ],
+ "context": [
+  "light",
+  "heat",
+  "energy",
+  "solar",
+  "photosynth",
+  "plant",
+  "day",
+  "sky",
+  "earth",
+  "planet",
+  "orbit",
+  "season",
+  "weather",
+  "evaporat",
+  "water cycle",
+  "shadow",
+  "rays",
+  "warm",
+  "star",
+  "space",
+  "summer"
+ ],
+ "not_for": [
+  "sun cream",
+  "sun hat",
+  "sun icon"
+ ],
+ "prefer": [
+  "rays",
+  "glow",
+  "shine",
+  "bright"
+ ],
+ "subjects": [
+  "physics",
+  "biology",
+  "geography"
+ ],
+ "parts": {
+  "disk": "the Sun",
+  "rays": "rays of light",
+  "glow": "glow"
+ },
+ "size": {
+  "min": 100.0,
+  "default": 220.0,
+  "max": 420.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M44.6 200C44.6 285.8 114.2 355.4 200 355.4C285.8 355.4 355.4 285.8 355.4 200C355.4 114.2 285.8 44.6 200 44.6C114.2 44.6 44.6 114.2 44.6 200Z",
+    "fill": "yellow",
+    "opacity": 0.25,
+    "part": "glow"
+   },
+   {
+    "d": "M185.5 69.5L200 5.3L214.5 69.5Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M282 97.5L337.7 62.3L302.5 118Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M330.5 185.5L394.7 200L330.5 214.5Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M302.5 282L337.7 337.7L282 302.5Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M214.5 330.5L200 394.7L185.5 330.5Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M118 302.5L62.3 337.7L97.5 282Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M69.5 214.5L5.3 200L69.5 185.5Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M97.5 118L62.3 62.3L118 97.5Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M238 81.2L264.2 45L257.1 89.1Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M310.9 142.9L355 135.8L318.8 162Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M318.8 238L355 264.2L310.9 257.1Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M257.1 310.9L264.2 355L238 318.8Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M162 318.8L135.8 355L142.9 310.9Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M89.1 257.1L45 264.2L81.2 238Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M81.2 162L45 135.8L89.1 142.9Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M142.9 89.1L135.8 45L162 81.2Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 2.59,
+    "part": "rays"
+   },
+   {
+    "d": "M84 200C84 264.1 135.9 316 200 316C264.1 316 316 264.1 316 200C316 135.9 264.1 84 200 84C135.9 84 84 135.9 84 200Z",
+    "fill": "yellow",
+    "stroke": "orange.dark",
+    "strokeWidth": 3.11,
+    "part": "disk"
+   },
+   {
+    "d": "M108.9 200C108.9 250.3 149.7 291.1 200 291.1C250.3 291.1 291.1 250.3 291.1 200C291.1 149.7 250.3 108.9 200 108.9C149.7 108.9 108.9 149.7 108.9 200Z",
+    "fill": "yellow.light",
+    "opacity": 0.8,
+    "part": "disk"
+   },
+   {
+    "d": "M129.6 156.5C144.1 125.4 175.1 104.7 210.4 102.6",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 10.36,
+    "opacity": 0.45
+   }
+  ],
+  "anchors": [
+   {
+    "name": "rays",
+    "x": 200.0,
+    "y": 17.7
+   },
+   {
+    "name": "glow",
+    "x": 230.4,
+    "y": 64.4
+   },
+   {
+    "name": "disk",
+    "x": 200.3,
+    "y": 200.3
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/sun.svg"
+ },
+ "quality": {
+  "score": 0.94,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "3 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.00 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "20 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "957 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "03d571bb5a0961b6",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

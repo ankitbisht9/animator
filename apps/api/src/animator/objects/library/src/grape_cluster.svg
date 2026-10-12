@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 360">
+  <!-- A bunch of grapes on its stem, with a leaf. -->
+  <path data-part="leaf" d="M150 70 C120 40 80 30 40 44 C46 82 84 106 132 96 C120 120 128 140 150 150 C160 120 160 96 150 70 Z" data-fill="green" data-stroke="green.dark" stroke-width="3"/>
+  <path d="M148 74 C120 66 90 58 58 54 M146 90 C130 104 132 122 146 140" fill="none" data-stroke="green.light" stroke-width="2.5"/>
+  <path data-part="stem" d="M166 112 C164 80 170 50 186 24 L196 30 C182 54 176 82 178 112 Z" data-fill="brown" data-stroke="brown.dark" stroke-width="2.5"/>
+  <path data-part="stem" d="M188 28 C204 12 226 10 236 22 C246 34 236 50 222 46" fill="none" data-stroke="brown" stroke-width="3"/>
+  <g data-part="grapes" data-fill="purple" data-stroke="purple.dark" stroke-width="2.5">
+    <circle cx="100" cy="122" r="21"/>
+    <circle cx="140" cy="122" r="21"/>
+    <circle cx="180" cy="122" r="21"/>
+    <circle cx="220" cy="122" r="21"/>
+    <circle cx="82" cy="156" r="21"/>
+    <circle cx="120" cy="156" r="21"/>
+    <circle cx="160" cy="156" r="21"/>
+    <circle cx="200" cy="156" r="21"/>
+    <circle cx="238" cy="156" r="21"/>
+    <circle cx="100" cy="192" r="21"/>
+    <circle cx="140" cy="192" r="21"/>
+    <circle cx="180" cy="192" r="21"/>
+    <circle cx="220" cy="192" r="21"/>
+    <circle cx="118" cy="228" r="21"/>
+    <circle cx="158" cy="228" r="21"/>
+    <circle cx="198" cy="228" r="21"/>
+    <circle cx="100" cy="262" r="21"/>
+    <circle cx="140" cy="262" r="21"/>
+    <circle cx="180" cy="262" r="21"/>
+    <circle cx="120" cy="294" r="21"/>
+    <circle cx="160" cy="294" r="21"/>
+    <circle cx="140" cy="324" r="21"/>
+  </g>
+  <g data-part="grapes" data-fill="#ffffff" stroke-width="0" opacity="0.45">
+    <ellipse cx="92" cy="112" rx="6" ry="4" transform="rotate(-30 92 112)"/>
+    <ellipse cx="132" cy="112" rx="6" ry="4" transform="rotate(-30 132 112)"/>
+    <ellipse cx="172" cy="112" rx="6" ry="4" transform="rotate(-30 172 112)"/>
+    <ellipse cx="212" cy="112" rx="6" ry="4" transform="rotate(-30 212 112)"/>
+    <ellipse cx="74" cy="146" rx="6" ry="4" transform="rotate(-30 74 146)"/>
+    <ellipse cx="112" cy="146" rx="6" ry="4" transform="rotate(-30 112 146)"/>
+    <ellipse cx="152" cy="146" rx="6" ry="4" transform="rotate(-30 152 146)"/>
+    <ellipse cx="192" cy="146" rx="6" ry="4" transform="rotate(-30 192 146)"/>
+    <ellipse cx="230" cy="146" rx="6" ry="4" transform="rotate(-30 230 146)"/>
+    <ellipse cx="92" cy="182" rx="6" ry="4" transform="rotate(-30 92 182)"/>
+    <ellipse cx="132" cy="182" rx="6" ry="4" transform="rotate(-30 132 182)"/>
+    <ellipse cx="172" cy="182" rx="6" ry="4" transform="rotate(-30 172 182)"/>
+    <ellipse cx="212" cy="182" rx="6" ry="4" transform="rotate(-30 212 182)"/>
+    <ellipse cx="110" cy="218" rx="6" ry="4" transform="rotate(-30 110 218)"/>
+    <ellipse cx="150" cy="218" rx="6" ry="4" transform="rotate(-30 150 218)"/>
+    <ellipse cx="190" cy="218" rx="6" ry="4" transform="rotate(-30 190 218)"/>
+    <ellipse cx="92" cy="252" rx="6" ry="4" transform="rotate(-30 92 252)"/>
+    <ellipse cx="132" cy="252" rx="6" ry="4" transform="rotate(-30 132 252)"/>
+    <ellipse cx="172" cy="252" rx="6" ry="4" transform="rotate(-30 172 252)"/>
+    <ellipse cx="112" cy="284" rx="6" ry="4" transform="rotate(-30 112 284)"/>
+    <ellipse cx="152" cy="284" rx="6" ry="4" transform="rotate(-30 152 284)"/>
+    <ellipse cx="132" cy="314" rx="6" ry="4" transform="rotate(-30 132 314)"/>
+  </g>
+</svg>

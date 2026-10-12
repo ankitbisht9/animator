@@ -1,0 +1,59 @@
+{
+ "id": "chloroplast",
+ "title": "Chloroplast",
+ "concept": "chloroplast",
+ "view": "cut lengthwise",
+ "description": "A chloroplast cut open: the outer and inner membranes, the stroma, stacks of thylakoid discs (grana) joined by lamellae, a starch grain and ribosomes",
+ "aliases": [
+  "chloroplast",
+  "chloroplasts",
+  "plastid"
+ ],
+ "context": [
+  "photosynth",
+  "plant",
+  "leaf",
+  "leaves",
+  "light",
+  "chlorophyll",
+  "glucose",
+  "sugar",
+  "cell",
+  "organelle",
+  "thylakoid",
+  "stroma",
+  "carbon dioxide",
+  "oxygen",
+  "energy",
+  "green"
+ ],
+ "not_for": [
+  "chloroplast diagram label"
+ ],
+ "prefer": [
+  "inside",
+  "thylakoid",
+  "granum",
+  "grana",
+  "stroma",
+  "membrane",
+  "zoom"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "outer_membrane": "outer membrane",
+  "inner_membrane": "inner membrane",
+  "stroma": "stroma",
+  "grana": "grana (thylakoid stacks)",
+  "lamellae": "lamellae",
+  "starch_grain": "starch grain",
+  "ribosomes": "ribosomes"
+ },
+ "size": {
+  "min": 200,
+  "default": 380,
+  "max": 620
+ }
+}

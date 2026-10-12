@@ -1,0 +1,69 @@
+{
+ "id": "lungs",
+ "title": "Human lungs",
+ "concept": "human lungs",
+ "view": "from the front",
+ "description": "Both lungs from the front (the right one with three lobes, the left one with two and a notch for the heart), the trachea with its rings, the two bronchi, bronchioles branching inside to small air sacs, and the diaphragm below",
+ "aliases": [
+  "lungs",
+  "lung",
+  "human lungs",
+  "the lungs",
+  "pair of lungs",
+  "respiratory system",
+  "breathing system",
+  "airways"
+ ],
+ "context": [
+  "breath",
+  "air",
+  "oxygen",
+  "carbon dioxide",
+  "co2",
+  "respirat",
+  "inhal",
+  "exhal",
+  "trachea",
+  "bronch",
+  "alveol",
+  "diaphragm",
+  "chest",
+  "smok",
+  "asthma",
+  "organ",
+  "body",
+  "gas exchange"
+ ],
+ "not_for": [
+  "lung capacity graph",
+  "iron lung",
+  "book lungs"
+ ],
+ "prefer": [
+  "front",
+  "trachea",
+  "bronch",
+  "lobe",
+  "diaphragm",
+  "airway",
+  "windpipe"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "right_lung": "right lung",
+  "left_lung": "left lung",
+  "trachea": "trachea (windpipe)",
+  "right_bronchus": "right bronchus",
+  "left_bronchus": "left bronchus",
+  "bronchioles": "bronchioles",
+  "alveoli": "alveoli (air sacs)",
+  "diaphragm": "diaphragm"
+ },
+ "size": {
+  "min": 240,
+  "default": 360,
+  "max": 560
+ }
+}

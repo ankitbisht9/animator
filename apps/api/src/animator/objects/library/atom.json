@@ -1,0 +1,340 @@
+{
+ "id": "atom",
+ "version": 1,
+ "title": "Atom (Bohr model)",
+ "concept": "atom",
+ "description": "An atom drawn as the Bohr model (a carbon atom): a nucleus of 6 protons (red) and 6 neutrons (gray), and 6 electrons (blue) on two shells, 2 and 4. Only for an atom in general or a carbon atom",
+ "view": "Bohr model of a carbon atom",
+ "aliases": [
+  "atom",
+  "atoms",
+  "carbon atom",
+  "bohr model",
+  "atomic model",
+  "structure of an atom",
+  "atomic structure"
+ ],
+ "context": [
+  "proton",
+  "neutron",
+  "electron",
+  "nucleus",
+  "shell",
+  "orbit",
+  "element",
+  "charge",
+  "particle",
+  "chemistry",
+  "matter",
+  "periodic",
+  "bond",
+  "ion",
+  "isotope"
+ ],
+ "not_for": [
+  "hydrogen atom",
+  "helium atom",
+  "lithium atom",
+  "beryllium atom",
+  "boron atom",
+  "nitrogen atom",
+  "oxygen atom",
+  "fluorine atom",
+  "neon atom",
+  "sodium atom",
+  "magnesium atom",
+  "aluminium atom",
+  "aluminum atom",
+  "silicon atom",
+  "phosphorus atom",
+  "sulfur atom",
+  "sulphur atom",
+  "chlorine atom",
+  "argon atom",
+  "potassium atom",
+  "calcium atom",
+  "iron atom",
+  "copper atom",
+  "zinc atom",
+  "silver atom",
+  "gold atom",
+  "uranium atom",
+  "iodine atom",
+  "lead atom",
+  "mercury atom",
+  "hydrogen atoms",
+  "oxygen atoms",
+  "sodium atoms",
+  "chlorine atoms"
+ ],
+ "prefer": [
+  "bohr",
+  "shell",
+  "proton",
+  "neutron",
+  "electron",
+  "nucleus",
+  "carbon"
+ ],
+ "subjects": [
+  "chemistry",
+  "physics"
+ ],
+ "parts": {
+  "nucleus": "nucleus",
+  "protons": "protons",
+  "neutrons": "neutrons",
+  "electrons": "electrons",
+  "shells": "electron shells"
+ },
+ "size": {
+  "min": 140.0,
+  "default": 280.0,
+  "max": 520.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M96.5 200C96.5 257.2 142.8 303.5 200 303.5C257.2 303.5 303.5 257.2 303.5 200C303.5 142.8 257.2 96.5 200 96.5C142.8 96.5 96.5 142.8 96.5 200Z",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 3.88,
+    "part": "shells"
+   },
+   {
+    "d": "M5.9 200C5.9 307.2 92.8 394.1 200 394.1C307.2 394.1 394.1 307.2 394.1 200C394.1 92.8 307.2 5.9 200 5.9C92.8 5.9 5.9 92.8 5.9 200Z",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 3.88,
+    "part": "shells"
+   },
+   {
+    "d": "M143.1 200C143.1 231.4 168.6 256.9 200 256.9C231.4 256.9 256.9 231.4 256.9 200C256.9 168.6 231.4 143.1 200 143.1C168.6 143.1 143.1 168.6 143.1 200Z",
+    "fill": "orange.soft",
+    "opacity": 0.8,
+    "part": "nucleus"
+   },
+   {
+    "d": "M183.2 200C183.2 209.3 190.7 216.8 200 216.8C209.3 216.8 216.8 209.3 216.8 200C216.8 190.7 209.3 183.2 200 183.2C190.7 183.2 183.2 190.7 183.2 200Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.59,
+    "part": "protons"
+   },
+   {
+    "d": "M165.1 189.7C165.1 198.9 172.6 206.5 181.9 206.5C191.2 206.5 198.7 198.9 198.7 189.7C198.7 180.4 191.2 172.8 181.9 172.8C172.6 172.8 165.1 180.4 165.1 189.7Z",
+    "fill": "gray",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.59,
+    "part": "neutrons"
+   },
+   {
+    "d": "M201.3 189.7C201.3 198.9 208.8 206.5 218.1 206.5C227.4 206.5 234.9 198.9 234.9 189.7C234.9 180.4 227.4 172.8 218.1 172.8C208.8 172.8 201.3 180.4 201.3 189.7Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.59,
+    "part": "protons"
+   },
+   {
+    "d": "M165.1 212.9C165.1 222.2 172.6 229.8 181.9 229.8C191.2 229.8 198.7 222.2 198.7 212.9C198.7 203.6 191.2 196.1 181.9 196.1C172.6 196.1 165.1 203.6 165.1 212.9Z",
+    "fill": "gray",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.59,
+    "part": "neutrons"
+   },
+   {
+    "d": "M201.3 212.9C201.3 222.2 208.8 229.8 218.1 229.8C227.4 229.8 234.9 222.2 234.9 212.9C234.9 203.6 227.4 196.1 218.1 196.1C208.8 196.1 201.3 203.6 201.3 212.9Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.59,
+    "part": "protons"
+   },
+   {
+    "d": "M183.2 174.1C183.2 183.4 190.7 190.9 200 190.9C209.3 190.9 216.8 183.4 216.8 174.1C216.8 164.8 209.3 157.3 200 157.3C190.7 157.3 183.2 164.8 183.2 174.1Z",
+    "fill": "gray",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.59,
+    "part": "neutrons"
+   },
+   {
+    "d": "M183.2 225.9C183.2 235.2 190.7 242.7 200 242.7C209.3 242.7 216.8 235.2 216.8 225.9C216.8 216.6 209.3 209.1 200 209.1C190.7 209.1 183.2 216.6 183.2 225.9Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.59,
+    "part": "protons"
+   },
+   {
+    "d": "M149.5 202.6C149.5 211.9 157.1 219.4 166.4 219.4C175.7 219.4 183.2 211.9 183.2 202.6C183.2 193.3 175.7 185.8 166.4 185.8C157.1 185.8 149.5 193.3 149.5 202.6Z",
+    "fill": "gray",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.59,
+    "part": "neutrons"
+   },
+   {
+    "d": "M216.8 202.6C216.8 211.9 224.3 219.4 233.6 219.4C242.9 219.4 250.5 211.9 250.5 202.6C250.5 193.3 242.9 185.8 233.6 185.8C224.3 185.8 216.8 193.3 216.8 202.6Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.59,
+    "part": "protons"
+   },
+   {
+    "d": "M170.2 166.4C170.2 175.7 177.8 183.2 187.1 183.2C196.4 183.2 203.9 175.7 203.9 166.4C203.9 157.1 196.4 149.5 187.1 149.5C177.8 149.5 170.2 157.1 170.2 166.4Z",
+    "fill": "gray",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.59,
+    "part": "neutrons"
+   },
+   {
+    "d": "M198.7 233.6C198.7 242.9 206.2 250.5 215.5 250.5C224.8 250.5 232.3 242.9 232.3 233.6C232.3 224.3 224.8 216.8 215.5 216.8C206.2 216.8 198.7 224.3 198.7 233.6Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.59,
+    "part": "protons"
+   },
+   {
+    "d": "M214.2 176.7C214.2 186 221.8 193.5 231 193.5C240.3 193.5 247.9 186 247.9 176.7C247.9 167.4 240.3 159.9 231 159.9C221.8 159.9 214.2 167.4 214.2 176.7Z",
+    "fill": "gray",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.59,
+    "part": "neutrons"
+   },
+   {
+    "d": "M185.8 303.5C185.8 311.4 192.1 317.7 200 317.7C207.9 317.7 214.2 311.4 214.2 303.5C214.2 295.6 207.9 289.3 200 289.3C192.1 289.3 185.8 295.6 185.8 303.5Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.59,
+    "part": "electrons"
+   },
+   {
+    "d": "M185.8 96.5C185.8 104.4 192.1 110.7 200 110.7C207.9 110.7 214.2 104.4 214.2 96.5C214.2 88.6 207.9 82.3 200 82.3C192.1 82.3 185.8 88.6 185.8 96.5Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.59,
+    "part": "electrons"
+   },
+   {
+    "d": "M323 337.3C323 345.1 329.4 351.5 337.3 351.5C345.1 351.5 351.5 345.1 351.5 337.3C351.5 329.4 345.1 323 337.3 323C329.4 323 323 329.4 323 337.3Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.59,
+    "part": "electrons"
+   },
+   {
+    "d": "M48.5 337.3C48.5 345.1 54.9 351.5 62.7 351.5C70.6 351.5 77 345.1 77 337.3C77 329.4 70.6 323 62.7 323C54.9 323 48.5 329.4 48.5 337.3Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.59,
+    "part": "electrons"
+   },
+   {
+    "d": "M48.5 62.7C48.5 70.6 54.9 77 62.7 77C70.6 77 77 70.6 77 62.7C77 54.9 70.6 48.5 62.7 48.5C54.9 48.5 48.5 54.9 48.5 62.7Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.59,
+    "part": "electrons"
+   },
+   {
+    "d": "M323 62.7C323 70.6 329.4 77 337.3 77C345.1 77 351.5 70.6 351.5 62.7C351.5 54.9 345.1 48.5 337.3 48.5C329.4 48.5 323 54.9 323 62.7Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.59,
+    "part": "electrons"
+   }
+  ],
+  "anchors": [
+   {
+    "name": "nucleus",
+    "x": 200.0,
+    "y": 200.0
+   },
+   {
+    "name": "shells",
+    "x": 337.1,
+    "y": 337.1
+   },
+   {
+    "name": "protons",
+    "x": 241.3,
+    "y": 201.4
+   },
+   {
+    "name": "neutrons",
+    "x": 236.5,
+    "y": 171.4
+   },
+   {
+    "name": "electrons",
+    "x": 199.6,
+    "y": 96.2
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/atom.svg"
+ },
+ "quality": {
+  "score": 1.0,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "5 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.00 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "21 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "3,096 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "37ba27a93b6cbbe9",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

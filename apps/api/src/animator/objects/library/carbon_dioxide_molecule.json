@@ -1,0 +1,208 @@
+{
+ "id": "carbon_dioxide_molecule",
+ "version": 1,
+ "title": "Carbon dioxide molecule",
+ "concept": "carbon dioxide molecule",
+ "description": "A carbon dioxide molecule (CO2) as balls and sticks: a dark carbon atom in the middle, double-bonded to a red oxygen atom on each side, in a straight line",
+ "view": "ball and stick",
+ "aliases": [
+  "carbon dioxide molecule",
+  "co2 molecule",
+  "molecule of carbon dioxide",
+  "carbon dioxide molecules",
+  "co2 molecules"
+ ],
+ "context": [
+  "atom",
+  "bond",
+  "carbon",
+  "oxygen",
+  "chemical",
+  "chemistry",
+  "gas",
+  "photosynth",
+  "respirat",
+  "greenhouse",
+  "climate",
+  "react",
+  "formula",
+  "breath"
+ ],
+ "not_for": [
+  "co2 emissions chart"
+ ],
+ "prefer": [
+  "ball",
+  "stick",
+  "double bond",
+  "linear",
+  "atom"
+ ],
+ "subjects": [
+  "chemistry",
+  "biology"
+ ],
+ "parts": {
+  "carbon": "carbon atom",
+  "oxygen": "oxygen atoms",
+  "bonds": "double bonds"
+ },
+ "size": {
+  "min": 100.0,
+  "default": 240.0,
+  "max": 440.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 129.1,
+  "shapes": [
+   {
+    "d": "M85.5 51.2L200 51.2",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 10.49,
+    "part": "bonds"
+   },
+   {
+    "d": "M85.5 77.9L200 77.9",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 10.49,
+    "part": "bonds"
+   },
+   {
+    "d": "M200 51.2L314.5 51.2",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 10.49,
+    "part": "bonds"
+   },
+   {
+    "d": "M200 77.9L314.5 77.9",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 10.49,
+    "part": "bonds"
+   },
+   {
+    "d": "M5.4 64.6C5.4 97.2 31.9 123.7 64.6 123.7C97.2 123.7 123.7 97.2 123.7 64.6C123.7 31.9 97.2 5.4 64.6 5.4C31.9 5.4 5.4 31.9 5.4 64.6Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.86,
+    "part": "oxygen"
+   },
+   {
+    "d": "M276.3 64.6C276.3 97.2 302.8 123.7 335.4 123.7C368.1 123.7 394.6 97.2 394.6 64.6C394.6 31.9 368.1 5.4 335.4 5.4C302.8 5.4 276.3 31.9 276.3 64.6Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.86,
+    "part": "oxygen"
+   },
+   {
+    "d": "M146.6 64.6C146.6 94.1 170.5 118 200 118C229.5 118 253.4 94.1 253.4 64.6C253.4 35.1 229.5 11.2 200 11.2C170.5 11.2 146.6 35.1 146.6 64.6Z",
+    "fill": "#3a3f4b",
+    "stroke": "text",
+    "strokeWidth": 2.86,
+    "part": "carbon"
+   },
+   {
+    "d": "M30.6 48.4C33.5 53.4 42.5 53.6 50.7 48.9C58.9 44.1 63.3 36.2 60.4 31.2C57.5 26.2 48.5 25.9 40.2 30.7C32 35.4 27.7 43.3 30.6 48.4Z",
+    "fill": "#ffffff",
+    "opacity": 0.4
+   },
+   {
+    "d": "M301.5 48.4C304.4 53.4 313.4 53.6 321.6 48.9C329.8 44.1 334.1 36.2 331.2 31.2C328.3 26.2 319.3 25.9 311.1 30.7C302.9 35.4 298.6 43.3 301.5 48.4Z",
+    "fill": "#ffffff",
+    "opacity": 0.4
+   },
+   {
+    "d": "M169.6 49.3C172.3 53.9 180.3 54.1 187.6 49.9C194.9 45.7 198.7 38.6 196 34C193.4 29.5 185.4 29.2 178.1 33.4C170.8 37.6 167 44.7 169.6 49.3Z",
+    "fill": "#ffffff",
+    "opacity": 0.4
+   }
+  ],
+  "anchors": [
+   {
+    "name": "bonds",
+    "x": 146.6,
+    "y": 51.2
+   },
+   {
+    "name": "oxygen",
+    "x": 64.7,
+    "y": 64.7
+   },
+   {
+    "name": "carbon",
+    "x": 199.9,
+    "y": 64.5
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/carbon_dioxide_molecule.svg"
+ },
+ "quality": {
+  "score": 0.897,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "3 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 0.32 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "10 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "900 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "2319f82f433af992",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

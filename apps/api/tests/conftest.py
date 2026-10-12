@@ -11,6 +11,8 @@ from pathlib import Path
 # var/platform/platform.db. Set before any test module imports the app.
 os.environ["PLATFORM_DATA_DIR"] = tempfile.mkdtemp(prefix="animator-platform-tests-")
 os.environ["PLATFORM_DATABASE_URL"] = ""
+# Nor is the saved-object warehouse (ADR-055): harvests, decisions and uses go to a temporary folder.
+os.environ["ANIMATOR_OBJECTS_DIR"] = tempfile.mkdtemp(prefix="animator-objects-tests-")
 
 import pytest
 

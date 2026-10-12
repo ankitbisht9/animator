@@ -1,0 +1,14 @@
+{
+ "id": "dna",
+ "title": "DNA double helix",
+ "concept": "dna",
+ "view": "a stretch of the double helix, upright",
+ "description": "A stretch of DNA as a double helix, upright: two twisted backbones (purple and light blue) joined by base pairs in four colors",
+ "aliases": ["dna", "double helix", "dna strand", "dna molecule", "deoxyribonucleic acid", "dna helix"],
+ "context": ["gene", "genetic", "chromosome", "base", "nucleotide", "replicat", "cell", "nucleus", "inherit", "heredit", "protein", "mutation", "sequence", "helix", "code"],
+ "not_for": ["dna test kit", "dna icon", "company dna", "brand dna", "in our dna"],
+ "prefer": ["helix", "base pair", "strand", "twist", "backbone"],
+ "subjects": ["biology"],
+ "parts": {"backbone": "sugar-phosphate backbone", "base_pairs": "base pairs"},
+ "size": {"min": 70, "default": 160, "max": 320}
+}

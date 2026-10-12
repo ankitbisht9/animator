@@ -10,6 +10,7 @@ import {
   NoteR,
   VectorArrowR,
 } from "./annotation";
+import { FigureR } from "./figure";
 import { AxesR, EquationR, GraphR, GridR, ReadoutR } from "./math";
 import {
   BalanceR,
@@ -43,6 +44,8 @@ export const RENDERERS: Record<string, Renderer> = {
   text: TextR,
   group: GroupR,
   image: ImageR,
+  // saved drawings, written by the pipeline (ADR-055)
+  figure: FigureR,
   // annotation
   arrow: ArrowR,
   vector_arrow: VectorArrowR,

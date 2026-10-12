@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420">
+  <!-- The lungs from the front, with the airways and the diaphragm. Viewer's left is the body's right lung. -->
+  <!-- Diaphragm -->
+  <path data-part="diaphragm" d="M30 402 C60 330 130 316 200 340 C270 316 340 330 370 402 L370 414 C340 352 270 340 200 362 C130 340 60 352 30 414 Z" data-fill="red" data-stroke="red.dark" stroke-width="3"/>
+  <!-- Right lung (three lobes) -->
+  <path data-part="right_lung" d="M168 106 C134 96 98 122 78 176 C58 232 50 300 56 352 C60 380 84 388 116 372 C142 360 162 350 176 336 C182 300 184 220 182 140 C180 120 176 110 168 106 Z" data-fill="pink" data-stroke="pink.dark" stroke-width="3"/>
+  <!-- Left lung (two lobes, with the notch for the heart) -->
+  <path data-part="left_lung" d="M232 106 C266 96 302 122 322 176 C342 232 350 300 344 352 C340 380 316 388 284 372 C266 362 254 352 250 344 C262 320 262 296 244 284 C232 276 222 262 220 240 C218 200 218 160 218 140 C220 120 224 110 232 106 Z" data-fill="pink" data-stroke="pink.dark" stroke-width="3"/>
+  <!-- Lobes (fissures) and a sheen -->
+  <g fill="none" data-stroke="pink.dark" stroke-width="2.5">
+    <path d="M70 248 C104 226 140 206 178 196"/>
+    <path d="M60 300 C100 292 140 290 180 286"/>
+    <path d="M326 228 C296 248 268 272 252 300"/>
+  </g>
+  <g fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="7" opacity="0.28">
+    <path d="M90 200 C102 160 122 132 148 122"/>
+    <path d="M310 200 C298 160 278 132 252 122"/>
+  </g>
+  <!-- Trachea and bronchi -->
+  <path data-part="trachea" d="M186 0 L214 0 L214 118 L186 118 Z" data-fill="#efe3dc" data-stroke="gray.dark" stroke-width="3"/>
+  <g data-part="trachea" fill="none" data-stroke="gray" stroke-width="2.5">
+    <path d="M188 16 L212 16"/><path d="M188 32 L212 32"/><path d="M188 48 L212 48"/>
+    <path d="M188 64 L212 64"/><path d="M188 80 L212 80"/><path d="M188 96 L212 96"/>
+  </g>
+  <path data-part="right_bronchus" d="M190 112 C176 126 160 142 144 162 L130 152 C148 130 166 112 186 98 Z" data-fill="#efe3dc" data-stroke="gray.dark" stroke-width="3"/>
+  <path data-part="left_bronchus" d="M210 112 C224 126 240 142 256 162 L270 152 C252 130 234 112 214 98 Z" data-fill="#efe3dc" data-stroke="gray.dark" stroke-width="3"/>
+  <!-- Bronchioles branching through the lungs, ending in air sacs -->
+  <g data-part="bronchioles" fill="none" data-stroke="#f8eef0" stroke="#f8eef0" stroke-width="5" stroke-linecap="round">
+    <path d="M138 158 C128 176 118 196 112 222"/>
+    <path d="M138 158 C140 190 142 228 138 266"/>
+    <path d="M112 222 C100 240 92 262 88 288"/>
+    <path d="M112 222 C116 246 118 274 112 306"/>
+    <path d="M138 266 C126 290 116 314 110 340"/>
+    <path d="M138 266 C150 288 156 312 156 336"/>
+    <path d="M262 158 C272 176 282 196 288 222"/>
+    <path d="M262 158 C260 190 260 222 266 250"/>
+    <path d="M288 222 C300 240 308 262 312 288"/>
+    <path d="M288 222 C284 246 284 274 290 304"/>
+    <path d="M266 250 C276 276 284 304 290 336"/>
+  </g>
+  <g data-part="alveoli" data-fill="pink.light" data-stroke="#f8eef0" stroke-width="2">
+    <circle cx="86" cy="294" r="6"/><circle cx="96" cy="296" r="5"/><circle cx="90" cy="303" r="5"/>
+    <circle cx="110" cy="346" r="6"/><circle cx="120" cy="347" r="5"/><circle cx="113" cy="354" r="5"/>
+    <circle cx="314" cy="294" r="6"/><circle cx="304" cy="296" r="5"/><circle cx="310" cy="303" r="5"/>
+    <circle cx="290" cy="342" r="6"/><circle cx="300" cy="343" r="5"/><circle cx="294" cy="350" r="5"/>
+  </g>
+  <circle data-anchor="trachea" cx="200" cy="56" r="1"/>
+</svg>

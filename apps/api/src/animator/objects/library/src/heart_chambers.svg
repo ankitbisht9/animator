@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 460">
+  <!-- The heart cut open from the front: four chambers, valves and vessels. Viewer's left is the body's right. -->
+  <!-- Right pulmonary artery (behind the aorta and the superior vena cava) -->
+  <path data-part="pulmonary_artery" d="M42 118 L236 116 L236 141 L42 142 Z" data-fill="blue" data-stroke="blue.dark" stroke-width="3"/>
+  <ellipse data-part="pulmonary_artery" cx="42" cy="130" rx="4.5" ry="12" data-fill="blue.dark" stroke-width="0"/>
+  <!-- Aorta: from the left ventricle up behind the pulmonary trunk, arching over to the back -->
+  <g data-part="aorta" data-fill="red" data-stroke="red.dark" stroke-width="3">
+    <path d="M226 40 C224 28 222 16 219 4 L236 2 C238 14 240 26 241 38 Z"/>
+    <path d="M255 34 C256 23 256 12 256 2 L272 2 C272 12 272 23 271 34 Z"/>
+    <path d="M285 40 C290 28 296 18 304 8 L317 16 C310 26 304 36 300 47 Z"/>
+    <path d="M222 184 C214 150 200 122 196 98 C191 60 214 34 254 32 C298 30 328 58 332 102 L334 182 L296 182 L294 106 C292 82 276 67 255 68 C237 69 229 83 231 97 C234 119 246 150 252 184 Z"/>
+  </g>
+  <g data-part="aorta" data-fill="red.dark" stroke-width="0">
+    <ellipse cx="227.5" cy="3" rx="8.5" ry="3.5" transform="rotate(-5 227.5 3)"/>
+    <ellipse cx="264" cy="2.5" rx="8" ry="3.5"/>
+    <ellipse cx="310.5" cy="12" rx="8" ry="3.5" transform="rotate(35 310.5 12)"/>
+  </g>
+  <circle data-anchor="aorta" cx="255" cy="50" r="1"/>
+  <circle data-anchor="septum" cx="211.5" cy="300" r="1"/>
+  <circle data-anchor="heart_wall" cx="333" cy="290" r="1"/>
+  <!-- The heart wall (muscle) -->
+  <g data-part="heart_wall">
+    <path d="M100 160 C100 138 118 128 140 128 L292 128 C318 128 334 142 336 165 C350 200 356 245 348 285 C338 338 292 386 228 430 C218 437 206 437 196 430 C134 388 92 340 80 290 C70 250 78 200 100 160 Z" data-fill="surface" stroke-width="0"/>
+    <path d="M100 160 C100 138 118 128 140 128 L292 128 C318 128 334 142 336 165 C350 200 356 245 348 285 C338 338 292 386 228 430 C218 437 206 437 196 430 C134 388 92 340 80 290 C70 250 78 200 100 160 Z" data-fill="red" stroke-width="0" fill-opacity="0.42"/>
+    <path d="M100 160 C100 138 118 128 140 128 L292 128 C318 128 334 142 336 165 C350 200 356 245 348 285 C338 338 292 386 228 430 C218 437 206 437 196 430 C134 388 92 340 80 290 C70 250 78 200 100 160 Z" fill="none" data-stroke="red.dark" stroke-width="3"/>
+  </g>
+  <!-- Superior vena cava, into the right atrium -->
+  <path data-part="superior_vena_cava" d="M112 14 L148 14 L150 156 L114 156 Z" data-fill="blue" data-stroke="blue.dark" stroke-width="3"/>
+  <ellipse data-part="superior_vena_cava" cx="130" cy="14" rx="18" ry="5.5" data-fill="blue.dark" stroke-width="0"/>
+  <!-- Pulmonary trunk: out of the right ventricle, in front of the aorta, to the left lung -->
+  <path data-part="pulmonary_artery" d="M170 184 C170 148 180 124 198 112 L222 94 C232 87 242 85 254 85 L362 84 L362 109 L260 111 C250 111 242 115 236 121 L216 142 C206 152 200 166 199 184 Z" data-fill="blue" data-stroke="blue.dark" stroke-width="3"/>
+  <ellipse data-part="pulmonary_artery" cx="362" cy="96.5" rx="4.5" ry="12.5" data-fill="blue.dark" stroke-width="0"/>
+  <!-- Pulmonary veins, into the left atrium -->
+  <g data-part="pulmonary_veins" data-fill="red" data-stroke="red.dark" stroke-width="3">
+    <path d="M306 152 L372 144 L374 162 L308 170 Z"/>
+    <path d="M308 188 L374 192 L372 210 L306 206 Z"/>
+  </g>
+  <g data-part="pulmonary_veins" data-fill="red.dark" stroke-width="0">
+    <ellipse cx="373" cy="153" rx="4" ry="9"/>
+    <ellipse cx="373" cy="201" rx="4" ry="9"/>
+  </g>
+  <!-- Inferior vena cava, into the right atrium from below -->
+  <path data-part="inferior_vena_cava" d="M72 354 L102 356 L114 226 L88 224 Z" data-fill="blue" data-stroke="blue.dark" stroke-width="3"/>
+  <ellipse data-part="inferior_vena_cava" cx="87" cy="355" rx="15" ry="5" data-fill="blue.dark" stroke-width="0" transform="rotate(4 87 355)"/>
+  <!-- Atria -->
+  <path data-part="right_atrium" d="M108 172 C106 152 120 140 140 140 L152 140 C160 140 164 146 164 154 L164 226 C164 242 152 250 136 250 C118 250 106 240 104 224 C102 208 104 188 108 172 Z" data-fill="blue.light" data-stroke="blue.dark" stroke-width="2.5"/>
+  <path data-part="left_atrium" d="M258 154 C258 146 262 140 270 140 L294 140 C312 140 320 152 320 170 L320 224 C320 240 306 250 288 250 C270 250 258 242 258 226 Z" data-fill="red.light" data-stroke="red.dark" stroke-width="2.5"/>
+  <!-- Ventricles (the left one's wall is the thicker) -->
+  <path data-part="right_ventricle" d="M108 270 C122 278 150 278 164 268 C168 240 168 210 170 184 L199 184 C201 236 202 300 200 360 C199 384 194 400 186 408 C150 386 118 348 101 306 C96 292 98 278 108 270 Z" data-fill="blue.light" data-stroke="blue.dark" stroke-width="2.5"/>
+  <path data-part="left_ventricle" d="M222 184 L252 184 C254 214 256 244 258 268 C272 278 298 278 314 266 C322 300 310 340 280 372 C262 390 244 402 230 406 C224 380 222 340 222 300 Z" data-fill="red.light" data-stroke="red.dark" stroke-width="2.5"/>
+  <!-- The septum between the ventricles (muscle) -->
+  <g data-part="septum">
+    <path d="M201.5 192 L220.5 192 C221 260 222 330 224 396 C216 404 208 404 201 398 C203 330 202 260 201.5 192 Z" data-fill="surface" stroke-width="0"/>
+    <path d="M201.5 192 L220.5 192 C221 260 222 330 224 396 C216 404 208 404 201 398 C203 330 202 260 201.5 192 Z" data-fill="red" stroke-width="0" fill-opacity="0.42"/>
+  </g>
+  <!-- Openings between the atria and the ventricles -->
+  <path data-part="right_atrium" d="M114 242 C120 254 120 264 114 276 L156 276 C150 264 150 254 156 242 Z" data-fill="blue.light" stroke-width="0"/>
+  <path data-part="left_atrium" d="M266 242 C272 254 272 264 266 276 L310 276 C304 264 304 254 310 242 Z" data-fill="red.light" stroke-width="0"/>
+  <!-- Papillary muscles on the ventricle walls, and their cords to the valves -->
+  <g data-part="heart_wall" data-fill="red" stroke-width="0" fill-opacity="0.75">
+    <path d="M110 330 C118 322 128 324 132 334 C128 342 118 344 112 342 Z"/>
+    <path d="M144 372 C150 362 160 362 164 370 C162 380 152 384 146 382 Z"/>
+    <path d="M308 330 C300 322 290 324 286 334 C290 342 300 344 306 342 Z"/>
+    <path d="M276 372 C270 362 260 362 256 370 C258 380 268 384 274 382 Z"/>
+  </g>
+  <g fill="none" data-stroke="#f6f2ea" stroke-width="1.6" opacity="0.9">
+    <path d="M125 300 L118 330"/><path d="M127 301 L126 331"/><path d="M143 301 L150 365"/><path d="M145 300 L159 364"/>
+    <path d="M277 300 L262 364"/><path d="M279 301 L271 365"/><path d="M295 301 L294 331"/><path d="M297 300 L302 330"/>
+  </g>
+  <!-- Valves -->
+  <g data-part="tricuspid_valve" data-fill="#f6f2ea" data-stroke="gray.dark" stroke-width="2">
+    <path d="M115 258 C119 276 123 290 126 302 C131 300 132 294 130 286 C128 276 124 266 122 258 Z"/>
+    <path d="M155 258 C151 276 147 290 144 302 C139 300 138 294 140 286 C142 276 146 266 148 258 Z"/>
+  </g>
+  <g data-part="mitral_valve" data-fill="#f6f2ea" data-stroke="gray.dark" stroke-width="2">
+    <path d="M267 258 C271 276 275 290 278 302 C283 300 284 294 282 286 C280 276 276 266 274 258 Z"/>
+    <path d="M309 258 C305 276 301 290 296 302 C291 300 290 294 292 286 C294 276 298 266 302 258 Z"/>
+  </g>
+  <g data-part="pulmonary_valve" data-fill="#f6f2ea" data-stroke="gray.dark" stroke-width="2">
+    <path d="M171 186 C175 197 182 198 185 188 C188 198 195 197 198 186 L198 191 C195 202 188 203 185 195 C182 203 175 202 171 191 Z"/>
+  </g>
+  <g data-part="aortic_valve" data-fill="#f6f2ea" data-stroke="gray.dark" stroke-width="2">
+    <path d="M223 186 C227 197 234 198 237 188 C240 198 247 197 251 186 L251 191 C247 202 240 203 237 195 C234 203 227 202 223 191 Z"/>
+  </g>
+  <!-- A sheen on the vessels -->
+  <g fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="5" opacity="0.3">
+    <path d="M122 30 L123 148"/>
+    <path d="M206 112 C206 70 226 48 252 44"/>
+    <path d="M186 160 C186 140 194 126 206 118"/>
+  </g>
+</svg>

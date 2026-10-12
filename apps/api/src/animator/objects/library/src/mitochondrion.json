@@ -1,0 +1,14 @@
+{
+ "id": "mitochondrion",
+ "title": "Mitochondrion",
+ "concept": "mitochondrion",
+ "view": "cut lengthwise",
+ "description": "A mitochondrion cut lengthwise: the smooth outer membrane, the inner membrane folded into cristae, and the matrix with a loop of DNA and ribosomes",
+ "aliases": ["mitochondrion", "mitochondria", "powerhouse of the cell", "mitochondrial"],
+ "context": ["respirat", "energy", "atp", "cell", "glucose", "oxygen", "organelle", "powerhouse", "krebs", "aerobic", "membrane", "muscle", "biology"],
+ "not_for": ["mitochondrial disease chart"],
+ "prefer": ["cristae", "matrix", "inner membrane", "inside", "atp"],
+ "subjects": ["biology"],
+ "parts": {"outer_membrane": "outer membrane", "inner_membrane": "inner membrane", "cristae": "cristae", "matrix": "matrix", "dna": "mitochondrial DNA", "ribosomes": "ribosomes"},
+ "size": {"min": 120, "default": 320, "max": 620}
+}

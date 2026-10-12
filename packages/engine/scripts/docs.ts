@@ -121,7 +121,7 @@ export function componentsMarkdown(): string {
     "",
   ];
   const byCat = new Map<string, ReturnType<typeof allSpecs>>();
-  for (const s of allSpecs()) byCat.set(s.category, [...(byCat.get(s.category) ?? []), s]);
+  for (const s of allSpecs().filter((x) => !x.hidden)) byCat.set(s.category, [...(byCat.get(s.category) ?? []), s]);
   for (const [cat, specs] of byCat) {
     out.push(`## ${cat}`, "");
     for (const s of specs) {

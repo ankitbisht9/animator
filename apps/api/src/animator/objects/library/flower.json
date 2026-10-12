@@ -1,0 +1,401 @@
+{
+ "id": "flower",
+ "version": 1,
+ "title": "Flower, cut in half",
+ "concept": "flower",
+ "description": "A flower cut in half and seen from the side, showing its parts: pink petals, green sepals, stamens (an anther with pollen on a filament), the pistil (stigma, style and an ovary with ovules), the receptacle, the stem and a leaf",
+ "view": "cut in half, from the side",
+ "aliases": [
+  "flower",
+  "flowers",
+  "parts of a flower",
+  "flower structure",
+  "flower cross section",
+  "blossom"
+ ],
+ "context": [
+  "petal",
+  "sepal",
+  "stamen",
+  "anther",
+  "filament",
+  "pistil",
+  "carpel",
+  "stigma",
+  "style",
+  "ovary",
+  "ovule",
+  "pollen",
+  "pollinat",
+  "seed",
+  "fertili",
+  "reproduc",
+  "bee",
+  "insect",
+  "nectar",
+  "fruit",
+  "botan",
+  "plant"
+ ],
+ "not_for": [
+  "flower pot",
+  "flower shop",
+  "flower bed",
+  "flower icon",
+  "sunflower oil"
+ ],
+ "prefer": [
+  "parts",
+  "stamen",
+  "pistil",
+  "carpel",
+  "ovary",
+  "pollinat",
+  "inside",
+  "cut"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "petal": "petal",
+  "sepal": "sepal",
+  "anther": "anther",
+  "filament": "filament",
+  "pollen": "pollen",
+  "stigma": "stigma",
+  "style": "style",
+  "ovary": "ovary",
+  "ovule": "ovules",
+  "receptacle": "receptacle",
+  "stem": "stem",
+  "leaf": "leaf"
+ },
+ "size": {
+  "min": 180.0,
+  "default": 300.0,
+  "max": 520.0
+ },
+ "art": {
+  "w": 255.6,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M126.9 323.5C156.8 295.4 198 287.9 235.5 301C207.4 329.1 166.2 336.6 126.9 323.5Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.81,
+    "part": "leaf"
+   },
+   {
+    "d": "M128.7 321.6C162.4 310.3 196.1 304.7 228 302.9",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 1.87
+   },
+   {
+    "d": "M121.3 394.6C119.4 351.5 119.4 304.7 121.3 248.6L134.4 248.6C134.4 304.7 134.4 351.5 136.2 394.6Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.81,
+    "part": "stem"
+   },
+   {
+    "d": "M128.7 154.9C100.7 98.8 111.9 33.3 128.7 5.2C145.6 33.3 156.8 98.8 128.7 154.9Z",
+    "fill": "pink.light",
+    "stroke": "pink.dark",
+    "strokeWidth": 2.34,
+    "opacity": 0.7,
+    "part": "petal"
+   },
+   {
+    "d": "M119.4 241.1C91.3 244.8 63.2 237.3 44.5 218.6C70.7 213 98.8 220.5 121.3 233.6Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.34,
+    "part": "sepal"
+   },
+   {
+    "d": "M136.2 241.1C164.3 244.8 192.4 237.3 211.1 218.6C184.9 213 156.8 220.5 134.4 233.6Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.34,
+    "part": "sepal"
+   },
+   {
+    "d": "M117.5 229.8C74.5 220.5 29.5 183 7.1 117.5C1.4 98.8 10.8 89.4 25.8 98.8C63.2 123.1 100.7 173.7 123.1 218.6Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 2.81,
+    "part": "petal"
+   },
+   {
+    "d": "M138.1 229.8C181.2 220.5 226.1 183 248.6 117.5C254.2 98.8 244.8 89.4 229.8 98.8C192.4 123.1 155 173.7 132.5 218.6Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 2.81,
+    "part": "petal"
+   },
+   {
+    "d": "M96 239.2C96 247.5 110.2 254.2 127.8 254.2C145.4 254.2 159.6 247.5 159.6 239.2C159.6 230.9 145.4 224.2 127.8 224.2C110.2 224.2 96 230.9 96 239.2Z",
+    "fill": "green.light",
+    "stroke": "green.dark",
+    "strokeWidth": 2.34,
+    "part": "receptacle"
+   },
+   {
+    "d": "M110 231.7C100.7 192.4 87.6 154.9 72.6 123.1",
+    "fill": "none",
+    "stroke": "yellow.dark",
+    "strokeWidth": 2.81,
+    "part": "filament"
+   },
+   {
+    "d": "M145.6 231.7C155 192.4 168.1 154.9 183 123.1",
+    "fill": "none",
+    "stroke": "yellow.dark",
+    "strokeWidth": 2.81,
+    "part": "filament"
+   },
+   {
+    "d": "M117.5 229.8C113.8 198 106.3 168.1 98.8 143.7",
+    "fill": "none",
+    "stroke": "yellow.dark",
+    "strokeWidth": 2.81,
+    "part": "filament"
+   },
+   {
+    "d": "M138.1 229.8C141.9 198 149.3 168.1 156.8 143.7",
+    "fill": "none",
+    "stroke": "yellow.dark",
+    "strokeWidth": 2.81,
+    "part": "filament"
+   },
+   {
+    "d": "M61.8 120.8C65.9 127.9 73.3 131.4 78.2 128.6C83.1 125.8 83.8 117.6 79.6 110.5C75.5 103.3 68.1 99.8 63.2 102.7C58.3 105.5 57.7 113.6 61.8 120.8Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 1.87,
+    "part": "anther"
+   },
+   {
+    "d": "M176 110.5C171.9 117.6 172.5 125.8 177.4 128.6C182.4 131.4 189.7 127.9 193.8 120.8C198 113.6 197.3 105.5 192.4 102.7C187.5 99.8 180.1 103.3 176 110.5Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 1.87,
+    "part": "anther"
+   },
+   {
+    "d": "M89 139.1C91.3 145.4 96.7 149.3 101.1 147.7C105.5 146.1 107.1 139.7 104.8 133.3C102.5 127 97.1 123.2 92.8 124.8C88.4 126.4 86.7 132.8 89 139.1Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 1.87,
+    "part": "anther"
+   },
+   {
+    "d": "M150.8 133.3C148.5 139.7 150.2 146.1 154.5 147.7C158.9 149.3 164.3 145.4 166.6 139.1C168.9 132.8 167.2 126.4 162.9 124.8C158.5 123.2 153.1 127 150.8 133.3Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 1.87,
+    "part": "anther"
+   },
+   {
+    "d": "M56.2 98.8C56.2 100.6 57.7 102.1 59.5 102.1C61.3 102.1 62.8 100.6 62.8 98.8C62.8 97 61.3 95.5 59.5 95.5C57.7 95.5 56.2 97 56.2 98.8Z",
+    "fill": "yellow",
+    "part": "pollen"
+   },
+   {
+    "d": "M192.9 98.8C192.9 100.6 194.3 102.1 196.1 102.1C198 102.1 199.4 100.6 199.4 98.8C199.4 97 198 95.5 196.1 95.5C194.3 95.5 192.9 97 192.9 98.8Z",
+    "fill": "yellow",
+    "part": "pollen"
+   },
+   {
+    "d": "M64.2 93.2C64.2 94.7 65.4 96 67 96C68.5 96 69.8 94.7 69.8 93.2C69.8 91.6 68.5 90.4 67 90.4C65.4 90.4 64.2 91.6 64.2 93.2Z",
+    "fill": "yellow",
+    "part": "pollen"
+   },
+   {
+    "d": "M185.9 93.2C185.9 94.7 187.1 96 188.7 96C190.2 96 191.5 94.7 191.5 93.2C191.5 91.6 190.2 90.4 188.7 90.4C187.1 90.4 185.9 91.6 185.9 93.2Z",
+    "fill": "yellow",
+    "part": "pollen"
+   },
+   {
+    "d": "M127.8 239.2C104.4 239.2 96.9 220.5 100.7 203.6C104.4 186.8 117.5 179.3 127.8 177.4C138.1 179.3 151.2 186.8 155 203.6C158.7 220.5 151.2 239.2 127.8 239.2Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.81,
+    "part": "ovary"
+   },
+   {
+    "d": "M113.8 209.2C113.8 212.3 116.3 214.9 119.4 214.9C122.5 214.9 125 212.3 125 209.2C125 206.1 122.5 203.6 119.4 203.6C116.3 203.6 113.8 206.1 113.8 209.2Z",
+    "fill": "#f6f2ea",
+    "stroke": "green.dark",
+    "strokeWidth": 1.4,
+    "part": "ovule"
+   },
+   {
+    "d": "M130.6 209.2C130.6 212.3 133.1 214.9 136.2 214.9C139.3 214.9 141.9 212.3 141.9 209.2C141.9 206.1 139.3 203.6 136.2 203.6C133.1 203.6 130.6 206.1 130.6 209.2Z",
+    "fill": "#f6f2ea",
+    "stroke": "green.dark",
+    "strokeWidth": 1.4,
+    "part": "ovule"
+   },
+   {
+    "d": "M122.2 224.2C122.2 227.3 124.7 229.8 127.8 229.8C130.9 229.8 133.4 227.3 133.4 224.2C133.4 221.1 130.9 218.6 127.8 218.6C124.7 218.6 122.2 221.1 122.2 224.2Z",
+    "fill": "#f6f2ea",
+    "stroke": "green.dark",
+    "strokeWidth": 1.4,
+    "part": "ovule"
+   },
+   {
+    "d": "M123.1 194.3C123.1 196.9 125.2 198.9 127.8 198.9C130.4 198.9 132.5 196.9 132.5 194.3C132.5 191.7 130.4 189.6 127.8 189.6C125.2 189.6 123.1 191.7 123.1 194.3Z",
+    "fill": "#f6f2ea",
+    "stroke": "green.dark",
+    "strokeWidth": 1.4,
+    "part": "ovule"
+   },
+   {
+    "d": "M124.1 179.3L122.2 108.1L133.4 108.1L131.6 179.3Z",
+    "fill": "green.light",
+    "stroke": "green.dark",
+    "strokeWidth": 1.87,
+    "part": "style"
+   },
+   {
+    "d": "M110 108.1C110 91.3 119.4 83.8 127.8 83.8C136.2 83.8 145.6 91.3 145.6 108.1C140 113.8 115.6 113.8 110 108.1Z",
+    "fill": "yellow.light",
+    "stroke": "green.dark",
+    "strokeWidth": 2.34,
+    "part": "stigma"
+   }
+  ],
+  "anchors": [
+   {
+    "name": "petal",
+    "x": 29.5,
+    "y": 125.0
+   },
+   {
+    "name": "leaf",
+    "x": 181.6,
+    "y": 318.3
+   },
+   {
+    "name": "stem",
+    "x": 127.3,
+    "y": 322.9
+   },
+   {
+    "name": "sepal",
+    "x": 84.6,
+    "y": 229.5
+   },
+   {
+    "name": "receptacle",
+    "x": 106.5,
+    "y": 241.3
+   },
+   {
+    "name": "filament",
+    "x": 108.9,
+    "y": 181.1
+   },
+   {
+    "name": "anther",
+    "x": 183.5,
+    "y": 118.4
+   },
+   {
+    "name": "pollen",
+    "x": 196.2,
+    "y": 98.8
+   },
+   {
+    "name": "ovary",
+    "x": 143.1,
+    "y": 222.9
+   },
+   {
+    "name": "ovule",
+    "x": 119.4,
+    "y": 209.2
+   },
+   {
+    "name": "style",
+    "x": 127.8,
+    "y": 117.8
+   },
+   {
+    "name": "stigma",
+    "x": 127.8,
+    "y": 98.1
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/flower.svg"
+ },
+ "quality": {
+  "score": 1.0,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "12 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.56 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "28 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "3,065 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "0457d23731aa89be",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

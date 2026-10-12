@@ -464,6 +464,8 @@ def heading_of(
         return None
     if kind == "icon" and (o.get("params") or {}).get("name") not in VEHICLE_ICONS:
         return None  # icons are drawn upright (a person, a house); vehicles lie along their way
+    if kind == "figure" and not _is_vehicle(o):
+        return None  # saved drawings (ADR-055) too
     fo = _find(frame, root)
     m = _matrix(fo) if fo is not None else None
     if m is None:

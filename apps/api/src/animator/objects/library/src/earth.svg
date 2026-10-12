@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <!-- The Earth from space: oceans, continents (Africa and Europe in front, the Americas at the left), clouds. -->
+  <circle data-part="atmosphere" cx="200" cy="200" r="190" fill="none" data-stroke="sky" stroke-width="8" opacity="0.6"/>
+  <circle data-part="ocean" cx="200" cy="200" r="180" data-fill="fluid" data-stroke="blue.dark" stroke-width="3"/>
+  <g data-part="land" data-fill="green" data-stroke="green.dark" stroke-width="2">
+    <path d="M196 148 C214 140 250 142 270 150 C284 156 288 172 296 184 C304 196 300 214 290 226 C282 238 284 256 276 272 C266 292 256 312 244 326 C236 334 228 330 226 318 C222 296 220 276 214 258 C208 244 196 236 184 230 C168 222 160 206 164 192 C168 178 180 156 196 148 Z"/>
+    <path d="M300 176 C314 178 326 190 330 204 C318 210 306 204 300 196 Z"/>
+    <ellipse cx="300" cy="298" rx="7" ry="16" transform="rotate(20 300 298)"/>
+    <path d="M196 138 C200 118 214 100 232 92 C248 86 266 90 280 84 C296 78 314 84 318 98 C306 106 290 110 280 122 C270 132 256 134 240 134 C222 134 206 140 196 138 Z"/>
+    <path d="M252 82 C258 62 272 50 288 52 C284 66 276 80 264 88 Z"/>
+    <path d="M92 222 C104 212 124 212 138 222 C148 232 150 248 144 262 C136 282 124 300 114 322 C108 336 100 344 96 336 C94 316 96 296 90 276 C84 258 80 236 92 222 Z"/>
+    <path d="M60 110 C80 90 112 80 140 84 C160 88 170 102 164 118 C158 132 140 140 128 152 C118 162 116 176 108 186 C100 180 92 168 84 160 C70 146 52 130 60 110 Z"/>
+    <path d="M168 52 C180 44 198 44 206 52 C204 64 192 72 178 70 C170 66 164 60 168 52 Z"/>
+  </g>
+  <g fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="7" opacity="0.6">
+    <path d="M120 250 C150 240 180 246 200 256"/>
+    <path d="M230 60 C260 56 292 66 312 80"/>
+    <path d="M170 350 C200 344 236 348 262 340"/>
+  </g>
+  <path d="M200 20 A180 180 0 0 1 200 380 A120 180 0 0 0 200 20 Z" data-fill="#000000" fill="#000000" stroke-width="0" opacity="0.14"/>
+  <path d="M74 140 C92 98 128 66 172 54" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="9" opacity="0.3"/>
+  <circle data-anchor="ocean" cx="190" cy="300" r="1"/>
+  <circle data-anchor="land" cx="232" cy="214" r="1"/>
+</svg>

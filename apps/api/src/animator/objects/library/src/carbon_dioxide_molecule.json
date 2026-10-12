@@ -1,0 +1,14 @@
+{
+ "id": "carbon_dioxide_molecule",
+ "title": "Carbon dioxide molecule",
+ "concept": "carbon dioxide molecule",
+ "view": "ball and stick",
+ "description": "A carbon dioxide molecule (CO2) as balls and sticks: a dark carbon atom in the middle, double-bonded to a red oxygen atom on each side, in a straight line",
+ "aliases": ["carbon dioxide molecule", "co2 molecule", "molecule of carbon dioxide", "carbon dioxide molecules", "co2 molecules"],
+ "context": ["atom", "bond", "carbon", "oxygen", "chemical", "chemistry", "gas", "photosynth", "respirat", "greenhouse", "climate", "react", "formula", "breath"],
+ "not_for": ["co2 emissions chart"],
+ "prefer": ["ball", "stick", "double bond", "linear", "atom"],
+ "subjects": ["chemistry", "biology"],
+ "parts": {"carbon": "carbon atom", "oxygen": "oxygen atoms", "bonds": "double bonds"},
+ "size": {"min": 100, "default": 240, "max": 440}
+}

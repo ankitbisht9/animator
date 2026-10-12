@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 240">
+  <!-- A water molecule (H2O), ball and stick: one oxygen atom, two hydrogen atoms at an angle. -->
+  <g data-part="bonds" fill="none" data-stroke="gray" stroke-width="16">
+    <path d="M170 92 L82 170"/><path d="M170 92 L258 170"/>
+  </g>
+  <circle data-part="hydrogen" cx="70" cy="180" r="44" data-fill="#f4f6fa" data-stroke="gray.dark" stroke-width="3"/>
+  <circle data-part="hydrogen" cx="270" cy="180" r="44" data-fill="#f4f6fa" data-stroke="gray.dark" stroke-width="3"/>
+  <circle data-part="oxygen" cx="170" cy="86" r="70" data-fill="red" data-stroke="red.dark" stroke-width="3"/>
+  <g fill="#ffffff" data-fill="#ffffff" stroke-width="0" opacity="0.45">
+    <ellipse cx="146" cy="58" rx="20" ry="12" transform="rotate(-30 146 58)"/>
+    <ellipse cx="56" cy="164" rx="12" ry="7" transform="rotate(-30 56 164)"/>
+    <ellipse cx="256" cy="164" rx="12" ry="7" transform="rotate(-30 256 164)"/>
+  </g>
+</svg>

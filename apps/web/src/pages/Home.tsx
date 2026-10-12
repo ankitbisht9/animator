@@ -15,10 +15,11 @@ const AUDIENCES = [
 const DURATIONS = [1, 2, 3, 5, 8, 10, 15];
 /** The language the explainer speaks (voice and captions); on-screen text is always English (ADR-039). */
 const LANGUAGES = ["English", "Hinglish"];
-/** How the scenes are laid out (ADR-047). */
+/** How the scenes are laid out (ADR-047), or cost saver: planned, placing saved drawings (ADR-055). */
 const LAYOUTS: { value: LayoutMode; label: string }[] = [
   { value: "classic", label: "Classic" },
   { value: "planned", label: "Planned (precise, fewer AI calls)" },
+  { value: "costsaver", label: "Cost saver (saved drawings)" },
 ];
 const EXAMPLES = [
   "Explain Archimedes' principle",

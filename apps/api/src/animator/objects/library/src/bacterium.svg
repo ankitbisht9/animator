@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 220">
+  <!-- A rod-shaped bacterium: capsule, cell wall, cytoplasm, a loop of DNA (nucleoid), plasmids, ribosomes, pili and a flagellum. -->
+  <path data-part="flagellum" d="M372 112 C390 92 404 132 420 112 C436 92 446 124 456 110" fill="none" data-stroke="pink.dark" stroke-width="4"/>
+  <g data-part="pili" fill="none" data-stroke="pink.dark" stroke-width="2.5">
+    <path d="M80 36 L72 18"/><path d="M130 30 L128 10"/><path d="M190 28 L194 8"/><path d="M250 30 L256 10"/>
+    <path d="M310 36 L320 18"/><path d="M90 184 L82 202"/><path d="M160 190 L158 210"/><path d="M230 192 L234 212"/>
+    <path d="M300 186 L310 204"/>
+  </g>
+  <rect data-part="capsule" x="20" y="28" width="360" height="164" rx="82" data-fill="pink.soft" data-stroke="pink" stroke-width="2.5"/>
+  <rect data-part="cytoplasm" x="34" y="42" width="332" height="136" rx="68" data-fill="pink.light" stroke-width="0" opacity="0.55"/>
+  <rect data-part="cell_wall" x="34" y="42" width="332" height="136" rx="68" fill="none" data-stroke="pink.dark" stroke-width="6"/>
+  <path data-part="nucleoid" d="M150 100 C170 70 210 80 220 100 C230 120 260 126 270 104 C280 82 250 70 236 86 C222 102 190 130 166 124 C142 118 136 94 158 88 C180 82 196 110 214 118 C232 126 256 112 246 96" fill="none" data-stroke="purple.dark" stroke-width="3.5"/>
+  <g data-part="plasmids" fill="none" data-stroke="purple" stroke-width="3">
+    <ellipse cx="92" cy="128" rx="16" ry="10"/><ellipse cx="318" cy="84" rx="14" ry="9"/>
+  </g>
+  <g data-part="ribosomes" data-fill="purple" stroke-width="0">
+    <circle cx="80" cy="80" r="4"/><circle cx="118" cy="66" r="4"/><circle cx="300" cy="140" r="4"/><circle cx="330" cy="116" r="4"/>
+    <circle cx="200" cy="152" r="4"/><circle cx="120" cy="150" r="4"/><circle cx="282" cy="62" r="4"/><circle cx="60" cy="110" r="4"/>
+  </g>
+  <path d="M74 56 L320 56" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="8" opacity="0.35"/>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <!-- The Sun: a glowing disk with rays. -->
+  <circle data-part="glow" cx="200" cy="200" r="150" data-fill="yellow" stroke-width="0" opacity="0.25"/>
+  <g data-part="rays" data-fill="orange" data-stroke="orange.dark" stroke-width="2.5">
+    <path d="M186 74 L200 12 L214 74 Z" transform="rotate(0 200 200)"/>
+    <path d="M186 74 L200 12 L214 74 Z" transform="rotate(45 200 200)"/>
+    <path d="M186 74 L200 12 L214 74 Z" transform="rotate(90 200 200)"/>
+    <path d="M186 74 L200 12 L214 74 Z" transform="rotate(135 200 200)"/>
+    <path d="M186 74 L200 12 L214 74 Z" transform="rotate(180 200 200)"/>
+    <path d="M186 74 L200 12 L214 74 Z" transform="rotate(225 200 200)"/>
+    <path d="M186 74 L200 12 L214 74 Z" transform="rotate(270 200 200)"/>
+    <path d="M186 74 L200 12 L214 74 Z" transform="rotate(315 200 200)"/>
+    <path d="M190 80 L200 38 L210 80 Z" transform="rotate(22.5 200 200)"/>
+    <path d="M190 80 L200 38 L210 80 Z" transform="rotate(67.5 200 200)"/>
+    <path d="M190 80 L200 38 L210 80 Z" transform="rotate(112.5 200 200)"/>
+    <path d="M190 80 L200 38 L210 80 Z" transform="rotate(157.5 200 200)"/>
+    <path d="M190 80 L200 38 L210 80 Z" transform="rotate(202.5 200 200)"/>
+    <path d="M190 80 L200 38 L210 80 Z" transform="rotate(247.5 200 200)"/>
+    <path d="M190 80 L200 38 L210 80 Z" transform="rotate(292.5 200 200)"/>
+    <path d="M190 80 L200 38 L210 80 Z" transform="rotate(337.5 200 200)"/>
+  </g>
+  <circle data-part="disk" cx="200" cy="200" r="112" data-fill="yellow" data-stroke="orange.dark" stroke-width="3"/>
+  <circle data-part="disk" cx="200" cy="200" r="88" data-fill="yellow.light" stroke-width="0" opacity="0.8"/>
+  <path d="M132 158 C146 128 176 108 210 106" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="10" opacity="0.45"/>
+  <circle data-anchor="rays" cx="200" cy="24" r="1"/>
+</svg>

@@ -1,0 +1,70 @@
+{
+ "id": "light_bulb",
+ "title": "Light bulb",
+ "concept": "light bulb",
+ "view": "upright, from the side",
+ "description": "An incandescent light bulb, upright: the glass bulb, the coiled filament held by two support wires, the screw base with its threads and the contact at the bottom",
+ "aliases": [
+  "light bulb",
+  "bulb",
+  "lightbulb",
+  "lamp",
+  "electric bulb",
+  "filament bulb",
+  "incandescent bulb"
+ ],
+ "context": [
+  "circuit",
+  "current",
+  "electric",
+  "voltage",
+  "battery",
+  "switch",
+  "wire",
+  "glow",
+  "filament",
+  "energy",
+  "power",
+  "resistance",
+  "series",
+  "parallel",
+  "watt"
+ ],
+ "not_for": [
+  "bright idea",
+  "flower bulb",
+  "tulip bulb",
+  "onion bulb",
+  "bulb of",
+  "lamp post",
+  "street lamp",
+  "oil lamp",
+  "lava lamp",
+  "desk lamp",
+  "table lamp",
+  "floor lamp",
+  "lamp shade"
+ ],
+ "prefer": [
+  "filament",
+  "circuit",
+  "glow",
+  "light up",
+  "lights up"
+ ],
+ "subjects": [
+  "physics"
+ ],
+ "parts": {
+  "glass": "glass bulb",
+  "filament": "filament",
+  "wires": "support wires",
+  "base": "screw base",
+  "contact": "contact"
+ },
+ "size": {
+  "min": 90,
+  "default": 170,
+  "max": 360
+ }
+}

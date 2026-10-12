@@ -1,0 +1,66 @@
+{
+ "id": "virus",
+ "title": "Virus",
+ "concept": "virus",
+ "view": "a spiky round virus, cut open",
+ "description": "A round virus like a coronavirus: its envelope covered in spike proteins, with its genetic material (RNA) inside",
+ "aliases": [
+  "virus",
+  "viruses",
+  "coronavirus",
+  "covid virus",
+  "virus particle",
+  "virion",
+  "flu virus",
+  "influenza virus"
+ ],
+ "context": [
+  "infect",
+  "disease",
+  "immun",
+  "vaccin",
+  "antibod",
+  "pathogen",
+  "cell",
+  "host",
+  "spread",
+  "germ",
+  "cold",
+  "flu",
+  "pandemic",
+  "epidemic",
+  "sick",
+  "white blood",
+  "rna",
+  "dna",
+  "replicat",
+  "spike"
+ ],
+ "not_for": [
+  "computer virus",
+  "viral video",
+  "went viral",
+  "virus scan",
+  "virus protection"
+ ],
+ "prefer": [
+  "spike",
+  "envelope",
+  "rna",
+  "corona",
+  "inside"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "envelope": "envelope",
+  "spike_proteins": "spike proteins",
+  "genetic_material": "genetic material (RNA)"
+ },
+ "size": {
+  "min": 60,
+  "default": 200,
+  "max": 420
+ }
+}

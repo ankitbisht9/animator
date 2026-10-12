@@ -1,0 +1,14 @@
+{
+ "id": "red_blood_cell",
+ "title": "Red blood cell",
+ "concept": "red blood cell",
+ "view": "from above",
+ "description": "A red blood cell from above: a red disc, thinner and paler in the middle (biconcave), with no nucleus",
+ "aliases": ["red blood cell", "red blood cells", "erythrocyte", "erythrocytes", "rbc", "red cell"],
+ "context": ["blood", "oxygen", "haemoglobin", "hemoglobin", "iron", "artery", "vein", "capillar", "circulat", "lung", "body", "carry", "anaemia", "anemia"],
+ "not_for": ["red blood cell count chart"],
+ "prefer": ["disc", "biconcave", "oxygen", "haemoglobin", "hemoglobin"],
+ "subjects": ["biology"],
+ "parts": {"rim": "red blood cell", "thin_center": "thin centre"},
+ "size": {"min": 40, "default": 140, "max": 360}
+}

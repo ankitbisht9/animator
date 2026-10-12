@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { ApiConfig } from "../../api";
-import { type Visibility, v1 } from "../api";
+import { type LessonLayout, type Visibility, v1 } from "../api";
 import { useAuth, useUser } from "../auth";
 import { credits, date } from "../format";
 import { useResource, useTitle } from "../hooks";
@@ -72,7 +72,8 @@ export function CreatePage() {
   const [language, setLanguage] = useState<string>(prefs.language);
   const [visibility, setVisibility] = useState<Visibility>("private");
   const [style, setStyle] = useState("");
-  const [layout, setLayout] = useState<"classic" | "planned" | null>(prefs.layout);
+  const [layout, setLayout] = useState<LessonLayout | null>(prefs.layout);
+  const info = useResource("public-info", v1.info, 300_000);
   const [paced, setPaced] = useState(false);
   const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -338,16 +339,24 @@ export function CreatePage() {
                   maxLength={300}
                 />
                 <div>
-                  <span className="ui-label">Layout</span>
+                  <span className="ui-label">Lesson type</span>
                   <Segmented
-                    label="Layout"
+                    label="Lesson type"
                     value={layout ?? config.data?.layout_mode ?? "classic"}
                     onChange={(v) => setLayout(v)}
                     options={[
                       { value: "classic", label: "Classic" },
                       { value: "planned", label: "Planned (precise)" },
+                      ...(info.data?.costsaver ? [{ value: "costsaver" as const, label: "Cost saver" }] : []),
                     ]}
                   />
+                  {(layout ?? config.data?.layout_mode) === "costsaver" && (
+                    <p className="small muted">
+                      Planned, and where a scene shows exactly something in the drawing library (a heart, a plant cell,
+                      a light bulb), it places that ready-made drawing instead of drawing it: usually less AI cost.
+                      Everything else is drawn as usual.
+                    </p>
+                  )}
                 </div>
                 <Checkbox checked={paced} onChange={setPaced}>
                   Save cost: make scenes just ahead of where I am watching

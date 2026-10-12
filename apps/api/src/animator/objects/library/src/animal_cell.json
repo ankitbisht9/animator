@@ -1,0 +1,64 @@
+{
+ "id": "animal_cell",
+ "title": "Animal cell",
+ "concept": "animal cell",
+ "view": "cut open",
+ "description": "A typical animal cell, rounded: the cell membrane, the cytoplasm, the nucleus with its nucleolus, mitochondria, endoplasmic reticulum with ribosomes, the Golgi apparatus and lysosomes (no cell wall, no chloroplasts)",
+ "aliases": [
+  "animal cell",
+  "animal cells",
+  "human cell",
+  "cell of an animal",
+  "body cell"
+ ],
+ "context": [
+  "cell",
+  "organelle",
+  "nucleus",
+  "mitochond",
+  "membrane",
+  "cytoplasm",
+  "biology",
+  "tissue",
+  "animal",
+  "body",
+  "dna",
+  "protein"
+ ],
+ "not_for": [
+  "solar cell",
+  "fuel cell",
+  "prison cell",
+  "battery cell",
+  "cell phone",
+  "spreadsheet cell"
+ ],
+ "prefer": [
+  "organelle",
+  "mitochond",
+  "nucleus",
+  "membrane",
+  "golgi",
+  "reticulum",
+  "inside"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "cell_membrane": "cell membrane",
+  "cytoplasm": "cytoplasm",
+  "nucleus": "nucleus",
+  "nucleolus": "nucleolus",
+  "mitochondria": "mitochondria",
+  "endoplasmic_reticulum": "endoplasmic reticulum",
+  "ribosomes": "ribosomes",
+  "golgi_apparatus": "Golgi apparatus",
+  "lysosomes": "lysosomes"
+ },
+ "size": {
+  "min": 260,
+  "default": 400,
+  "max": 620
+ }
+}

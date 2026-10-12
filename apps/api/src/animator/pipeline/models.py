@@ -266,9 +266,9 @@ class GenerationRequest(_Strict):
     style: str | None = Field(default=None, max_length=300)
     language: str = Field(default="English", max_length=40)
     paced: bool = Field(default=False, description="Generate only a buffer ahead of playback (saves cost)")
-    # How the scenes are laid out (ADR-047): classic or planned; None: the server's default
-    # (ANIMATOR_LAYOUT_MODE).
-    layout: Literal["classic", "planned"] | None = None
+    # How the scenes are laid out (ADR-047): classic or planned, or costsaver (ADR-055: planned, with
+    # saved drawings placed where they fit exactly); None: the server's default (ANIMATOR_LAYOUT_MODE).
+    layout: Literal["classic", "planned", "costsaver"] | None = None
 
 
 class Attempt(BaseModel):
@@ -304,6 +304,8 @@ class SceneRecord(BaseModel):
     narration: dict[str, Any] | None = None
     # The planned layout flow (ADR-047): the scene's stage plan and what the planner made of it.
     layout_plan: dict[str, Any] | None = None
+    # Cost-saver lessons (ADR-055): the saved drawings offered to the scene and the ones it placed.
+    saved: dict[str, Any] | None = None
     started_at: float | None = None
     finished_at: float | None = None
 
@@ -338,6 +340,8 @@ class Metrics(BaseModel):
     # Visual glitch repair (ADR-040): patch rounds run, and glitches the finished scenes still show.
     glitch_repairs: int = 0
     glitches_left: int = 0
+    # Cost-saver lessons (ADR-055): saved drawings placed in the finished scenes.
+    saved_objects: int = 0
 
 
 class Generation(BaseModel):

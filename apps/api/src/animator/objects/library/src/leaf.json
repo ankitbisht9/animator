@@ -1,0 +1,63 @@
+{
+ "id": "leaf",
+ "title": "Leaf",
+ "concept": "leaf",
+ "view": "flat, from above",
+ "description": "One green leaf, upright: the blade, the midrib, side veins and the stalk (petiole)",
+ "aliases": [
+  "leaf",
+  "leaves",
+  "green leaf",
+  "plant leaf",
+  "tree leaf"
+ ],
+ "context": [
+  "photosynth",
+  "plant",
+  "tree",
+  "chlorophyll",
+  "chloroplast",
+  "stomat",
+  "transpir",
+  "botan",
+  "autumn",
+  "foliage",
+  "petiole",
+  "midrib",
+  "deciduous",
+  "evergreen",
+  "garden",
+  "forest",
+  "grow",
+  "sunlight"
+ ],
+ "not_for": [
+  "leaf through",
+  "leaf node",
+  "leaf spring",
+  "gold leaf",
+  "table leaf"
+ ],
+ "prefer": [
+  "vein",
+  "midrib",
+  "blade",
+  "stalk",
+  "petiole",
+  "single leaf"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "blade": "leaf blade",
+  "midrib": "midrib",
+  "veins": "veins",
+  "petiole": "stalk (petiole)"
+ },
+ "size": {
+  "min": 120,
+  "default": 220,
+  "max": 400
+ }
+}

@@ -1,0 +1,461 @@
+{
+ "id": "lungs",
+ "version": 1,
+ "title": "Human lungs",
+ "concept": "human lungs",
+ "description": "Both lungs from the front (the right one with three lobes, the left one with two and a notch for the heart), the trachea with its rings, the two bronchi, bronchioles branching inside to small air sacs, and the diaphragm below",
+ "view": "from the front",
+ "aliases": [
+  "lungs",
+  "lung",
+  "human lungs",
+  "the lungs",
+  "pair of lungs",
+  "respiratory system",
+  "breathing system",
+  "airways"
+ ],
+ "context": [
+  "breath",
+  "air",
+  "oxygen",
+  "carbon dioxide",
+  "co2",
+  "respirat",
+  "inhal",
+  "exhal",
+  "trachea",
+  "bronch",
+  "alveol",
+  "diaphragm",
+  "chest",
+  "smok",
+  "asthma",
+  "organ",
+  "body",
+  "gas exchange"
+ ],
+ "not_for": [
+  "lung capacity graph",
+  "iron lung",
+  "book lungs"
+ ],
+ "prefer": [
+  "front",
+  "trachea",
+  "bronch",
+  "lobe",
+  "diaphragm",
+  "airway",
+  "windpipe"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "right_lung": "right lung",
+  "left_lung": "left lung",
+  "trachea": "trachea (windpipe)",
+  "right_bronchus": "right bronchus",
+  "left_bronchus": "left bronchus",
+  "bronchioles": "bronchioles",
+  "alveoli": "alveoli (air sacs)",
+  "diaphragm": "diaphragm"
+ },
+ "size": {
+  "min": 240.0,
+  "default": 360.0,
+  "max": 560.0
+ },
+ "art": {
+  "w": 330.4,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M5.4 383.3C33.6 315.6 99.4 302.5 165.2 325C231 302.5 296.8 315.6 325 383.3L325 394.6C296.8 336.3 231 325 165.2 345.7C99.4 325 33.6 336.3 5.4 394.6Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.82,
+    "part": "diaphragm"
+   },
+   {
+    "d": "M135.1 105.1C103.2 95.7 69.3 120.1 50.5 170.9C31.7 223.5 24.2 287.4 29.9 336.3C33.6 362.6 56.2 370.1 86.3 355.1C110.7 343.8 129.5 334.4 142.7 321.3C148.3 287.4 150.2 212.2 148.3 137C146.4 118.2 142.7 108.8 135.1 105.1Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 2.82,
+    "part": "right_lung"
+   },
+   {
+    "d": "M195.3 105.1C227.3 95.7 261.1 120.1 279.9 170.9C298.7 223.5 306.2 287.4 300.6 336.3C296.8 362.6 274.3 370.1 244.2 355.1C227.3 345.7 216 336.3 212.2 328.8C223.5 306.2 223.5 283.7 206.6 272.4C195.3 264.9 185.9 251.7 184 231C182.1 193.4 182.1 155.8 182.1 137C184 118.2 187.8 108.8 195.3 105.1Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 2.82,
+    "part": "left_lung"
+   },
+   {
+    "d": "M43 238.5C75 217.9 108.8 199.1 144.5 189.7",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 2.35
+   },
+   {
+    "d": "M33.6 287.4C71.2 279.9 108.8 278 146.4 274.3",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 2.35
+   },
+   {
+    "d": "M283.7 219.7C255.5 238.5 229.1 261.1 214.1 287.4",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 2.35
+   },
+   {
+    "d": "M61.8 193.4C73.1 155.8 91.9 129.5 116.3 120.1",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 6.58,
+    "opacity": 0.28
+   },
+   {
+    "d": "M268.6 193.4C257.3 155.8 238.5 129.5 214.1 120.1",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 6.58,
+    "opacity": 0.28
+   },
+   {
+    "d": "M152.1 5.4L178.4 5.4L178.4 116.3L152.1 116.3Z",
+    "fill": "#efe3dc",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.82,
+    "part": "trachea"
+   },
+   {
+    "d": "M153.9 20.5L176.5 20.5",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 2.35,
+    "part": "trachea"
+   },
+   {
+    "d": "M153.9 35.5L176.5 35.5",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 2.35,
+    "part": "trachea"
+   },
+   {
+    "d": "M153.9 50.5L176.5 50.5",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 2.35,
+    "part": "trachea"
+   },
+   {
+    "d": "M153.9 65.6L176.5 65.6",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 2.35,
+    "part": "trachea"
+   },
+   {
+    "d": "M153.9 80.6L176.5 80.6",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 2.35,
+    "part": "trachea"
+   },
+   {
+    "d": "M153.9 95.7L176.5 95.7",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 2.35,
+    "part": "trachea"
+   },
+   {
+    "d": "M155.8 110.7C142.7 123.9 127.6 138.9 112.6 157.7L99.4 148.3C116.3 127.6 133.3 110.7 152.1 97.5Z",
+    "fill": "#efe3dc",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.82,
+    "part": "right_bronchus"
+   },
+   {
+    "d": "M174.6 110.7C187.8 123.9 202.8 138.9 217.9 157.7L231 148.3C214.1 127.6 197.2 110.7 178.4 97.5Z",
+    "fill": "#efe3dc",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.82,
+    "part": "left_bronchus"
+   },
+   {
+    "d": "M106.9 153.9C97.5 170.9 88.1 189.7 82.5 214.1",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M106.9 153.9C108.8 184 110.7 219.7 106.9 255.5",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M82.5 214.1C71.2 231 63.7 251.7 59.9 276.1",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M82.5 214.1C86.3 236.7 88.1 263 82.5 293.1",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M106.9 255.5C95.7 278 86.3 300.6 80.6 325",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M106.9 255.5C118.2 276.1 123.9 298.7 123.9 321.3",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M223.5 153.9C232.9 170.9 242.3 189.7 247.9 214.1",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M223.5 153.9C221.6 184 221.6 214.1 227.3 240.4",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M247.9 214.1C259.2 231 266.7 251.7 270.5 276.1",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M247.9 214.1C244.2 236.7 244.2 263 249.8 291.2",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M227.3 240.4C236.7 264.9 244.2 291.2 249.8 321.3",
+    "fill": "none",
+    "stroke": "#f8eef0",
+    "strokeWidth": 4.7,
+    "part": "bronchioles"
+   },
+   {
+    "d": "M52.4 281.8C52.4 284.9 54.9 287.4 58.1 287.4C61.2 287.4 63.7 284.9 63.7 281.8C63.7 278.7 61.2 276.1 58.1 276.1C54.9 276.1 52.4 278.7 52.4 281.8Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M62.8 283.7C62.8 286.3 64.9 288.4 67.5 288.4C70 288.4 72.2 286.3 72.2 283.7C72.2 281.1 70 279 67.5 279C64.9 279 62.8 281.1 62.8 283.7Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M57.1 290.2C57.1 292.8 59.2 294.9 61.8 294.9C64.4 294.9 66.5 292.8 66.5 290.2C66.5 287.6 64.4 285.5 61.8 285.5C59.2 285.5 57.1 287.6 57.1 290.2Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M75 330.7C75 333.8 77.5 336.3 80.6 336.3C83.7 336.3 86.3 333.8 86.3 330.7C86.3 327.6 83.7 325 80.6 325C77.5 325 75 327.6 75 330.7Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M85.3 331.6C85.3 334.2 87.4 336.3 90 336.3C92.6 336.3 94.7 334.2 94.7 331.6C94.7 329 92.6 326.9 90 326.9C87.4 326.9 85.3 329 85.3 331.6Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M78.7 338.2C78.7 340.8 80.8 342.9 83.4 342.9C86 342.9 88.1 340.8 88.1 338.2C88.1 335.6 86 333.5 83.4 333.5C80.8 333.5 78.7 335.6 78.7 338.2Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M266.7 281.8C266.7 284.9 269.3 287.4 272.4 287.4C275.5 287.4 278 284.9 278 281.8C278 278.7 275.5 276.1 272.4 276.1C269.3 276.1 266.7 278.7 266.7 281.8Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M258.3 283.7C258.3 286.3 260.4 288.4 263 288.4C265.6 288.4 267.7 286.3 267.7 283.7C267.7 281.1 265.6 279 263 279C260.4 279 258.3 281.1 258.3 283.7Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M263.9 290.2C263.9 292.8 266 294.9 268.6 294.9C271.2 294.9 273.3 292.8 273.3 290.2C273.3 287.6 271.2 285.5 268.6 285.5C266 285.5 263.9 287.6 263.9 290.2Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M244.2 326.9C244.2 330 246.7 332.5 249.8 332.5C252.9 332.5 255.5 330 255.5 326.9C255.5 323.8 252.9 321.3 249.8 321.3C246.7 321.3 244.2 323.8 244.2 326.9Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M254.5 327.8C254.5 330.4 256.6 332.5 259.2 332.5C261.8 332.5 263.9 330.4 263.9 327.8C263.9 325.3 261.8 323.1 259.2 323.1C256.6 323.1 254.5 325.3 254.5 327.8Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   },
+   {
+    "d": "M248.9 334.4C248.9 337 251 339.1 253.6 339.1C256.2 339.1 258.3 337 258.3 334.4C258.3 331.8 256.2 329.7 253.6 329.7C251 329.7 248.9 331.8 248.9 334.4Z",
+    "fill": "pink.light",
+    "stroke": "#f8eef0",
+    "strokeWidth": 1.88,
+    "part": "alveoli"
+   }
+  ],
+  "anchors": [
+   {
+    "name": "trachea",
+    "x": 165.2,
+    "y": 58.1
+   },
+   {
+    "name": "diaphragm",
+    "x": 198.1,
+    "y": 327.4
+   },
+   {
+    "name": "right_lung",
+    "x": 53.1,
+    "y": 318.5
+   },
+   {
+    "name": "left_lung",
+    "x": 263.1,
+    "y": 188.6
+   },
+   {
+    "name": "right_bronchus",
+    "x": 123.4,
+    "y": 132.9
+   },
+   {
+    "name": "left_bronchus",
+    "x": 207.0,
+    "y": 132.9
+   },
+   {
+    "name": "bronchioles",
+    "x": 108.4,
+    "y": 236.6
+   },
+   {
+    "name": "alveoli",
+    "x": 272.4,
+    "y": 281.2
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/lungs.svg"
+ },
+ "quality": {
+  "score": 1.0,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "8 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.21 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "40 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "3,484 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "c50e2e695bca3489",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

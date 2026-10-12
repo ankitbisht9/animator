@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 450">
+  <!-- The human heart from the front. Viewer's left is the body's right. -->
+  <!-- Aorta: arch and its three branches (behind everything else) -->
+  <g data-part="aorta" data-fill="red.light" data-stroke="red.dark" stroke-width="3">
+    <path d="M199 72 C197 50 191 28 184 6 L203 1 C209 22 215 44 220 64 Z"/>
+    <path d="M237 46 C237 31 237 17 237 3 L254 3 C254 17 254 31 254 44 Z"/>
+    <path d="M267 52 C273 36 281 21 291 7 L306 14 C297 28 290 42 285 58 Z"/>
+    <path d="M179 200 L179 106 C179 46 229 21 270 33 C310 46 326 85 326 132 L326 200 L284 200 L284 136 C284 106 277 85 260 77 C242 69 221 79 221 108 L221 200 Z"/>
+  </g>
+  <g data-part="aorta" data-fill="red.dark" stroke-width="0">
+    <ellipse cx="193.5" cy="3.5" rx="10" ry="4" transform="rotate(-13 193.5 3.5)"/>
+    <ellipse cx="245.5" cy="3" rx="8.5" ry="3.5"/>
+    <ellipse cx="298.5" cy="10.5" rx="8.5" ry="3.5" transform="rotate(25 298.5 10.5)"/>
+  </g>
+  <path data-part="aorta" d="M190 186 L190 110 C190 74 214 50 246 44" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="7" opacity="0.35"/>
+  <circle data-anchor="aorta" cx="253" cy="52" r="1"/>
+  <!-- Superior vena cava -->
+  <g data-part="superior_vena_cava" data-fill="blue" data-stroke="blue.dark" stroke-width="3">
+    <path d="M118 58 L157 58 L159 214 L120 214 Z"/>
+  </g>
+  <ellipse data-part="superior_vena_cava" cx="137.5" cy="58" rx="19.5" ry="6" data-fill="blue.dark" stroke-width="0"/>
+  <!-- Pulmonary veins (into the left atrium, at the back) -->
+  <g data-part="pulmonary_veins" data-fill="red.light" data-stroke="red.dark" stroke-width="3">
+    <path d="M326 194 L366 188 L368 205 L329 212 Z"/>
+    <path d="M330 216 L368 222 L366 239 L327 233 Z"/>
+  </g>
+  <g data-part="pulmonary_veins" data-fill="red.dark" stroke-width="0">
+    <ellipse cx="367" cy="196.5" rx="4" ry="8.5"/>
+    <ellipse cx="367" cy="230.5" rx="4" ry="8.5"/>
+  </g>
+  <!-- Left atrium: its ear (auricle) at the upper right -->
+  <path data-part="left_atrium" d="M282 210 C285 188 309 178 329 186 C346 193 346 214 332 225 C319 236 296 234 284 224 Z" data-fill="red" data-stroke="red.dark" stroke-width="3"/>
+  <path d="M296 200 C306 192 320 191 330 197" fill="none" data-stroke="#000000" stroke="#000000" stroke-width="2.5" opacity="0.18"/>
+  <!-- Right atrium, with its ear reaching up beside the aorta -->
+  <path data-part="right_atrium" d="M160 206 C122 196 84 220 82 262 C80 300 100 334 136 340 C154 343 166 330 170 316 L172 214 Z" data-fill="red" data-stroke="red.dark" stroke-width="3"/>
+  <path data-part="right_atrium" d="M151 210 C152 187 171 172 192 178 C208 183 208 201 198 211 C186 223 165 223 151 216 Z" data-fill="red" data-stroke="red.dark" stroke-width="3"/>
+  <path d="M98 252 C103 231 120 218 142 217" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="6" opacity="0.3"/>
+  <!-- Inferior vena cava, below the right atrium -->
+  <path data-part="inferior_vena_cava" d="M92 324 L130 330 L126 394 L92 390 Z" data-fill="blue" data-stroke="blue.dark" stroke-width="3"/>
+  <ellipse data-part="inferior_vena_cava" cx="109" cy="392" rx="17" ry="5" data-fill="blue.dark" stroke-width="0"/>
+  <!-- Pulmonary trunk, rising from the right ventricle and turning to the left lung -->
+  <path data-part="pulmonary_artery" d="M188 244 C186 172 200 142 222 120 L248 99 C261 89 278 87 293 91 L341 100 L338 125 L296 117 C284 115 274 120 266 128 L247 150 C237 166 235 190 237 216 Z" data-fill="blue" data-stroke="blue.dark" stroke-width="3"/>
+  <ellipse data-part="pulmonary_artery" cx="340" cy="112.5" rx="4.5" ry="12.5" data-fill="blue.dark" stroke-width="0"/>
+  <path d="M200 200 C198 168 210 145 228 128" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="6" opacity="0.3"/>
+  <!-- Ventricles: the left one forms the right border and the apex; the right one most of the front -->
+  <path data-part="left_ventricle" d="M152 214 C180 204 236 200 274 206 C306 211 334 228 343 262 C354 302 338 360 303 396 C287 412 270 426 254 433 C242 438 233 432 226 422 C196 387 161 352 141 316 C129 293 129 240 152 214 Z" data-fill="red" data-stroke="red.dark" stroke-width="3"/>
+  <path d="M318 246 C334 268 336 308 322 344 C312 368 296 390 278 408" fill="none" data-stroke="#000000" stroke="#000000" stroke-width="9" opacity="0.12"/>
+  <path data-part="right_ventricle" d="M152 214 C180 206 220 202 250 206 C254 262 260 336 262 418 C255 431 238 432 226 422 C196 387 161 352 141 316 C129 293 129 240 152 214 Z" data-fill="red" data-stroke="red.dark" stroke-width="3"/>
+  <path d="M164 258 C172 238 196 226 222 228 C202 238 184 254 176 280 C170 274 166 266 164 258 Z" data-fill="#ffffff" fill="#ffffff" stroke-width="0" opacity="0.32"/>
+  <path d="M292 236 C312 246 324 266 324 290 C316 274 304 260 290 252 Z" data-fill="#ffffff" fill="#ffffff" stroke-width="0" opacity="0.3"/>
+  <!-- Coronary vessels on the surface -->
+  <g data-part="coronary_arteries" fill="none" data-stroke="red.dark" stroke-width="4">
+    <path d="M253 214 C254 262 258 322 261 410"/>
+    <path d="M255 262 C270 271 284 284 296 300"/>
+    <path d="M258 322 C272 332 282 346 288 362"/>
+    <path d="M166 220 C162 262 158 300 149 330"/>
+  </g>
+  <path d="M265 214 C264 252 270 300 268 340 C267 368 268 388 268 404" fill="none" data-stroke="blue.dark" stroke="#0043ac" stroke-width="2.5"/>
+</svg>

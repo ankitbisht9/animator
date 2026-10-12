@@ -10,6 +10,7 @@
  * `lift()` maps the LLM form back to canonical (drops nulls, fills defaults).
  */
 import { z } from "zod";
+import { allSpecs } from "../catalog/registry";
 import { sceneSchema } from "./scene";
 
 type Json = { [k: string]: unknown };
@@ -110,9 +111,27 @@ export function canonicalJsonSchema(): Json {
   return raw;
 }
 
+/** The object types the model never writes (`hidden` specs, e.g. the pipeline's `figure`) are left out. */
+function withoutHidden(schema: Json): Json {
+  const hidden = new Set(
+    allSpecs()
+      .filter((s) => s.hidden)
+      .map((s) => `Object_${s.type}`),
+  );
+  if (hidden.size === 0) return schema;
+  const defs = { ...(schema.$defs as Record<string, Json>) };
+  for (const name of hidden) delete defs[name];
+  const union = defs.Object;
+  if (union && Array.isArray(union.anyOf)) {
+    const kept = union.anyOf.filter((v) => !(isObj(v) && hidden.has(String(v.$ref).replace("#/$defs/", ""))));
+    defs.Object = { ...union, anyOf: kept };
+  }
+  return { ...schema, $defs: defs };
+}
+
 /** LLM-facing, strict-mode compatible JSON Schema. */
 export function llmJsonSchema(): Json {
   const canonical = canonicalJsonSchema();
-  const strict = bareRefs(strictify(canonical)) as Json;
+  const strict = withoutHidden(bareRefs(strictify(canonical)) as Json);
   return { $schema: "https://json-schema.org/draft/2020-12/schema", ...strict };
 }

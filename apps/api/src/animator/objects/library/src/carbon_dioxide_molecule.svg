@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 180">
+  <!-- A carbon dioxide molecule (CO2), ball and stick: O=C=O in a straight line, with double bonds. -->
+  <g data-part="bonds" fill="none" data-stroke="gray" stroke-width="11">
+    <path d="M100 76 L220 76"/><path d="M100 104 L220 104"/><path d="M220 76 L340 76"/><path d="M220 104 L340 104"/>
+  </g>
+  <circle data-part="oxygen" cx="78" cy="90" r="62" data-fill="red" data-stroke="red.dark" stroke-width="3"/>
+  <circle data-part="oxygen" cx="362" cy="90" r="62" data-fill="red" data-stroke="red.dark" stroke-width="3"/>
+  <circle data-part="carbon" cx="220" cy="90" r="56" data-fill="#3a3f4b" data-stroke="text" stroke-width="3"/>
+  <g fill="#ffffff" data-fill="#ffffff" stroke-width="0" opacity="0.4">
+    <ellipse cx="58" cy="64" rx="18" ry="11" transform="rotate(-30 58 64)"/>
+    <ellipse cx="342" cy="64" rx="18" ry="11" transform="rotate(-30 342 64)"/>
+    <ellipse cx="202" cy="66" rx="16" ry="10" transform="rotate(-30 202 66)"/>
+  </g>
+</svg>

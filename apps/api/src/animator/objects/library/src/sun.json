@@ -1,0 +1,62 @@
+{
+ "id": "sun",
+ "title": "Sun",
+ "concept": "sun",
+ "view": "glowing, with rays",
+ "description": "The Sun as a bright yellow disk with orange rays and a soft glow",
+ "aliases": [
+  "sun",
+  "the sun",
+  "sunshine",
+  "our star"
+ ],
+ "context": [
+  "light",
+  "heat",
+  "energy",
+  "solar",
+  "photosynth",
+  "plant",
+  "day",
+  "sky",
+  "earth",
+  "planet",
+  "orbit",
+  "season",
+  "weather",
+  "evaporat",
+  "water cycle",
+  "shadow",
+  "rays",
+  "warm",
+  "star",
+  "space",
+  "summer"
+ ],
+ "not_for": [
+  "sun cream",
+  "sun hat",
+  "sun icon"
+ ],
+ "prefer": [
+  "rays",
+  "glow",
+  "shine",
+  "bright"
+ ],
+ "subjects": [
+  "physics",
+  "biology",
+  "geography"
+ ],
+ "parts": {
+  "disk": "the Sun",
+  "rays": "rays of light",
+  "glow": "glow"
+ },
+ "size": {
+  "min": 100,
+  "default": 220,
+  "max": 420
+ }
+}

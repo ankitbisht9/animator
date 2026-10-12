@@ -48,6 +48,10 @@ services:
         value: "1"
       - key: ANIMATOR_TEACHING_VISUAL_CRITIC
         value: "false"
+      # Saved drawings (ADR-055): the built-in library ships in the image; collecting from lessons only
+      # when an admin asks (the free instance's files do not last anyway).
+      - key: ANIMATOR_OBJECTS_HARVEST
+        value: "false"
 
       # Lessons: as on the development machine (.env).
       - key: ANIMATOR_PIPELINE

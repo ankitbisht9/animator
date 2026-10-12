@@ -1,0 +1,65 @@
+{
+ "id": "neuron",
+ "title": "Neuron",
+ "concept": "neuron",
+ "view": "lying along its length",
+ "description": "A nerve cell (motor neuron) lying left to right: branching dendrites, the cell body with its nucleus, the long axon wrapped in a myelin sheath with gaps (nodes of Ranvier), and the axon terminals at the right end",
+ "aliases": [
+  "neuron",
+  "neurons",
+  "neurone",
+  "nerve cell",
+  "nerve cells",
+  "motor neuron",
+  "brain cell"
+ ],
+ "context": [
+  "nerve",
+  "brain",
+  "signal",
+  "impulse",
+  "synapse",
+  "spinal",
+  "nervous",
+  "axon",
+  "dendrite",
+  "message",
+  "electrical",
+  "reflex",
+  "sense",
+  "receptor",
+  "muscle",
+  "memory",
+  "learn"
+ ],
+ "not_for": [
+  "neural network",
+  "artificial neuron",
+  "neuron in a network"
+ ],
+ "prefer": [
+  "axon",
+  "dendrite",
+  "myelin",
+  "synapse",
+  "impulse",
+  "signal"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "dendrites": "dendrites",
+  "cell_body": "cell body",
+  "nucleus": "nucleus",
+  "axon": "axon",
+  "myelin_sheath": "myelin sheath",
+  "node_of_ranvier": "node of Ranvier",
+  "axon_terminals": "axon terminals"
+ },
+ "size": {
+  "min": 200,
+  "default": 420,
+  "max": 720
+ }
+}

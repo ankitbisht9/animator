@@ -1,0 +1,221 @@
+{
+ "id": "battery",
+ "version": 1,
+ "title": "Battery",
+ "concept": "battery",
+ "description": "A cylindrical battery (dry cell) lying on its side: the dark casing with a copper band, the positive terminal (+) at the right end and the flat negative end (-) at the left",
+ "view": "a cylindrical cell on its side",
+ "aliases": [
+  "battery",
+  "batteries",
+  "cell battery",
+  "dry cell",
+  "electric cell",
+  "aa battery",
+  "torch battery"
+ ],
+ "context": [
+  "circuit",
+  "current",
+  "voltage",
+  "volt",
+  "electric",
+  "electron",
+  "charge",
+  "wire",
+  "bulb",
+  "terminal",
+  "energy",
+  "power",
+  "chemical",
+  "switch",
+  "resistor",
+  "ampere",
+  "amp"
+ ],
+ "not_for": [
+  "battery of tests",
+  "assault and battery",
+  "battery farm",
+  "battery hens"
+ ],
+ "prefer": [
+  "terminal",
+  "positive",
+  "negative",
+  "cell",
+  "circuit"
+ ],
+ "subjects": [
+  "physics",
+  "chemistry"
+ ],
+ "parts": {
+  "casing": "battery",
+  "positive_terminal": "positive terminal",
+  "negative_terminal": "negative terminal",
+  "plus_sign": "positive (+) end",
+  "minus_sign": "negative (-) end"
+ },
+ "size": {
+  "min": 140.0,
+  "default": 260.0,
+  "max": 520.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 131.3,
+  "shapes": [
+   {
+    "d": "M13.5 9.5L19.5 9.5C24 9.5 27.6 13.1 27.6 17.5L27.6 113.8C27.6 118.2 24 121.8 19.5 121.8L13.5 121.8C9.1 121.8 5.5 118.2 5.5 113.8L5.5 17.5C5.5 13.1 9.1 9.5 13.5 9.5Z",
+    "fill": "#9aa3b2",
+    "stroke": "text",
+    "strokeWidth": 3.01,
+    "part": "negative_terminal"
+   },
+   {
+    "d": "M27.6 5.5L258.1 5.5C263.7 5.5 268.2 10 268.2 15.5L268.2 115.8C268.2 121.3 263.7 125.8 258.1 125.8L27.6 125.8C22 125.8 17.5 121.3 17.5 115.8L17.5 15.5C17.5 10 22 5.5 27.6 5.5Z",
+    "fill": "#2b2f3a",
+    "stroke": "text",
+    "strokeWidth": 3.01,
+    "part": "casing"
+   },
+   {
+    "d": "M268.2 5.5L346.4 5.5C351.9 5.5 356.4 10 356.4 15.5L356.4 115.8C356.4 121.3 351.9 125.8 346.4 125.8L268.2 125.8C262.6 125.8 258.1 121.3 258.1 115.8L258.1 15.5C258.1 10 262.6 5.5 268.2 5.5Z",
+    "fill": "#e08a2c",
+    "stroke": "text",
+    "strokeWidth": 3.01,
+    "part": "casing"
+   },
+   {
+    "d": "M360.4 41.6L384.5 41.6C390 41.6 394.5 46.1 394.5 51.6L394.5 79.7C394.5 85.2 390 89.7 384.5 89.7L360.4 89.7C354.9 89.7 350.4 85.2 350.4 79.7L350.4 51.6C350.4 46.1 354.9 41.6 360.4 41.6Z",
+    "fill": "#c3c9d4",
+    "stroke": "text",
+    "strokeWidth": 3.01,
+    "part": "positive_terminal"
+   },
+   {
+    "d": "M31.6 21.5L344.4 21.5",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 8.02,
+    "opacity": 0.28
+   },
+   {
+    "d": "M31.6 109.8L344.4 109.8",
+    "fill": "none",
+    "stroke": "#000000",
+    "strokeWidth": 8.02,
+    "opacity": 0.2
+   },
+   {
+    "d": "M295.2 59.6L323.3 59.6C325 59.6 326.3 61 326.3 62.6L326.3 66.7C326.3 68.3 325 69.7 323.3 69.7L295.2 69.7C293.6 69.7 292.2 68.3 292.2 66.7L292.2 62.6C292.2 61 293.6 59.6 295.2 59.6Z",
+    "fill": "#ffffff",
+    "part": "plus_sign"
+   },
+   {
+    "d": "M307.3 47.6L311.3 47.6C312.9 47.6 314.3 49 314.3 50.6L314.3 78.7C314.3 80.4 312.9 81.7 311.3 81.7L307.3 81.7C305.6 81.7 304.3 80.4 304.3 78.7L304.3 50.6C304.3 49 305.6 47.6 307.3 47.6Z",
+    "fill": "#ffffff",
+    "part": "plus_sign"
+   },
+   {
+    "d": "M56.6 59.6L84.7 59.6C86.4 59.6 87.7 61 87.7 62.6L87.7 66.7C87.7 68.3 86.4 69.7 84.7 69.7L56.6 69.7C55 69.7 53.6 68.3 53.6 66.7L53.6 62.6C53.6 61 55 59.6 56.6 59.6Z",
+    "fill": "#ffffff",
+    "part": "minus_sign"
+   }
+  ],
+  "anchors": [
+   {
+    "name": "negative_terminal",
+    "x": 11.5,
+    "y": 64.3
+   },
+   {
+    "name": "casing",
+    "x": 186.5,
+    "y": 65.5
+   },
+   {
+    "name": "positive_terminal",
+    "x": 372.4,
+    "y": 65.6
+   },
+   {
+    "name": "plus_sign",
+    "x": 309.3,
+    "y": 64.6
+   },
+   {
+    "name": "minus_sign",
+    "x": 70.6,
+    "y": 64.7
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/battery.svg"
+ },
+ "quality": {
+  "score": 0.946,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "5 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 0.33 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "9 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "1,280 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "d99dcf8a4cde56eb",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

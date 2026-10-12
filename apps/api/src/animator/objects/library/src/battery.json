@@ -1,0 +1,64 @@
+{
+ "id": "battery",
+ "title": "Battery",
+ "concept": "battery",
+ "view": "a cylindrical cell on its side",
+ "description": "A cylindrical battery (dry cell) lying on its side: the dark casing with a copper band, the positive terminal (+) at the right end and the flat negative end (-) at the left",
+ "aliases": [
+  "battery",
+  "batteries",
+  "cell battery",
+  "dry cell",
+  "electric cell",
+  "aa battery",
+  "torch battery"
+ ],
+ "context": [
+  "circuit",
+  "current",
+  "voltage",
+  "volt",
+  "electric",
+  "electron",
+  "charge",
+  "wire",
+  "bulb",
+  "terminal",
+  "energy",
+  "power",
+  "chemical",
+  "switch",
+  "resistor",
+  "ampere",
+  "amp"
+ ],
+ "not_for": [
+  "battery of tests",
+  "assault and battery",
+  "battery farm",
+  "battery hens"
+ ],
+ "prefer": [
+  "terminal",
+  "positive",
+  "negative",
+  "cell",
+  "circuit"
+ ],
+ "subjects": [
+  "physics",
+  "chemistry"
+ ],
+ "parts": {
+  "casing": "battery",
+  "positive_terminal": "positive terminal",
+  "negative_terminal": "negative terminal",
+  "plus_sign": "positive (+) end",
+  "minus_sign": "negative (-) end"
+ },
+ "size": {
+  "min": 140,
+  "default": 260,
+  "max": 520
+ }
+}

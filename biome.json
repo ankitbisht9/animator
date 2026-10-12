@@ -10,6 +10,7 @@
       "!**/dist",
       "!contracts",
       "!fixtures",
+      "!apps/api/src/animator/objects/library",
       "!packages/engine/src/text/fonts/*.json",
       "!**/test/__snapshots__",
       "!.venv",

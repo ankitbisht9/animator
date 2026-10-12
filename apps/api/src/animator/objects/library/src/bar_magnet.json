@@ -1,0 +1,55 @@
+{
+ "id": "bar_magnet",
+ "title": "Bar magnet",
+ "concept": "bar magnet",
+ "view": "lying flat, north pole at the left",
+ "description": "A bar magnet lying flat: the north pole (red, marked N) at the left, the south pole (blue, marked S) at the right",
+ "aliases": [
+  "bar magnet",
+  "bar magnets",
+  "magnet",
+  "magnets",
+  "permanent magnet"
+ ],
+ "context": [
+  "magnetic",
+  "pole",
+  "north",
+  "south",
+  "attract",
+  "repel",
+  "field",
+  "iron",
+  "compass",
+  "steel",
+  "force",
+  "electromagnet"
+ ],
+ "not_for": [
+  "horseshoe magnet",
+  "fridge magnet",
+  "magnet school",
+  "magnet link",
+  "chick magnet",
+  "people magnet"
+ ],
+ "prefer": [
+  "bar",
+  "pole",
+  "north",
+  "south",
+  "field line"
+ ],
+ "subjects": [
+  "physics"
+ ],
+ "parts": {
+  "north_pole": "north pole (N)",
+  "south_pole": "south pole (S)"
+ },
+ "size": {
+  "min": 140,
+  "default": 280,
+  "max": 560
+ }
+}

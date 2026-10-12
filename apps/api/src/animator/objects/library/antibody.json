@@ -1,0 +1,234 @@
+{
+ "id": "antibody",
+ "version": 1,
+ "title": "Antibody",
+ "concept": "antibody",
+ "description": "An antibody molecule, Y-shaped: two heavy chains (blue) forming the stem and the inner arms, two light chains (light blue) on the outer arms, antigen-binding sites (yellow) at the tips, and the bonds that hold the chains together",
+ "view": "Y-shaped molecule",
+ "aliases": [
+  "antibody",
+  "antibodies",
+  "immunoglobulin",
+  "y shaped antibody",
+  "y-shaped antibody"
+ ],
+ "context": [
+  "immun",
+  "antigen",
+  "pathogen",
+  "virus",
+  "bacteri",
+  "infect",
+  "white blood",
+  "lymphocyte",
+  "b cell",
+  "vaccin",
+  "disease",
+  "defen",
+  "germ",
+  "protein",
+  "blood",
+  "bind"
+ ],
+ "not_for": [
+  "antibody test kit",
+  "antibody test result"
+ ],
+ "prefer": [
+  "binding",
+  "antigen",
+  "y shape",
+  "chain"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "heavy_chain": "heavy chain",
+  "light_chain": "light chain",
+  "binding_site": "antigen-binding site",
+  "disulfide_bonds": "bonds holding the chains",
+  "stem": "stem"
+ },
+ "size": {
+  "min": 70.0,
+  "default": 180.0,
+  "max": 400.0
+ },
+ "art": {
+  "w": 398.1,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M168 393.7L168 191.9L65.6 61.5L99.7 36.6L196 160.8L196 393.7Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 4.66,
+    "part": "heavy_chain"
+   },
+   {
+    "d": "M230.1 393.7L230.1 191.9L332.6 61.5L298.4 36.6L202.2 160.8L202.2 393.7Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 4.66,
+    "part": "heavy_chain"
+   },
+   {
+    "d": "M71.8 69.2L152.5 171.7L135.4 185.7L53.2 83.2Z",
+    "fill": "sky",
+    "stroke": "blue.dark",
+    "strokeWidth": 4.66,
+    "part": "light_chain"
+   },
+   {
+    "d": "M326.4 69.2L245.6 171.7L262.7 185.7L345 83.2Z",
+    "fill": "sky",
+    "stroke": "blue.dark",
+    "strokeWidth": 4.66,
+    "part": "light_chain"
+   },
+   {
+    "d": "M19 101.8C-2.7 73.9 3.5 30.4 37.6 11.8C59.4 -0.6 87.3 8.7 102.8 33.5L65.6 61.5Z",
+    "fill": "yellow",
+    "stroke": "yellow.dark",
+    "strokeWidth": 4.66,
+    "part": "binding_site"
+   },
+   {
+    "d": "M379.1 101.8C400.9 73.9 394.7 30.4 360.5 11.8C338.8 -0.6 310.8 8.7 295.3 33.5L332.6 61.5Z",
+    "fill": "yellow",
+    "stroke": "yellow.dark",
+    "strokeWidth": 4.66,
+    "part": "binding_site"
+   },
+   {
+    "d": "M168 219.8L230.1 219.8",
+    "fill": "none",
+    "stroke": "red",
+    "strokeWidth": 5.43,
+    "part": "disulfide_bonds"
+   },
+   {
+    "d": "M168 244.7L230.1 244.7",
+    "fill": "none",
+    "stroke": "red",
+    "strokeWidth": 5.43,
+    "part": "disulfide_bonds"
+   },
+   {
+    "d": "M105.9 157.7L127.7 139.1",
+    "fill": "none",
+    "stroke": "red",
+    "strokeWidth": 5.43,
+    "part": "disulfide_bonds"
+   },
+   {
+    "d": "M292.2 157.7L270.5 139.1",
+    "fill": "none",
+    "stroke": "red",
+    "strokeWidth": 5.43,
+    "part": "disulfide_bonds"
+   },
+   {
+    "d": "M177.3 368.8L177.3 198.1L93.5 92.5",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 6.21,
+    "opacity": 0.4
+   }
+  ],
+  "anchors": [
+   {
+    "name": "stem",
+    "x": 199.1,
+    "y": 337.8
+   },
+   {
+    "name": "heavy_chain",
+    "x": 173.7,
+    "y": 165.4
+   },
+   {
+    "name": "light_chain",
+    "x": 265.6,
+    "y": 164.3
+   },
+   {
+    "name": "binding_site",
+    "x": 46.5,
+    "y": 40.1
+   },
+   {
+    "name": "disulfide_bonds",
+    "x": 199.1,
+    "y": 219.8
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/antibody.svg"
+ },
+ "quality": {
+  "score": 0.938,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "4 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.00 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "11 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "516 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "f39d9ab8cfffa12e",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

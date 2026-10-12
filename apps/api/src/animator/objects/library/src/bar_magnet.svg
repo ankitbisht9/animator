@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 140">
+  <!-- A bar magnet: north pole (red) and south pole (blue), marked N and S. -->
+  <rect data-part="north_pole" x="14" y="20" width="200" height="100" rx="10" data-fill="red" data-stroke="red.dark" stroke-width="4"/>
+  <rect data-part="south_pole" x="206" y="20" width="200" height="100" rx="10" data-fill="blue" data-stroke="blue.dark" stroke-width="4"/>
+  <path d="M206 24 L206 116" fill="none" data-stroke="text" stroke-width="3"/>
+  <path d="M30 36 L392 36" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="8" opacity="0.3"/>
+  <path data-part="north_pole" d="M72 96 L72 44 L106 96 L106 44" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="9"/>
+  <path data-part="south_pole" d="M338 52 C334 44 326 42 316 42 C304 42 296 50 298 58 C300 66 310 68 318 70 C328 72 338 76 338 86 C338 94 330 100 318 100 C306 100 298 96 296 88" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="9"/>
+  <circle data-anchor="north_pole" cx="40" cy="70" r="1"/>
+  <circle data-anchor="south_pole" cx="380" cy="70" r="1"/>
+</svg>

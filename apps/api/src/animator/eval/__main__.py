@@ -26,6 +26,7 @@ from animator.jobs.runner import GenerationRunner
 from animator.jobs.store import FileStore
 from animator.llm import ModelCatalog, PriceTable
 from animator.llm.openai_client import OpenAILLM
+from animator.objects.service import ObjectLibrary
 from animator.pipeline.generator import Pipeline
 from animator.pipeline.models import GenerationRequest
 
@@ -95,7 +96,10 @@ async def run(args: argparse.Namespace) -> int:
             PriceTable.load(settings.resolve(settings.animator_pricing_file)),
             ModelCatalog.load(settings.resolve(settings.animator_models_file)),
         )
-        runner = GenerationRunner(FileStore(out), Pipeline(EngineClient(pool), llm, settings), settings)
+        # Saved drawings are read as lessons would; evaluation lessons record no uses (ADR-055).
+        objects = ObjectLibrary(settings, record=False) if settings.animator_objects_enabled else None
+        pipeline = Pipeline(EngineClient(pool), llm, settings, objects=objects)
+        runner = GenerationRunner(FileStore(out), pipeline, settings)
         rows: list[dict[str, Any]] = []
         for t in topics:
             req = GenerationRequest(

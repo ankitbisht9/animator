@@ -1,0 +1,61 @@
+{
+ "id": "plant_cell",
+ "title": "Plant cell",
+ "concept": "plant cell",
+ "view": "cut open, from above",
+ "description": "A typical plant cell, box-shaped: the cell wall, the cell membrane just inside it, the cytoplasm, a large central vacuole, the nucleus with its nucleolus, green chloroplasts and two mitochondria",
+ "aliases": [
+  "plant cell",
+  "plant cells",
+  "leaf cell",
+  "cell of a plant"
+ ],
+ "context": [
+  "plant",
+  "leaf",
+  "leaves",
+  "cell",
+  "photosynth",
+  "chloroplast",
+  "vacuole",
+  "cell wall",
+  "organelle",
+  "biology",
+  "tissue",
+  "nucleus"
+ ],
+ "not_for": [
+  "solar cell",
+  "fuel cell",
+  "prison cell",
+  "battery cell",
+  "cell phone",
+  "spreadsheet cell"
+ ],
+ "prefer": [
+  "vacuole",
+  "cell wall",
+  "chloroplast",
+  "organelle",
+  "nucleus",
+  "inside"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "cell_wall": "cell wall",
+  "cell_membrane": "cell membrane",
+  "cytoplasm": "cytoplasm",
+  "vacuole": "vacuole",
+  "nucleus": "nucleus",
+  "nucleolus": "nucleolus",
+  "chloroplasts": "chloroplasts",
+  "mitochondria": "mitochondria"
+ },
+ "size": {
+  "min": 260,
+  "default": 420,
+  "max": 660
+ }
+}

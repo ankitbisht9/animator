@@ -3688,3 +3688,212 @@ a.quota:hover {
 :root[data-theme="dark"] .subject-pill.on {
   background: color-mix(in srgb, var(--ink) 10%, transparent);
 }
+
+/* ---------------------------------------------------------------- saved drawings (ADR-055) */
+
+.objects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 14px 0 18px;
+}
+
+.object-card {
+  display: grid;
+  grid-template-rows: 170px auto;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.object-card:hover,
+.object-card:focus-visible {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.object-card-art,
+.object-detail-art > svg {
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: #f4f7fc;
+}
+
+.dark-preview .object-card-art,
+.object-detail-art.dark-preview > svg {
+  background: #0f1729;
+}
+
+.object-card-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.object-card-body b {
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.object-card-body small {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.object-card-tags,
+.object-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.object-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.object-detail-art {
+  display: grid;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+}
+
+.object-detail-art > svg {
+  padding: 10px;
+  max-width: 100%;
+  height: auto;
+}
+
+.object-detail-form,
+.import-form {
+  display: grid;
+  gap: 12px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-row.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.object-parts {
+  display: grid;
+  gap: 6px;
+}
+
+.object-part {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.object-part code {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.object-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.object-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.object-checks li {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.object-checks li.ok svg {
+  color: var(--success);
+}
+
+.object-checks li.bad {
+  color: var(--danger);
+}
+
+.object-checks small {
+  color: var(--muted);
+}
+
+.figure-anchor {
+  fill: #00c2ff;
+  stroke: #0b1020;
+}
+
+.figure-anchor-label {
+  fill: #0b1020;
+  stroke: #ffffff;
+  paint-order: stroke;
+  font-family: var(--font-sans);
+}
+
+.plain-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.ui-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.ui-file input {
+  max-width: 220px;
+}
+
+.match-results h3 {
+  margin: 8px 0 4px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+@media (max-width: 760px) {
+  .object-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .object-detail-art {
+    position: static;
+  }
+
+  .form-row,
+  .form-row.three {
+    grid-template-columns: 1fr;
+  }
+}

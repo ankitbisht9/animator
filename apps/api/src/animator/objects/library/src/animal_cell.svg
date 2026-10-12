@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 340">
+  <!-- An animal cell: membrane, cytoplasm, nucleus, mitochondria, endoplasmic reticulum, Golgi, lysosomes, ribosomes. -->
+  <path data-part="cytoplasm" d="M60 70 C110 18 220 6 300 26 C380 46 418 110 410 180 C402 252 350 316 250 330 C150 344 60 310 26 246 C-4 188 14 118 60 70 Z" data-fill="orange.soft" stroke-width="0"/>
+  <path data-part="cell_membrane" d="M60 70 C110 18 220 6 300 26 C380 46 418 110 410 180 C402 252 350 316 250 330 C150 344 60 310 26 246 C-4 188 14 118 60 70 Z" fill="none" data-stroke="orange.dark" stroke-width="5"/>
+  <path d="M68 78 C116 30 220 18 298 38 C372 58 404 116 398 180" fill="none" data-stroke="orange.light" stroke-width="3" opacity="0.8"/>
+  <!-- Endoplasmic reticulum around the nucleus -->
+  <g data-part="endoplasmic_reticulum" fill="none" data-stroke="blue" stroke-width="3">
+    <path d="M138 108 C150 96 170 92 186 98 C200 104 214 100 226 92"/>
+    <path d="M128 124 C144 110 172 106 192 112 C210 118 226 112 240 104"/>
+    <path d="M250 150 C262 168 262 192 252 212 C246 226 250 240 260 250"/>
+    <path d="M266 144 C280 166 280 196 268 218 C262 232 266 246 276 256"/>
+  </g>
+  <g data-part="ribosomes" data-fill="blue.dark" stroke-width="0">
+    <circle cx="150" cy="99" r="2.6"/><circle cx="176" cy="94" r="2.6"/><circle cx="206" cy="102" r="2.6"/>
+    <circle cx="160" cy="111" r="2.6"/><circle cx="212" cy="116" r="2.6"/><circle cx="259" cy="174" r="2.6"/>
+    <circle cx="256" cy="206" r="2.6"/><circle cx="276" cy="186" r="2.6"/><circle cx="273" cy="224" r="2.6"/>
+    <circle cx="90" cy="250" r="2.6"/><circle cx="330" cy="96" r="2.6"/><circle cx="346" cy="240" r="2.6"/>
+    <circle cx="120" cy="290" r="2.6"/><circle cx="300" cy="290" r="2.6"/><circle cx="70" cy="150" r="2.6"/>
+  </g>
+  <!-- Nucleus with its nucleolus -->
+  <circle data-part="nucleus" cx="196" cy="178" r="56" data-fill="purple.light" data-stroke="purple.dark" stroke-width="3"/>
+  <circle data-part="nucleolus" cx="208" cy="170" r="18" data-fill="purple.dark" stroke-width="0"/>
+  <!-- Golgi apparatus -->
+  <g data-part="golgi_apparatus" fill="none" data-stroke="yellow.dark" stroke-width="6">
+    <path d="M300 92 C318 100 336 104 356 102"/>
+    <path d="M296 106 C316 116 338 120 360 116"/>
+    <path d="M294 120 C314 132 338 136 362 130"/>
+  </g>
+  <g data-part="golgi_apparatus" data-fill="yellow" data-stroke="yellow.dark" stroke-width="1.5">
+    <circle cx="370" cy="108" r="5"/><circle cx="372" cy="128" r="4"/>
+  </g>
+  <!-- Mitochondria -->
+  <g data-part="mitochondria">
+    <g data-fill="red.light" data-stroke="red.dark" stroke-width="2.5">
+      <ellipse cx="96" cy="196" rx="30" ry="15" transform="rotate(-25 96 196)"/>
+      <ellipse cx="318" cy="234" rx="30" ry="15" transform="rotate(20 318 234)"/>
+      <ellipse cx="190" cy="280" rx="30" ry="14"/>
+    </g>
+    <g fill="none" data-stroke="red.dark" stroke-width="1.8">
+      <path d="M74 204 L80 194 L88 208 L96 192 L104 204 L112 190 L118 196" transform="rotate(-25 96 196)"/>
+      <path d="M296 226 L302 236 L310 222 L318 238 L326 224 L334 238 L340 232" transform="rotate(20 318 234)"/>
+      <path d="M168 280 L174 272 L182 288 L190 272 L198 288 L206 272 L212 280"/>
+    </g>
+  </g>
+  <!-- Lysosomes -->
+  <g data-part="lysosomes" data-fill="green" data-stroke="green.dark" stroke-width="2">
+    <circle cx="118" cy="122" r="9"/><circle cx="352" cy="180" r="8"/><circle cx="252" cy="62" r="8"/>
+  </g>
+  <path d="M84 84 C120 50 176 34 236 32" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="6" opacity="0.45"/>
+</svg>

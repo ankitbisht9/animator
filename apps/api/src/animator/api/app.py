@@ -27,6 +27,7 @@ from animator.export.site import WEB_DIST
 from animator.jobs.runner import GenerationRunner
 from animator.jobs.store import FileStore, GenerationStore, MemoryStore
 from animator.llm import LLMClient, build_llm
+from animator.objects.harvest import Harvester
 from animator.observability import setup_logging
 from animator.pipeline.generator import KeyframeSource, Pipeline
 from animator.platform import Platform, PlatformSettings, serve_web
@@ -79,6 +80,16 @@ def create_app(
         llm_client = llm or build_llm()
         pipeline = Pipeline(engine, llm_client, s, frames, speech)
         runner = GenerationRunner(the_store, pipeline, s)
+        # Saved drawings (ADR-055): the library cost-saver lessons use, and the warehouse's harvest
+        # of finished lessons (in the background when ANIMATOR_OBJECTS_HARVEST, else on request).
+        app.state.objects = pipeline.objects
+        app.state.harvester = (
+            Harvester(pipeline.objects.store, engine, the_store, s, busy=runner.busy)
+            if pipeline.objects is not None
+            else None
+        )
+        if app.state.harvester is not None and s.animator_objects_harvest:
+            app.state.harvester.start()
         app.state.settings = s
         app.state.speech = speech
         app.state.runner = runner
@@ -98,6 +109,8 @@ def create_app(
         finally:
             if plat is not None:
                 await plat.close()
+            if app.state.harvester is not None:
+                await app.state.harvester.close()
             await runner.close()
             await app.state.exports.close()
             if owned_frames is not None:

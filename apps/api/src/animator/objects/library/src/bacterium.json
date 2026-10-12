@@ -1,0 +1,68 @@
+{
+ "id": "bacterium",
+ "title": "Bacterium",
+ "concept": "bacterium",
+ "view": "rod-shaped, cut open",
+ "description": "A rod-shaped bacterium cut open: the capsule, the cell wall, the cytoplasm with ribosomes, a loop of DNA (nucleoid) and plasmids, hair-like pili and a whip-like flagellum",
+ "aliases": [
+  "bacterium",
+  "bacteria",
+  "bacterial cell",
+  "bacillus",
+  "prokaryote",
+  "prokaryotic cell",
+  "e coli"
+ ],
+ "context": [
+  "infect",
+  "disease",
+  "immun",
+  "antibiot",
+  "microb",
+  "cell",
+  "dna",
+  "divid",
+  "reproduc",
+  "pathogen",
+  "white blood",
+  "antibod",
+  "decompos",
+  "ferment",
+  "gut",
+  "hygien",
+  "vaccin",
+  "microscope",
+  "biology"
+ ],
+ "not_for": [
+  "germ theory diagram",
+  "wheat germ"
+ ],
+ "prefer": [
+  "flagell",
+  "pili",
+  "plasmid",
+  "nucleoid",
+  "cell wall",
+  "capsule",
+  "inside"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "capsule": "capsule",
+  "cell_wall": "cell wall",
+  "cytoplasm": "cytoplasm",
+  "nucleoid": "DNA (nucleoid)",
+  "plasmids": "plasmids",
+  "ribosomes": "ribosomes",
+  "pili": "pili",
+  "flagellum": "flagellum"
+ },
+ "size": {
+  "min": 100,
+  "default": 300,
+  "max": 600
+ }
+}

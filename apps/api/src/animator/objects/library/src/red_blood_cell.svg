@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <!-- A red blood cell seen from above: a disc that is thinner in the middle (biconcave). No nucleus. -->
+  <circle data-part="rim" cx="150" cy="150" r="136" data-fill="red" data-stroke="red.dark" stroke-width="4"/>
+  <circle cx="150" cy="150" r="118" fill="none" data-stroke="red.light" stroke-width="10" opacity="0.6"/>
+  <circle data-part="thin_center" cx="158" cy="158" r="70" data-fill="red.dark" stroke-width="0" opacity="0.35"/>
+  <circle data-part="thin_center" cx="150" cy="150" r="64" data-fill="red.light" stroke-width="0"/>
+  <path d="M60 110 C76 74 110 50 150 46" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="10" opacity="0.35"/>
+</svg>

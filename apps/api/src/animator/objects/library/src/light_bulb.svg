@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 420">
+  <!-- An incandescent light bulb: glass, filament on two support wires, screw base and contact. -->
+  <path data-part="glass" d="M130 10 C196 10 246 60 246 124 C246 168 222 196 200 220 C186 236 178 252 176 272 L84 272 C82 252 74 236 60 220 C38 196 14 168 14 124 C14 60 64 10 130 10 Z" data-fill="yellow.light" data-stroke="yellow.dark" stroke-width="3" opacity="0.6"/>
+  <path data-part="glass" d="M130 10 C196 10 246 60 246 124 C246 168 222 196 200 220 C186 236 178 252 176 272 L84 272 C82 252 74 236 60 220 C38 196 14 168 14 124 C14 60 64 10 130 10 Z" fill="none" data-stroke="yellow.dark" stroke-width="3"/>
+  <g data-part="wires" fill="none" data-stroke="gray.dark" stroke-width="3">
+    <path d="M110 272 L110 200 L84 136"/>
+    <path d="M150 272 L150 200 L176 136"/>
+  </g>
+  <path data-part="filament" d="M84 136 C90 120 96 152 102 136 C108 120 114 152 120 136 C126 120 132 152 138 136 C144 120 150 152 156 136 C162 120 168 152 176 136" fill="none" data-stroke="orange.dark" stroke-width="4"/>
+  <path d="M60 80 C76 50 100 34 126 30" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="10" opacity="0.55"/>
+  <path data-part="base" d="M82 270 L178 270 L176 352 C176 360 170 366 162 366 L98 366 C90 366 84 360 84 352 Z" data-fill="gray.light" data-stroke="gray.dark" stroke-width="3"/>
+  <g data-part="base" fill="none" data-stroke="gray.dark" stroke-width="3">
+    <path d="M84 290 L176 298"/><path d="M84 310 L176 318"/><path d="M84 330 L176 338"/>
+  </g>
+  <path data-part="contact" d="M104 366 L156 366 L150 392 C148 400 142 404 134 404 L126 404 C118 404 112 400 110 392 Z" data-fill="text" data-stroke="text" stroke-width="2"/>
+</svg>

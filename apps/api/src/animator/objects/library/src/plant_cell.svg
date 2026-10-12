@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 320">
+  <!-- A plant cell: wall, membrane, cytoplasm, a large vacuole, nucleus, chloroplasts, mitochondria. -->
+  <path data-part="cell_wall" d="M24 20 L416 16 C428 16 434 24 434 36 L436 284 C436 296 428 304 416 304 L28 306 C16 306 8 298 8 286 L6 38 C6 26 12 20 24 20 Z" data-fill="green" data-stroke="green.dark" stroke-width="3"/>
+  <path data-part="cytoplasm" d="M30 34 L410 30 C416 30 420 34 420 40 L422 280 C422 286 418 290 412 290 L32 292 C26 292 22 288 22 282 L20 44 C20 38 24 34 30 34 Z" data-fill="green.soft" stroke-width="0"/>
+  <path data-part="cell_membrane" d="M30 34 L410 30 C416 30 420 34 420 40 L422 280 C422 286 418 290 412 290 L32 292 C26 292 22 288 22 282 L20 44 C20 38 24 34 30 34 Z" fill="none" data-stroke="yellow.dark" stroke-width="4"/>
+  <!-- Vacuole -->
+  <path data-part="vacuole" d="M140 82 C190 64 300 68 340 92 C372 112 374 196 344 222 C302 254 196 252 150 230 C108 210 104 104 140 82 Z" data-fill="sky.light" data-stroke="fluid.dark" stroke-width="2.5"/>
+  <path d="M160 100 C200 86 260 86 300 98" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="6" opacity="0.5"/>
+  <!-- Nucleus with its nucleolus -->
+  <circle data-part="nucleus" cx="80" cy="102" r="38" data-fill="purple.light" data-stroke="purple.dark" stroke-width="3"/>
+  <circle data-part="nucleolus" cx="88" cy="96" r="13" data-fill="purple.dark" stroke-width="0"/>
+  <!-- Chloroplasts -->
+  <g data-part="chloroplasts">
+    <g data-fill="green" data-stroke="green.dark" stroke-width="2">
+      <ellipse cx="66" cy="196" rx="24" ry="12" transform="rotate(-20 66 196)"/>
+      <ellipse cx="88" cy="252" rx="24" ry="12" transform="rotate(15 88 252)"/>
+      <ellipse cx="210" cy="264" rx="24" ry="12"/>
+      <ellipse cx="300" cy="260" rx="24" ry="12" transform="rotate(-10 300 260)"/>
+      <ellipse cx="392" cy="210" rx="12" ry="24" transform="rotate(10 392 210)"/>
+      <ellipse cx="388" cy="96" rx="12" ry="24" transform="rotate(-15 388 96)"/>
+      <ellipse cx="230" cy="54" rx="24" ry="11"/>
+    </g>
+    <g fill="none" data-stroke="green.dark" stroke-width="1.6">
+      <path d="M52 200 L80 190"/><path d="M56 192 L76 186"/>
+      <path d="M74 248 L102 256"/><path d="M78 256 L98 262"/>
+      <path d="M196 264 L224 264"/><path d="M200 258 L220 258"/>
+      <path d="M286 262 L314 258"/><path d="M290 268 L310 265"/>
+      <path d="M390 196 L394 224"/><path d="M384 200 L387 220"/>
+      <path d="M384 82 L392 110"/><path d="M378 88 L384 106"/>
+      <path d="M216 54 L244 54"/><path d="M220 60 L240 60"/>
+    </g>
+  </g>
+  <!-- Mitochondria -->
+  <g data-part="mitochondria">
+    <ellipse cx="148" cy="270" rx="20" ry="10" data-fill="orange" data-stroke="orange.dark" stroke-width="2"/>
+    <ellipse cx="370" cy="150" rx="10" ry="20" data-fill="orange" data-stroke="orange.dark" stroke-width="2"/>
+    <path d="M134 270 L140 264 L146 276 L152 264 L158 276 L162 270" fill="none" data-stroke="orange.dark" stroke-width="1.6"/>
+    <path d="M370 136 L364 142 L376 148 L364 154 L376 160 L370 164" fill="none" data-stroke="orange.dark" stroke-width="1.6"/>
+  </g>
+  <circle data-anchor="cell_wall" cx="13" cy="160" r="1"/>
+</svg>

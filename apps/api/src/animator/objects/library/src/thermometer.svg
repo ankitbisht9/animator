@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 400">
+  <!-- A liquid-in-glass thermometer: bulb, red liquid column, scale. -->
+  <path data-part="tube" d="M38 30 C38 18 48 10 60 10 C72 10 82 18 82 30 L82 300 L38 300 Z" data-fill="#f4f6fa" data-stroke="gray.dark" stroke-width="4"/>
+  <circle data-part="bulb" cx="60" cy="336" r="44" data-fill="red" data-stroke="red.dark" stroke-width="4"/>
+  <rect data-part="liquid" x="52" y="140" width="16" height="200" rx="4" data-fill="red" stroke-width="0"/>
+  <g data-part="scale" fill="none" data-stroke="gray.dark" stroke-width="3">
+    <path d="M82 60 L100 60"/><path d="M82 90 L94 90"/><path d="M82 120 L100 120"/><path d="M82 150 L94 150"/>
+    <path d="M82 180 L100 180"/><path d="M82 210 L94 210"/><path d="M82 240 L100 240"/><path d="M82 270 L94 270"/>
+  </g>
+  <path d="M46 36 L46 290" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="5" opacity="0.7"/>
+  <circle cx="46" cy="322" r="10" fill="#ffffff" data-fill="#ffffff" stroke-width="0" opacity="0.4"/>
+</svg>

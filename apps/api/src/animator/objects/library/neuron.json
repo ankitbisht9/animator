@@ -1,0 +1,383 @@
+{
+ "id": "neuron",
+ "version": 1,
+ "title": "Neuron",
+ "concept": "neuron",
+ "description": "A nerve cell (motor neuron) lying left to right: branching dendrites, the cell body with its nucleus, the long axon wrapped in a myelin sheath with gaps (nodes of Ranvier), and the axon terminals at the right end",
+ "view": "lying along its length",
+ "aliases": [
+  "neuron",
+  "neurons",
+  "neurone",
+  "nerve cell",
+  "nerve cells",
+  "motor neuron",
+  "brain cell"
+ ],
+ "context": [
+  "nerve",
+  "brain",
+  "signal",
+  "impulse",
+  "synapse",
+  "spinal",
+  "nervous",
+  "axon",
+  "dendrite",
+  "message",
+  "electrical",
+  "reflex",
+  "sense",
+  "receptor",
+  "muscle",
+  "memory",
+  "learn"
+ ],
+ "not_for": [
+  "neural network",
+  "artificial neuron",
+  "neuron in a network"
+ ],
+ "prefer": [
+  "axon",
+  "dendrite",
+  "myelin",
+  "synapse",
+  "impulse",
+  "signal"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "dendrites": "dendrites",
+  "cell_body": "cell body",
+  "nucleus": "nucleus",
+  "axon": "axon",
+  "myelin_sheath": "myelin sheath",
+  "node_of_ranvier": "node of Ranvier",
+  "axon_terminals": "axon terminals"
+ },
+ "size": {
+  "min": 200.0,
+  "default": 420.0,
+  "max": 720.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 176.2,
+  "shapes": [
+   {
+    "d": "M67.4 70.6C54.6 49.8 40.3 38.7 22.7 33.9",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 5.58,
+    "part": "dendrites"
+   },
+   {
+    "d": "M46.6 45.1C43.5 30.7 45.1 18 51.4 6.8",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 5.58,
+    "part": "dendrites"
+   },
+   {
+    "d": "M62.6 105.6C46.6 113.6 30.7 128 18 147.1",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 5.58,
+    "part": "dendrites"
+   },
+   {
+    "d": "M35.5 124.8C25.9 123.2 16.4 126.4 6.8 131.1",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 5.58,
+    "part": "dendrites"
+   },
+   {
+    "d": "M81.7 59.4C80.1 41.9 84.9 25.9 94.5 13.2",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 5.58,
+    "part": "dendrites"
+   },
+   {
+    "d": "M86.5 118.4C84.9 137.5 88.1 153.5 96.1 169.4",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 5.58,
+    "part": "dendrites"
+   },
+   {
+    "d": "M54.6 86.5C40.3 84.9 25.9 81.7 10 75.3",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 5.58,
+    "part": "dendrites"
+   },
+   {
+    "d": "M67.4 70.6C54.6 49.8 40.3 38.7 22.7 33.9",
+    "fill": "none",
+    "stroke": "pink",
+    "strokeWidth": 3.19,
+    "part": "dendrites"
+   },
+   {
+    "d": "M46.6 45.1C43.5 30.7 45.1 18 51.4 6.8",
+    "fill": "none",
+    "stroke": "pink",
+    "strokeWidth": 3.19,
+    "part": "dendrites"
+   },
+   {
+    "d": "M62.6 105.6C46.6 113.6 30.7 128 18 147.1",
+    "fill": "none",
+    "stroke": "pink",
+    "strokeWidth": 3.19,
+    "part": "dendrites"
+   },
+   {
+    "d": "M35.5 124.8C25.9 123.2 16.4 126.4 6.8 131.1",
+    "fill": "none",
+    "stroke": "pink",
+    "strokeWidth": 3.19,
+    "part": "dendrites"
+   },
+   {
+    "d": "M81.7 59.4C80.1 41.9 84.9 25.9 94.5 13.2",
+    "fill": "none",
+    "stroke": "pink",
+    "strokeWidth": 3.19,
+    "part": "dendrites"
+   },
+   {
+    "d": "M86.5 118.4C84.9 137.5 88.1 153.5 96.1 169.4",
+    "fill": "none",
+    "stroke": "pink",
+    "strokeWidth": 3.19,
+    "part": "dendrites"
+   },
+   {
+    "d": "M54.6 86.5C40.3 84.9 25.9 81.7 10 75.3",
+    "fill": "none",
+    "stroke": "pink",
+    "strokeWidth": 3.19,
+    "part": "dendrites"
+   },
+   {
+    "d": "M110.4 83.3L340 83.3L340 96.1L110.4 96.1Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 1.99,
+    "part": "axon"
+   },
+   {
+    "d": "M57.8 89.7C53 69 67.4 53 88.1 54.6C107.2 56.2 120 70.6 118.4 89.7C116.8 110.4 100.9 123.2 81.7 121.6C65.8 120 61 105.6 57.8 89.7Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 2.39,
+    "part": "cell_body"
+   },
+   {
+    "d": "M72.2 88.1C72.2 96 78.6 102.4 86.5 102.4C94.4 102.4 100.9 96 100.9 88.1C100.9 80.2 94.4 73.8 86.5 73.8C78.6 73.8 72.2 80.2 72.2 88.1Z",
+    "fill": "purple",
+    "stroke": "purple.dark",
+    "strokeWidth": 1.99,
+    "part": "nucleus"
+   },
+   {
+    "d": "M84.9 84.9C84.9 87.6 87.1 89.7 89.7 89.7C92.3 89.7 94.5 87.6 94.5 84.9C94.5 82.3 92.3 80.1 89.7 80.1C87.1 80.1 84.9 82.3 84.9 84.9Z",
+    "fill": "purple.dark",
+    "part": "nucleus"
+   },
+   {
+    "d": "M143.9 73.8L158.2 73.8C166.2 73.8 172.6 80.2 172.6 88.1L172.6 91.3C172.6 99.2 166.2 105.6 158.2 105.6L143.9 105.6C136 105.6 129.6 99.2 129.6 91.3L129.6 88.1C129.6 80.2 136 73.8 143.9 73.8Z",
+    "fill": "yellow.light",
+    "stroke": "yellow.dark",
+    "strokeWidth": 1.99,
+    "part": "myelin_sheath"
+   },
+   {
+    "d": "M194.9 73.8L209.3 73.8C217.2 73.8 223.6 80.2 223.6 88.1L223.6 91.3C223.6 99.2 217.2 105.6 209.3 105.6L194.9 105.6C187 105.6 180.6 99.2 180.6 91.3L180.6 88.1C180.6 80.2 187 73.8 194.9 73.8Z",
+    "fill": "yellow.light",
+    "stroke": "yellow.dark",
+    "strokeWidth": 1.99,
+    "part": "myelin_sheath"
+   },
+   {
+    "d": "M245.9 73.8L260.3 73.8C268.2 73.8 274.6 80.2 274.6 88.1L274.6 91.3C274.6 99.2 268.2 105.6 260.3 105.6L245.9 105.6C238 105.6 231.6 99.2 231.6 91.3L231.6 88.1C231.6 80.2 238 73.8 245.9 73.8Z",
+    "fill": "yellow.light",
+    "stroke": "yellow.dark",
+    "strokeWidth": 1.99,
+    "part": "myelin_sheath"
+   },
+   {
+    "d": "M297 73.8L311.3 73.8C319.2 73.8 325.7 80.2 325.7 88.1L325.7 91.3C325.7 99.2 319.2 105.6 311.3 105.6L297 105.6C289 105.6 282.6 99.2 282.6 91.3L282.6 88.1C282.6 80.2 289 73.8 297 73.8Z",
+    "fill": "yellow.light",
+    "stroke": "yellow.dark",
+    "strokeWidth": 1.99,
+    "part": "myelin_sheath"
+   },
+   {
+    "d": "M338.4 89.7C352.8 76.9 363.9 62.6 370.3 45.1",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 3.99,
+    "part": "axon_terminals"
+   },
+   {
+    "d": "M338.4 89.7C355.9 89.7 371.9 89.7 386.2 86.5",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 3.99,
+    "part": "axon_terminals"
+   },
+   {
+    "d": "M338.4 89.7C352.8 104 363.9 118.4 371.9 135.9",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 3.99,
+    "part": "axon_terminals"
+   },
+   {
+    "d": "M357.5 70.6C365.5 73.8 373.5 75.3 381.5 72.2",
+    "fill": "none",
+    "stroke": "pink.dark",
+    "strokeWidth": 3.99,
+    "part": "axon_terminals"
+   },
+   {
+    "d": "M363.9 41.9C363.9 45.8 367.1 49 371.1 49C375.1 49 378.3 45.8 378.3 41.9C378.3 37.9 375.1 34.7 371.1 34.7C367.1 34.7 363.9 37.9 363.9 41.9Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 1.99,
+    "part": "axon_terminals"
+   },
+   {
+    "d": "M380.7 86.5C380.7 90.5 383.9 93.7 387.8 93.7C391.8 93.7 395 90.5 395 86.5C395 82.5 391.8 79.3 387.8 79.3C383.9 79.3 380.7 82.5 380.7 86.5Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 1.99,
+    "part": "axon_terminals"
+   },
+   {
+    "d": "M366.3 139.1C366.3 143.1 369.5 146.3 373.5 146.3C377.4 146.3 380.7 143.1 380.7 139.1C380.7 135.2 377.4 131.9 373.5 131.9C369.5 131.9 366.3 135.2 366.3 139.1Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 1.99,
+    "part": "axon_terminals"
+   },
+   {
+    "d": "M378.3 71.4C378.3 74.4 380.8 76.9 383.8 76.9C386.9 76.9 389.4 74.4 389.4 71.4C389.4 68.3 386.9 65.8 383.8 65.8C380.8 65.8 378.3 68.3 378.3 71.4Z",
+    "fill": "pink",
+    "stroke": "pink.dark",
+    "strokeWidth": 1.99,
+    "part": "axon_terminals"
+   }
+  ],
+  "anchors": [
+   {
+    "name": "node_of_ranvier",
+    "x": 176.6,
+    "y": 89.7
+   },
+   {
+    "name": "axon",
+    "x": 227.6,
+    "y": 89.7
+   },
+   {
+    "name": "dendrites",
+    "x": 32.3,
+    "y": 40.3
+   },
+   {
+    "name": "cell_body",
+    "x": 83.9,
+    "y": 111.9
+   },
+   {
+    "name": "nucleus",
+    "x": 82.3,
+    "y": 93.9
+   },
+   {
+    "name": "myelin_sheath",
+    "x": 207.5,
+    "y": 89.7
+   },
+   {
+    "name": "axon_terminals",
+    "x": 374.7,
+    "y": 140.3
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/neuron.svg"
+ },
+ "quality": {
+  "score": 1.0,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "6 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 0.44 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "30 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "2,498 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "e37e0afb3e38c985",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

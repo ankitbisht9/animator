@@ -1,0 +1,14 @@
+{
+ "id": "water_molecule",
+ "title": "Water molecule",
+ "concept": "water molecule",
+ "view": "ball and stick",
+ "description": "A water molecule (H2O) as balls and sticks: a red oxygen atom bonded to two white hydrogen atoms at an angle",
+ "aliases": ["water molecule", "water molecules", "h2o", "h2o molecule", "molecule of water"],
+ "context": ["atom", "bond", "oxygen", "hydrogen", "polar", "chemical", "chemistry", "molecul", "evaporat", "boil", "freez", "liquid", "gas", "photosynth", "react", "formula"],
+ "not_for": ["water molecule count"],
+ "prefer": ["ball", "stick", "bond", "angle", "atom"],
+ "subjects": ["chemistry"],
+ "parts": {"oxygen": "oxygen atom", "hydrogen": "hydrogen atoms", "bonds": "bonds"},
+ "size": {"min": 60, "default": 180, "max": 360}
+}

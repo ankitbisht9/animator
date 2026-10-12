@@ -20,7 +20,7 @@ export interface SceneSummary {
 }
 
 /** classic: laid out as the scene writer places things; planned: a stage plan, measured and placed by the layout planner (ADR-047). */
-export type LayoutMode = "classic" | "planned";
+export type LayoutMode = "classic" | "planned" | "costsaver";
 
 export interface GenerationSummary {
   id: string;

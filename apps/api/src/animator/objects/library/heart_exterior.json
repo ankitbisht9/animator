@@ -1,0 +1,419 @@
+{
+ "id": "heart_exterior",
+ "version": 1,
+ "title": "Human heart",
+ "concept": "human heart",
+ "description": "The heart as an organ, seen from the front: the two ventricles and the apex, the right atrium and the left atrium's ear, the aorta arching over the top with its branches, the pulmonary artery, the venae cavae (blue) and the coronary vessels on its surface",
+ "view": "outside, from the front",
+ "aliases": [
+  "heart",
+  "human heart",
+  "the heart"
+ ],
+ "context": [
+  "blood",
+  "pump",
+  "circulat",
+  "arter",
+  "vein",
+  "vessel",
+  "organ",
+  "ventric",
+  "atri",
+  "atrium",
+  "cardi",
+  "heartbeat",
+  "beat",
+  "pulse",
+  "oxygen",
+  "aorta",
+  "chest",
+  "valve",
+  "lung",
+  "body",
+  "anatom"
+ ],
+ "not_for": [
+  "heart shape",
+  "heart shaped",
+  "heart symbol",
+  "heart icon",
+  "heart emoji",
+  "broken heart",
+  "by heart",
+  "heart sign"
+ ],
+ "prefer": [
+  "outside",
+  "exterior",
+  "front",
+  "surface",
+  "coronary",
+  "aorta",
+  "vessel",
+  "shape of the heart",
+  "fist"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "aorta": "aorta",
+  "superior_vena_cava": "superior vena cava",
+  "inferior_vena_cava": "inferior vena cava",
+  "pulmonary_artery": "pulmonary artery",
+  "pulmonary_veins": "pulmonary veins",
+  "left_atrium": "left atrium",
+  "right_atrium": "right atrium",
+  "left_ventricle": "left ventricle",
+  "right_ventricle": "right ventricle",
+  "coronary_arteries": "coronary arteries"
+ },
+ "size": {
+  "min": 220.0,
+  "default": 340.0,
+  "max": 560.0
+ },
+ "art": {
+  "w": 268.5,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M110.3 69.4C108.6 49.7 103.2 30 96.9 10.3L113.9 5.8C119.3 24.6 124.7 44.3 129.2 62.3Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "aorta"
+   },
+   {
+    "d": "M144.4 46.1C144.4 32.7 144.4 20.1 144.4 7.6L159.7 7.6C159.7 20.1 159.7 32.7 159.7 44.3Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "aorta"
+   },
+   {
+    "d": "M171.3 51.5C176.7 37.2 183.9 23.7 192.8 11.2L206.3 17.4C198.2 30 191.9 42.5 187.4 56.9Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "aorta"
+   },
+   {
+    "d": "M92.4 184.2L92.4 99.9C92.4 46.1 137.2 23.7 174 34.5C209.8 46.1 224.2 81.1 224.2 123.2L224.2 184.2L186.5 184.2L186.5 126.8C186.5 99.9 180.3 81.1 165 73.9C148.9 66.7 130.1 75.7 130.1 101.7L130.1 184.2Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "aorta"
+   },
+   {
+    "d": "M96.7 10.1C97.1 12 101.4 12.6 106.2 11.5C111 10.4 114.6 7.9 114.2 6C113.7 4.1 109.4 3.4 104.6 4.5C99.8 5.7 96.2 8.1 96.7 10.1Z",
+    "fill": "red.dark",
+    "part": "aorta"
+   },
+   {
+    "d": "M144.4 7.6C144.4 9.3 147.8 10.7 152 10.7C156.2 10.7 159.7 9.3 159.7 7.6C159.7 5.9 156.2 4.4 152 4.4C147.8 4.4 144.4 5.9 144.4 7.6Z",
+    "fill": "red.dark",
+    "part": "aorta"
+   },
+   {
+    "d": "M192.6 11.1C191.9 12.7 194.4 15.4 198.2 17.2C202 18.9 205.7 19.1 206.4 17.5C207.2 16 204.7 13.2 200.9 11.5C197.1 9.7 193.4 9.5 192.6 11.1Z",
+    "fill": "red.dark",
+    "part": "aorta"
+   },
+   {
+    "d": "M102.3 171.6L102.3 103.5C102.3 71.2 123.8 49.7 152.5 44.3",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 6.27,
+    "opacity": 0.35,
+    "part": "aorta"
+   },
+   {
+    "d": "M37.7 56.9L72.7 56.9L74.5 196.7L39.5 196.7Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.69,
+    "part": "superior_vena_cava"
+   },
+   {
+    "d": "M37.7 56.9C37.7 59.9 45.6 62.3 55.2 62.3C64.9 62.3 72.7 59.9 72.7 56.9C72.7 53.9 64.9 51.5 55.2 51.5C45.6 51.5 37.7 53.9 37.7 56.9Z",
+    "fill": "blue.dark",
+    "part": "superior_vena_cava"
+   },
+   {
+    "d": "M224.2 178.8L260 173.4L261.8 188.7L226.9 194.9Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "pulmonary_veins"
+   },
+   {
+    "d": "M227.8 198.5L261.8 203.9L260 219.1L225.1 213.8Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "pulmonary_veins"
+   },
+   {
+    "d": "M257.4 181C257.4 185.3 259 188.7 260.9 188.7C262.9 188.7 264.5 185.3 264.5 181C264.5 176.8 262.9 173.4 260.9 173.4C259 173.4 257.4 176.8 257.4 181Z",
+    "fill": "red.dark",
+    "part": "pulmonary_veins"
+   },
+   {
+    "d": "M257.4 211.5C257.4 215.7 259 219.1 260.9 219.1C262.9 219.1 264.5 215.7 264.5 211.5C264.5 207.3 262.9 203.9 260.9 203.9C259 203.9 257.4 207.3 257.4 211.5Z",
+    "fill": "red.dark",
+    "part": "pulmonary_veins"
+   },
+   {
+    "d": "M184.8 193.1C187.4 173.4 209 164.5 226.9 171.6C242.1 177.9 242.1 196.7 229.6 206.6C217.9 216.5 197.3 214.7 186.5 205.7Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "left_atrium"
+   },
+   {
+    "d": "M197.3 184.2C206.3 177 218.8 176.1 227.8 181.5",
+    "fill": "none",
+    "stroke": "#000000",
+    "strokeWidth": 2.24,
+    "opacity": 0.18
+   },
+   {
+    "d": "M75.4 189.6C41.3 180.6 7.3 202.1 5.5 239.8C3.7 273.8 21.6 304.3 53.9 309.7C70 312.4 80.8 300.7 84.4 288.2L86.1 196.7Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "right_atrium"
+   },
+   {
+    "d": "M67.3 193.1C68.2 172.5 85.2 159.1 104.1 164.5C118.4 168.9 118.4 185.1 109.5 194C98.7 204.8 79.9 204.8 67.3 198.5Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "right_atrium"
+   },
+   {
+    "d": "M19.8 230.8C24.3 212 39.5 200.3 59.3 199.4",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 5.38,
+    "opacity": 0.3
+   },
+   {
+    "d": "M14.4 295.3L48.5 300.7L44.9 358.1L14.4 354.5Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.69,
+    "part": "inferior_vena_cava"
+   },
+   {
+    "d": "M14.4 356.3C14.4 358.8 21.3 360.8 29.7 360.8C38.1 360.8 44.9 358.8 44.9 356.3C44.9 353.8 38.1 351.8 29.7 351.8C21.3 351.8 14.4 353.8 14.4 356.3Z",
+    "fill": "blue.dark",
+    "part": "inferior_vena_cava"
+   },
+   {
+    "d": "M100.5 223.6C98.7 159.1 111.2 132.2 131 112.5L154.3 93.6C165.9 84.7 181.2 82.9 194.6 86.5L237.6 94.5L234.9 116.9L197.3 109.8C186.5 108 177.6 112.5 170.4 119.6L153.4 139.4C144.4 153.7 142.6 175.2 144.4 198.5Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.69,
+    "part": "pulmonary_artery"
+   },
+   {
+    "d": "M232.7 105.7C232.7 111.9 234.5 116.9 236.7 116.9C239 116.9 240.8 111.9 240.8 105.7C240.8 99.6 239 94.5 236.7 94.5C234.5 94.5 232.7 99.6 232.7 105.7Z",
+    "fill": "blue.dark",
+    "part": "pulmonary_artery"
+   },
+   {
+    "d": "M111.2 184.2C109.5 155.5 120.2 134.9 136.3 119.6",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 5.38,
+    "opacity": 0.3
+   },
+   {
+    "d": "M68.2 196.7C93.3 187.8 143.5 184.2 177.6 189.6C206.3 194 231.4 209.3 239.4 239.8C249.3 275.6 234.9 327.6 203.6 359.9C189.2 374.2 174 386.8 159.7 393C148.9 397.5 140.8 392.1 134.6 383.2C107.7 351.8 76.3 320.4 58.4 288.2C47.6 267.5 47.6 220 68.2 196.7Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "left_ventricle"
+   },
+   {
+    "d": "M217 225.4C231.4 245.1 233.2 281 220.6 313.3C211.6 334.8 197.3 354.5 181.2 370.6",
+    "fill": "none",
+    "stroke": "#000000",
+    "strokeWidth": 8.07,
+    "opacity": 0.12
+   },
+   {
+    "d": "M68.2 196.7C93.3 189.6 129.2 186 156.1 189.6C159.7 239.8 165 306.1 166.8 379.6C160.5 391.3 145.3 392.1 134.6 383.2C107.7 351.8 76.3 320.4 58.4 288.2C47.6 267.5 47.6 220 68.2 196.7Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "right_ventricle"
+   },
+   {
+    "d": "M79 236.2C86.1 218.2 107.7 207.5 131 209.3C113 218.2 96.9 232.6 89.7 255.9C84.4 250.5 80.8 243.3 79 236.2Z",
+    "fill": "#ffffff",
+    "opacity": 0.32
+   },
+   {
+    "d": "M193.7 216.5C211.6 225.4 222.4 243.3 222.4 264.9C215.2 250.5 204.5 238 191.9 230.8Z",
+    "fill": "#ffffff",
+    "opacity": 0.3
+   },
+   {
+    "d": "M158.8 196.7C159.7 239.8 163.2 293.5 165.9 372.4",
+    "fill": "none",
+    "stroke": "red.dark",
+    "strokeWidth": 3.59,
+    "part": "coronary_arteries"
+   },
+   {
+    "d": "M160.5 239.8C174 247.8 186.5 259.5 197.3 273.8",
+    "fill": "none",
+    "stroke": "red.dark",
+    "strokeWidth": 3.59,
+    "part": "coronary_arteries"
+   },
+   {
+    "d": "M163.2 293.5C175.8 302.5 184.8 315.1 190.1 329.4",
+    "fill": "none",
+    "stroke": "red.dark",
+    "strokeWidth": 3.59,
+    "part": "coronary_arteries"
+   },
+   {
+    "d": "M80.8 202.1C77.2 239.8 73.6 273.8 65.5 300.7",
+    "fill": "none",
+    "stroke": "red.dark",
+    "strokeWidth": 3.59,
+    "part": "coronary_arteries"
+   },
+   {
+    "d": "M169.5 196.7C168.6 230.8 174 273.8 172.2 309.7C171.3 334.8 172.2 352.7 172.2 367",
+    "fill": "none",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.24
+   }
+  ],
+  "anchors": [
+   {
+    "name": "aorta",
+    "x": 158.8,
+    "y": 51.5
+   },
+   {
+    "name": "superior_vena_cava",
+    "x": 55.5,
+    "y": 82.5
+   },
+   {
+    "name": "pulmonary_veins",
+    "x": 240.5,
+    "y": 208.3
+   },
+   {
+    "name": "left_atrium",
+    "x": 220.6,
+    "y": 187.4
+   },
+   {
+    "name": "right_atrium",
+    "x": 29.6,
+    "y": 232.7
+   },
+   {
+    "name": "inferior_vena_cava",
+    "x": 30.9,
+    "y": 318.6
+   },
+   {
+    "name": "pulmonary_artery",
+    "x": 125.8,
+    "y": 159.8
+   },
+   {
+    "name": "left_ventricle",
+    "x": 200.9,
+    "y": 232.2
+   },
+   {
+    "name": "right_ventricle",
+    "x": 116.1,
+    "y": 290.5
+   },
+   {
+    "name": "coronary_arteries",
+    "x": 162.2,
+    "y": 283.0
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/heart_exterior.svg"
+ },
+ "quality": {
+  "score": 1.0,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "10 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.49 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "34 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "3,471 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "f235e349baa000cb",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

@@ -1,0 +1,56 @@
+{
+ "id": "grape_cluster",
+ "title": "Bunch of grapes",
+ "concept": "grapes",
+ "view": "hanging bunch",
+ "description": "A bunch of purple grapes hanging from its stem, with a grape leaf",
+ "aliases": [
+  "grapes",
+  "grape",
+  "bunch of grapes",
+  "grape cluster",
+  "grape bunch",
+  "cluster of grapes"
+ ],
+ "context": [
+  "wine",
+  "ferment",
+  "juice",
+  "fruit",
+  "sugar",
+  "vine",
+  "vineyard",
+  "harvest",
+  "yeast",
+  "crush",
+  "eat",
+  "food",
+  "raisin",
+  "farm"
+ ],
+ "not_for": [
+  "grape juice carton",
+  "grape soda",
+  "grapevine news"
+ ],
+ "prefer": [
+  "bunch",
+  "vine",
+  "harvest",
+  "fresh"
+ ],
+ "subjects": [
+  "biology",
+  "chemistry"
+ ],
+ "parts": {
+  "grapes": "grapes",
+  "stem": "stem",
+  "leaf": "grape leaf"
+ },
+ "size": {
+  "min": 100,
+  "default": 200,
+  "max": 400
+ }
+}

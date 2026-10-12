@@ -1,0 +1,73 @@
+{
+ "id": "plant",
+ "title": "Plant with roots",
+ "concept": "plant",
+ "view": "growing in the soil, roots shown",
+ "description": "A young green plant: leaves on a stem above the ground, and its roots spreading through the soil below (the soil cut away to show them)",
+ "aliases": [
+  "plant",
+  "plants",
+  "green plant",
+  "young plant",
+  "seedling",
+  "small plant",
+  "potted plant",
+  "sapling"
+ ],
+ "context": [
+  "photosynth",
+  "root",
+  "soil",
+  "water",
+  "leaf",
+  "leaves",
+  "sunlight",
+  "light",
+  "grow",
+  "stem",
+  "nutrient",
+  "mineral",
+  "carbon dioxide",
+  "oxygen",
+  "glucose",
+  "food",
+  "chlorophyll",
+  "transpir",
+  "botan",
+  "garden",
+  "seed",
+  "germinat"
+ ],
+ "not_for": [
+  "power plant",
+  "nuclear plant",
+  "chemical plant",
+  "manufacturing plant",
+  "treatment plant",
+  "processing plant",
+  "plant based",
+  "plant-based"
+ ],
+ "prefer": [
+  "root",
+  "soil",
+  "absorb",
+  "water",
+  "grow",
+  "stem"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "leaves": "leaves",
+  "stem": "stem",
+  "roots": "roots",
+  "soil": "soil"
+ },
+ "size": {
+  "min": 140,
+  "default": 240,
+  "max": 420
+ }
+}

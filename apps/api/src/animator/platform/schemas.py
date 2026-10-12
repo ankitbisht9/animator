@@ -52,7 +52,7 @@ class Preferences(_In):
     language: Literal["English", "Hinglish"] | None = None
     audience: str | None = Field(default=None, max_length=120)
     duration_min: float | None = Field(default=None, ge=0.5, le=20)
-    layout: Literal["classic", "planned"] | None = None
+    layout: Literal["classic", "planned", "costsaver"] | None = None
     interests: list[str] | None = Field(default=None, max_length=12)
     weekly_goal_min: int | None = Field(default=None, ge=10, le=1200)
     playback_rate: float | None = Field(default=None, ge=0.5, le=2)
@@ -103,7 +103,7 @@ class LessonCreateIn(_In):
     style: str | None = Field(default=None, max_length=300)
     language: str = Field(default="English", max_length=40)
     paced: bool = False
-    layout: Literal["classic", "planned"] | None = None
+    layout: Literal["classic", "planned", "costsaver"] | None = None
     visibility: Visibility = "private"
     subject: str | None = Field(default=None, max_length=32)
 
@@ -224,6 +224,59 @@ class ReviewIn(_In):
 
     status: Literal["", "flagged", "working", "resolved"]
     note: str = Field(default="", max_length=500)
+
+
+# ---------------------------------------------------------------------- saved objects (ADR-055)
+
+
+class ObjectSizeIn(_In):
+    min: float = Field(ge=24, le=1500)
+    default: float = Field(ge=24, le=1500)
+    max: float = Field(ge=24, le=1500)
+
+
+class ObjectEditIn(_In):
+    """An admin's changes to a saved drawing's words and sizes (never the drawing). Omitted: kept."""
+
+    title: str | None = Field(default=None, min_length=1, max_length=80)
+    concept: str | None = Field(default=None, min_length=1, max_length=80)
+    description: str | None = Field(default=None, max_length=300)
+    view: str | None = Field(default=None, max_length=40)
+    aliases: list[str] | None = Field(default=None, max_length=24)
+    context: list[str] | None = Field(default=None, max_length=60)
+    not_for: list[str] | None = Field(default=None, max_length=40)
+    prefer: list[str] | None = Field(default=None, max_length=40)
+    subjects: list[str] | None = Field(default=None, max_length=8)
+    parts: dict[str, str] | None = None
+    size: ObjectSizeIn | None = None
+    note: str | None = Field(default=None, max_length=500)
+
+
+class ObjectReviewIn(_In):
+    decision: Literal["approve", "reject", "retire", "restore"]
+    note: str = Field(default="", max_length=500)
+
+
+class ObjectImportIn(_In):
+    """An SVG drawing to add to the warehouse (as a candidate, approved separately)."""
+
+    svg: str = Field(min_length=20, max_length=600_000)
+    title: str = Field(min_length=1, max_length=80)
+    concept: str = Field(min_length=1, max_length=80)
+    aliases: list[str] = Field(default_factory=list, max_length=24)
+    description: str = Field(default="", max_length=300)
+    file: str = Field(default="", max_length=120)
+
+
+class ObjectMatchIn(_In):
+    """A scene brief to try the matching on: lines "id: description" are its objects."""
+
+    brief: str = Field(min_length=1, max_length=6000)
+    lesson: str = Field(default="", max_length=300)
+
+
+class HarvestIn(_In):
+    lessons: int = Field(default=20, ge=1, le=500)
 
 
 class Page(BaseModel):

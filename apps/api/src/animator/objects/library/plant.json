@@ -1,0 +1,361 @@
+{
+ "id": "plant",
+ "version": 1,
+ "title": "Plant with roots",
+ "concept": "plant",
+ "description": "A young green plant: leaves on a stem above the ground, and its roots spreading through the soil below (the soil cut away to show them)",
+ "view": "growing in the soil, roots shown",
+ "aliases": [
+  "plant",
+  "plants",
+  "green plant",
+  "young plant",
+  "seedling",
+  "small plant",
+  "potted plant",
+  "sapling"
+ ],
+ "context": [
+  "photosynth",
+  "root",
+  "soil",
+  "water",
+  "leaf",
+  "leaves",
+  "sunlight",
+  "light",
+  "grow",
+  "stem",
+  "nutrient",
+  "mineral",
+  "carbon dioxide",
+  "oxygen",
+  "glucose",
+  "food",
+  "chlorophyll",
+  "transpir",
+  "botan",
+  "garden",
+  "seed",
+  "germinat"
+ ],
+ "not_for": [
+  "power plant",
+  "nuclear plant",
+  "chemical plant",
+  "manufacturing plant",
+  "treatment plant",
+  "processing plant",
+  "plant based",
+  "plant-based"
+ ],
+ "prefer": [
+  "root",
+  "soil",
+  "absorb",
+  "water",
+  "grow",
+  "stem"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "leaves": "leaves",
+  "stem": "stem",
+  "roots": "roots",
+  "soil": "soil"
+ },
+ "size": {
+  "min": 140.0,
+  "default": 240.0,
+  "max": 420.0
+ },
+ "art": {
+  "w": 272.5,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M5.3 253.3C49 246.3 92.6 249.8 136.3 248C179.9 246.3 223.6 249.8 267.2 253.3L267.2 394.7L5.3 394.7Z",
+    "fill": "brown",
+    "stroke": "brown.dark",
+    "strokeWidth": 2.62,
+    "part": "soil"
+   },
+   {
+    "d": "M28 288.2C28 290.1 29.6 291.7 31.5 291.7C33.4 291.7 35 290.1 35 288.2C35 286.2 33.4 284.7 31.5 284.7C29.6 284.7 28 286.2 28 288.2Z",
+    "fill": "#000000",
+    "opacity": 0.15
+   },
+   {
+    "d": "M227.9 305.6C227.9 308.1 229.9 310 232.3 310C234.7 310 236.7 308.1 236.7 305.6C236.7 303.2 234.7 301.3 232.3 301.3C229.9 301.3 227.9 303.2 227.9 305.6Z",
+    "fill": "#000000",
+    "opacity": 0.15
+   },
+   {
+    "d": "M71.7 366.8C71.7 368.7 73.2 370.2 75.2 370.2C77.1 370.2 78.6 368.7 78.6 366.8C78.6 364.8 77.1 363.3 75.2 363.3C73.2 363.3 71.7 364.8 71.7 366.8Z",
+    "fill": "#000000",
+    "opacity": 0.15
+   },
+   {
+    "d": "M193.9 366.8C193.9 368.7 195.5 370.2 197.4 370.2C199.3 370.2 200.9 368.7 200.9 366.8C200.9 364.8 199.3 363.3 197.4 363.3C195.5 363.3 193.9 364.8 193.9 366.8Z",
+    "fill": "#000000",
+    "opacity": 0.15
+   },
+   {
+    "d": "M252.4 358C252.4 359.5 253.6 360.6 255 360.6C256.4 360.6 257.6 359.5 257.6 358C257.6 356.6 256.4 355.4 255 355.4C253.6 355.4 252.4 356.6 252.4 358Z",
+    "fill": "#000000",
+    "opacity": 0.15
+   },
+   {
+    "d": "M18.4 340.6C18.4 342 19.6 343.2 21 343.2C22.5 343.2 23.6 342 23.6 340.6C23.6 339.1 22.5 337.9 21 337.9C19.6 337.9 18.4 339.1 18.4 340.6Z",
+    "fill": "#000000",
+    "opacity": 0.15
+   },
+   {
+    "d": "M136.3 251.5C134.5 279.4 136.3 314.4 132.8 358",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 4.37,
+    "part": "roots"
+   },
+   {
+    "d": "M135.4 270.7C118.8 284.7 99.6 291.7 80.4 307.4",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 4.37,
+    "part": "roots"
+   },
+   {
+    "d": "M136.3 276C155.5 288.2 174.7 296.9 193.9 310.9",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 4.37,
+    "part": "roots"
+   },
+   {
+    "d": "M134.5 305.6C115.3 319.6 94.4 331.8 75.2 352.8",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 4.37,
+    "part": "roots"
+   },
+   {
+    "d": "M134.5 310.9C155.5 324.8 176.4 337.1 192.1 359.8",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 4.37,
+    "part": "roots"
+   },
+   {
+    "d": "M99.6 291.7C90.9 302.1 85.6 314.4 83.9 328.3",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 4.37,
+    "part": "roots"
+   },
+   {
+    "d": "M174.7 296.9C183.4 307.4 188.7 319.6 190.4 331.8",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 4.37,
+    "part": "roots"
+   },
+   {
+    "d": "M80.4 307.4C71.7 314.4 61.2 317.9 50.7 317.9",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 2.18,
+    "part": "roots"
+   },
+   {
+    "d": "M193.9 310.9C204.4 317.9 214.8 319.6 225.3 317.9",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 2.18,
+    "part": "roots"
+   },
+   {
+    "d": "M75.2 352.8C66.4 358 57.7 365 52.5 373.7",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 2.18,
+    "part": "roots"
+   },
+   {
+    "d": "M192.1 359.8C199.1 366.8 206.1 373.7 209.6 382.5",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 2.18,
+    "part": "roots"
+   },
+   {
+    "d": "M132.8 358C129.3 368.5 127.5 377.2 127.5 386",
+    "fill": "none",
+    "stroke": "#f2e6cf",
+    "strokeWidth": 2.18,
+    "part": "roots"
+   },
+   {
+    "d": "M131.9 255C129.3 209.6 127.5 157.2 132.8 104.8C134.5 83.9 138 64.7 139.8 47.2L146.7 49C145 66.4 142.4 85.6 140.6 104.8C136.3 157.2 138 209.6 141.5 255Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.18,
+    "part": "stem"
+   },
+   {
+    "d": "M134.5 206.1C110.1 186.9 78.6 183.4 42 197.4C68.2 220.1 104.8 223.6 134.5 206.1Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.62,
+    "part": "leaves"
+   },
+   {
+    "d": "M137.1 171.2C159 150.2 192.1 141.5 230.6 150.2C207.9 176.4 169.4 183.4 137.1 171.2Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.62,
+    "part": "leaves"
+   },
+   {
+    "d": "M135.4 131C113.6 108.3 83.9 99.6 50.7 104.8C69.9 131 104.8 141.5 135.4 131Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.62,
+    "part": "leaves"
+   },
+   {
+    "d": "M139.8 94.4C159 73.4 186.9 62.9 218.3 66.4C200.9 90.9 167.7 101.3 139.8 94.4Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.62,
+    "part": "leaves"
+   },
+   {
+    "d": "M142.4 49C132.8 33.2 132.8 19.3 143.3 5.3C155.5 19.3 155.5 35 142.4 49Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.62,
+    "part": "leaves"
+   },
+   {
+    "d": "M132.8 206.1C106.6 200.9 80.4 199.1 54.2 199.1",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 1.75
+   },
+   {
+    "d": "M138.9 169.4C164.2 160.7 190.4 155.5 218.3 153.7",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 1.75
+   },
+   {
+    "d": "M133.6 129.3C110.1 122.3 87.4 115.3 62.9 108.3",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 1.75
+   },
+   {
+    "d": "M141.5 92.6C162.5 83.9 183.4 75.2 206.1 69.9",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 1.75
+   },
+   {
+    "d": "M142.4 45.5C141.5 35 142.4 24.5 143.3 12.3",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 1.75
+   }
+  ],
+  "anchors": [
+   {
+    "name": "leaves",
+    "x": 80.4,
+    "y": 200.9
+   },
+   {
+    "name": "roots",
+    "x": 134.1,
+    "y": 331.8
+   },
+   {
+    "name": "soil",
+    "x": 50.3,
+    "y": 283.6
+   },
+   {
+    "name": "stem",
+    "x": 134.0,
+    "y": 151.9
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/plant.svg"
+ },
+ "quality": {
+  "score": 0.97,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "4 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.47 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "30 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "2,275 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "77b1a56d55a2017d",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

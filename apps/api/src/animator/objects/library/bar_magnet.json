@@ -1,0 +1,181 @@
+{
+ "id": "bar_magnet",
+ "version": 1,
+ "title": "Bar magnet",
+ "concept": "bar magnet",
+ "description": "A bar magnet lying flat: the north pole (red, marked N) at the left, the south pole (blue, marked S) at the right",
+ "view": "lying flat, north pole at the left",
+ "aliases": [
+  "bar magnet",
+  "bar magnets",
+  "magnet",
+  "magnets",
+  "permanent magnet"
+ ],
+ "context": [
+  "magnetic",
+  "pole",
+  "north",
+  "south",
+  "attract",
+  "repel",
+  "field",
+  "iron",
+  "compass",
+  "steel",
+  "force",
+  "electromagnet"
+ ],
+ "not_for": [
+  "horseshoe magnet",
+  "fridge magnet",
+  "magnet school",
+  "magnet link",
+  "chick magnet",
+  "people magnet"
+ ],
+ "prefer": [
+  "bar",
+  "pole",
+  "north",
+  "south",
+  "field line"
+ ],
+ "subjects": [
+  "physics"
+ ],
+ "parts": {
+  "north_pole": "north pole (N)",
+  "south_pole": "south pole (S)"
+ },
+ "size": {
+  "min": 140.0,
+  "default": 280.0,
+  "max": 560.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 110.9,
+  "shapes": [
+   {
+    "d": "M15.9 6L194.1 6C199.5 6 204 10.4 204 15.9L204 95.1C204 100.5 199.5 105 194.1 105L15.9 105C10.4 105 6 100.5 6 95.1L6 15.9C6 10.4 10.4 6 15.9 6Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 3.96,
+    "part": "north_pole"
+   },
+   {
+    "d": "M205.9 6L384.1 6C389.6 6 394 10.4 394 15.9L394 95.1C394 100.5 389.6 105 384.1 105L205.9 105C200.5 105 196 100.5 196 95.1L196 15.9C196 10.4 200.5 6 205.9 6Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 3.96,
+    "part": "south_pole"
+   },
+   {
+    "d": "M196 9.9L196 101",
+    "fill": "none",
+    "stroke": "text",
+    "strokeWidth": 2.97
+   },
+   {
+    "d": "M21.8 21.8L380.2 21.8",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 7.92,
+    "opacity": 0.3
+   },
+   {
+    "d": "M63.4 81.2L63.4 29.7L97.1 81.2L97.1 29.7",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 8.91,
+    "part": "north_pole"
+   },
+   {
+    "d": "M326.7 37.7C322.7 29.7 314.8 27.8 304.9 27.8C293.1 27.8 285.1 35.7 287.1 43.6C289.1 51.5 299 53.5 306.9 55.5C316.8 57.5 326.7 61.4 326.7 71.3C326.7 79.2 318.8 85.2 306.9 85.2C295 85.2 287.1 81.2 285.1 73.3",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 8.91,
+    "part": "south_pole"
+   }
+  ],
+  "anchors": [
+   {
+    "name": "north_pole",
+    "x": 31.7,
+    "y": 55.5
+   },
+   {
+    "name": "south_pole",
+    "x": 368.3,
+    "y": 55.5
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/bar_magnet.svg"
+ },
+ "quality": {
+  "score": 0.824,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "2 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 0.28 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "6 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "579 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "eb45fbf66fb17c49",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

@@ -510,6 +510,9 @@
           "$ref": "#/$defs/Object_equation"
         },
         {
+          "$ref": "#/$defs/Object_figure"
+        },
+        {
           "$ref": "#/$defs/Object_flow_particles"
         },
         {
@@ -3094,6 +3097,220 @@
       ],
       "additionalProperties": false,
       "description": "A typeset equation (TeX subset) split into parts with ids, so parts can be written one by one (`write` with `terms`) and highlighted individually (`highlight` with `terms`). Each part is an anchor 'term_<id>'. Numbers computed by the engine belong in readouts or bound labels, not in TeX."
+    },
+    "Object_figure": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "type": {
+          "type": "string",
+          "const": "figure"
+        },
+        "params": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "art": {
+              "type": "object",
+              "properties": {
+                "w": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 4000
+                },
+                "h": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 4000
+                },
+                "shapes": {
+                  "minItems": 1,
+                  "maxItems": 400,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "d": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20000
+                      },
+                      "fill": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "stroke": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "strokeWidth": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 200
+                      },
+                      "opacity": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "fillRule": {
+                        "type": "string",
+                        "enum": [
+                          "nonzero",
+                          "evenodd"
+                        ]
+                      },
+                      "part": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      }
+                    },
+                    "required": [
+                      "d"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "anchors": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "x",
+                      "y"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "w",
+                "h",
+                "shapes"
+              ],
+              "additionalProperties": false
+            },
+            "width": {
+              "default": 300,
+              "type": "number",
+              "minimum": 8,
+              "maximum": 1600
+            },
+            "ref": {
+              "type": "string",
+              "maxLength": 96
+            },
+            "focus": {
+              "default": "",
+              "type": "string",
+              "maxLength": 48
+            }
+          },
+          "required": [
+            "art"
+          ],
+          "additionalProperties": false
+        },
+        "place": {
+          "$ref": "#/$defs/Place"
+        },
+        "rotation": {
+          "default": 0,
+          "description": "Degrees, clockwise",
+          "type": "number",
+          "minimum": -3600,
+          "maximum": 3600
+        },
+        "scale": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "opacity": {
+          "default": 1,
+          "description": "0..1",
+          "type": "number"
+        },
+        "style": {
+          "$ref": "#/$defs/Style"
+        },
+        "layer": {
+          "default": "main",
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": "string",
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay"
+          ]
+        },
+        "z": {
+          "default": 0,
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "persist": {
+          "default": true,
+          "description": "Carry into the next scene (default true)",
+          "type": "boolean"
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": "boolean"
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,47}$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": {
+              "description": "Shown when a viewer hovers the object",
+              "type": "string",
+              "maxLength": 240
+            },
+            "concept": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "A saved drawing from the object library, placed by the pipeline. Its parts and named points are anchors."
     },
     "Object_flow_particles": {
       "type": "object",

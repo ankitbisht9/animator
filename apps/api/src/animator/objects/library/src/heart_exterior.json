@@ -1,0 +1,76 @@
+{
+ "id": "heart_exterior",
+ "title": "Human heart",
+ "concept": "human heart",
+ "view": "outside, from the front",
+ "description": "The heart as an organ, seen from the front: the two ventricles and the apex, the right atrium and the left atrium's ear, the aorta arching over the top with its branches, the pulmonary artery, the venae cavae (blue) and the coronary vessels on its surface",
+ "aliases": [
+  "heart",
+  "human heart",
+  "the heart"
+ ],
+ "context": [
+  "blood",
+  "pump",
+  "circulat",
+  "arter",
+  "vein",
+  "vessel",
+  "organ",
+  "ventric",
+  "atri",
+  "atrium",
+  "cardi",
+  "heartbeat",
+  "beat",
+  "pulse",
+  "oxygen",
+  "aorta",
+  "chest",
+  "valve",
+  "lung",
+  "body",
+  "anatom"
+ ],
+ "not_for": [
+  "heart shape",
+  "heart shaped",
+  "heart symbol",
+  "heart icon",
+  "heart emoji",
+  "broken heart",
+  "by heart",
+  "heart sign"
+ ],
+ "prefer": [
+  "outside",
+  "exterior",
+  "front",
+  "surface",
+  "coronary",
+  "aorta",
+  "vessel",
+  "shape of the heart",
+  "fist"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "aorta": "aorta",
+  "superior_vena_cava": "superior vena cava",
+  "inferior_vena_cava": "inferior vena cava",
+  "pulmonary_artery": "pulmonary artery",
+  "pulmonary_veins": "pulmonary veins",
+  "left_atrium": "left atrium",
+  "right_atrium": "right atrium",
+  "left_ventricle": "left ventricle",
+  "right_ventricle": "right ventricle",
+  "coronary_arteries": "coronary arteries"
+ },
+ "size": {
+  "min": 220,
+  "default": 340,
+  "max": 560
+ }
+}

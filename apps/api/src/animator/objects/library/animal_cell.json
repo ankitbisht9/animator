@@ -1,0 +1,423 @@
+{
+ "id": "animal_cell",
+ "version": 1,
+ "title": "Animal cell",
+ "concept": "animal cell",
+ "description": "A typical animal cell, rounded: the cell membrane, the cytoplasm, the nucleus with its nucleolus, mitochondria, endoplasmic reticulum with ribosomes, the Golgi apparatus and lysosomes (no cell wall, no chloroplasts)",
+ "view": "cut open",
+ "aliases": [
+  "animal cell",
+  "animal cells",
+  "human cell",
+  "cell of an animal",
+  "body cell"
+ ],
+ "context": [
+  "cell",
+  "organelle",
+  "nucleus",
+  "mitochond",
+  "membrane",
+  "cytoplasm",
+  "biology",
+  "tissue",
+  "animal",
+  "body",
+  "dna",
+  "protein"
+ ],
+ "not_for": [
+  "solar cell",
+  "fuel cell",
+  "prison cell",
+  "battery cell",
+  "cell phone",
+  "spreadsheet cell"
+ ],
+ "prefer": [
+  "organelle",
+  "mitochond",
+  "nucleus",
+  "membrane",
+  "golgi",
+  "reticulum",
+  "inside"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "cell_membrane": "cell membrane",
+  "cytoplasm": "cytoplasm",
+  "nucleus": "nucleus",
+  "nucleolus": "nucleolus",
+  "mitochondria": "mitochondria",
+  "endoplasmic_reticulum": "endoplasmic reticulum",
+  "ribosomes": "ribosomes",
+  "golgi_apparatus": "Golgi apparatus",
+  "lysosomes": "lysosomes"
+ },
+ "size": {
+  "min": 260.0,
+  "default": 400.0,
+  "max": 620.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 319.1,
+  "shapes": [
+   {
+    "d": "M53.6 57.9C102 7.5 208.6 -4.1 286 15.3C363.5 34.6 400.3 96.6 392.6 164.4C384.8 234.1 334.5 296.1 237.6 309.7C140.8 323.2 53.6 290.3 20.7 228.3C-8.4 172.2 9.1 104.4 53.6 57.9Z",
+    "fill": "orange.soft",
+    "part": "cytoplasm"
+   },
+   {
+    "d": "M53.6 57.9C102 7.5 208.6 -4.1 286 15.3C363.5 34.6 400.3 96.6 392.6 164.4C384.8 234.1 334.5 296.1 237.6 309.7C140.8 323.2 53.6 290.3 20.7 228.3C-8.4 172.2 9.1 104.4 53.6 57.9Z",
+    "fill": "none",
+    "stroke": "orange.dark",
+    "strokeWidth": 4.84,
+    "part": "cell_membrane"
+   },
+   {
+    "d": "M61.4 65.6C107.9 19.1 208.6 7.5 284.1 26.9C355.8 46.3 386.8 102.4 380.9 164.4",
+    "fill": "none",
+    "stroke": "orange.light",
+    "strokeWidth": 2.91,
+    "opacity": 0.8
+   },
+   {
+    "d": "M129.2 94.7C140.8 83.1 160.1 79.2 175.6 85C189.2 90.8 202.8 86.9 214.4 79.2",
+    "fill": "none",
+    "stroke": "blue",
+    "strokeWidth": 2.91,
+    "part": "endoplasmic_reticulum"
+   },
+   {
+    "d": "M119.5 110.2C135 96.6 162.1 92.7 181.5 98.6C198.9 104.4 214.4 98.6 227.9 90.8",
+    "fill": "none",
+    "stroke": "blue",
+    "strokeWidth": 2.91,
+    "part": "endoplasmic_reticulum"
+   },
+   {
+    "d": "M237.6 135.4C249.2 152.8 249.2 176 239.6 195.4C233.7 209 237.6 222.5 247.3 232.2",
+    "fill": "none",
+    "stroke": "blue",
+    "strokeWidth": 2.91,
+    "part": "endoplasmic_reticulum"
+   },
+   {
+    "d": "M253.1 129.5C266.7 150.9 266.7 179.9 255.1 201.2C249.2 214.8 253.1 228.3 262.8 238",
+    "fill": "none",
+    "stroke": "blue",
+    "strokeWidth": 2.91,
+    "part": "endoplasmic_reticulum"
+   },
+   {
+    "d": "M138.3 86C138.3 86.9 138.7 87.7 139.5 88.2C140.3 88.6 141.3 88.6 142 88.2C142.8 87.7 143.3 86.9 143.3 86C143.3 85.1 142.8 84.2 142 83.8C141.3 83.3 140.3 83.3 139.5 83.8C138.7 84.2 138.3 85.1 138.3 86Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M163.4 81.1C163.4 82 163.9 82.9 164.7 83.3C165.5 83.8 166.4 83.8 167.2 83.3C168 82.9 168.5 82 168.5 81.1C168.5 80.2 168 79.4 167.2 78.9C166.4 78.5 165.5 78.5 164.7 78.9C163.9 79.4 163.4 80.2 163.4 81.1Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M192.5 88.9C192.5 89.8 193 90.6 193.8 91.1C194.5 91.5 195.5 91.5 196.3 91.1C197 90.6 197.5 89.8 197.5 88.9C197.5 88 197 87.1 196.3 86.7C195.5 86.2 194.5 86.2 193.8 86.7C193 87.1 192.5 88 192.5 88.9Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M147.9 97.6C147.9 98.5 148.4 99.3 149.2 99.8C150 100.2 150.9 100.2 151.7 99.8C152.5 99.3 153 98.5 153 97.6C153 96.7 152.5 95.9 151.7 95.4C150.9 95 150 95 149.2 95.4C148.4 95.9 147.9 96.7 147.9 97.6Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M198.3 102.4C198.3 103.3 198.8 104.2 199.6 104.6C200.3 105.1 201.3 105.1 202.1 104.6C202.9 104.2 203.3 103.3 203.3 102.4C203.3 101.5 202.9 100.7 202.1 100.3C201.3 99.8 200.3 99.8 199.6 100.3C198.8 100.7 198.3 101.5 198.3 102.4Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M243.8 158.6C243.8 160 244.9 161.1 246.3 161.1C247.7 161.1 248.9 160 248.9 158.6C248.9 157.2 247.7 156.1 246.3 156.1C244.9 156.1 243.8 157.2 243.8 158.6Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M240.9 189.6C240.9 191 242 192.1 243.4 192.1C244.8 192.1 245.9 191 245.9 189.6C245.9 188.2 244.8 187.1 243.4 187.1C242 187.1 240.9 188.2 240.9 189.6Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M260.3 170.2C260.3 171.6 261.4 172.7 262.8 172.7C264.2 172.7 265.3 171.6 265.3 170.2C265.3 168.8 264.2 167.7 262.8 167.7C261.4 167.7 260.3 168.8 260.3 170.2Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M257.4 207C257.4 208.4 258.5 209.5 259.9 209.5C261.3 209.5 262.4 208.4 262.4 207C262.4 205.6 261.3 204.5 259.9 204.5C258.5 204.5 257.4 205.6 257.4 207Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M80.2 232.2C80.2 233.1 80.6 233.9 81.4 234.4C82.2 234.8 83.2 234.8 83.9 234.4C84.7 233.9 85.2 233.1 85.2 232.2C85.2 231.3 84.7 230.5 83.9 230C83.2 229.6 82.2 229.6 81.4 230C80.6 230.5 80.2 231.3 80.2 232.2Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M312.6 83.1C312.6 84.5 313.7 85.6 315.1 85.6C316.5 85.6 317.6 84.5 317.6 83.1C317.6 81.7 316.5 80.5 315.1 80.5C313.7 80.5 312.6 81.7 312.6 83.1Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M328.1 222.5C328.1 223.9 329.2 225 330.6 225C332 225 333.1 223.9 333.1 222.5C333.1 221.1 332 220 330.6 220C329.2 220 328.1 221.1 328.1 222.5Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M109.2 270.9C109.2 271.8 109.7 272.7 110.5 273.1C111.2 273.6 112.2 273.6 113 273.1C113.8 272.7 114.2 271.8 114.2 270.9C114.2 270 113.8 269.2 113 268.8C112.2 268.3 111.2 268.3 110.5 268.8C109.7 269.2 109.2 270 109.2 270.9Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M283.5 270.9C283.5 272.3 284.7 273.5 286 273.5C287.4 273.5 288.6 272.3 288.6 270.9C288.6 269.5 287.4 268.4 286 268.4C284.7 268.4 283.5 269.5 283.5 270.9Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M60.8 135.4C60.8 136.3 61.3 137.1 62 137.5C62.8 138 63.8 138 64.6 137.5C65.3 137.1 65.8 136.3 65.8 135.4C65.8 134.5 65.3 133.6 64.6 133.2C63.8 132.7 62.8 132.7 62 133.2C61.3 133.6 60.8 134.5 60.8 135.4Z",
+    "fill": "blue.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M131.1 162.5C131.1 192.4 155.4 216.7 185.3 216.7C215.3 216.7 239.6 192.4 239.6 162.5C239.6 132.5 215.3 108.2 185.3 108.2C155.4 108.2 131.1 132.5 131.1 162.5Z",
+    "fill": "purple.light",
+    "stroke": "purple.dark",
+    "strokeWidth": 2.91,
+    "part": "nucleus"
+   },
+   {
+    "d": "M179.5 154.7C179.5 164.4 187.3 172.2 196.9 172.2C206.6 172.2 214.4 164.4 214.4 154.7C214.4 145.1 206.6 137.3 196.9 137.3C187.3 137.3 179.5 145.1 179.5 154.7Z",
+    "fill": "purple.dark",
+    "part": "nucleolus"
+   },
+   {
+    "d": "M286 79.2C303.5 86.9 320.9 90.8 340.3 88.9",
+    "fill": "none",
+    "stroke": "yellow.dark",
+    "strokeWidth": 5.81,
+    "part": "golgi_apparatus"
+   },
+   {
+    "d": "M282.2 92.7C301.5 102.4 322.8 106.3 344.1 102.4",
+    "fill": "none",
+    "stroke": "yellow.dark",
+    "strokeWidth": 5.81,
+    "part": "golgi_apparatus"
+   },
+   {
+    "d": "M280.2 106.3C299.6 117.9 322.8 121.8 346.1 116",
+    "fill": "none",
+    "stroke": "yellow.dark",
+    "strokeWidth": 5.81,
+    "part": "golgi_apparatus"
+   },
+   {
+    "d": "M349 94.7C349 97.4 351.2 99.5 353.8 99.5C356.5 99.5 358.7 97.4 358.7 94.7C358.7 92 356.5 89.8 353.8 89.8C351.2 89.8 349 92 349 94.7Z",
+    "fill": "yellow",
+    "stroke": "yellow.dark",
+    "strokeWidth": 1.45,
+    "part": "golgi_apparatus"
+   },
+   {
+    "d": "M351.9 114.1C351.9 116.2 353.6 117.9 355.8 117.9C357.9 117.9 359.6 116.2 359.6 114.1C359.6 111.9 357.9 110.2 355.8 110.2C353.6 110.2 351.9 111.9 351.9 114.1Z",
+    "fill": "yellow",
+    "stroke": "yellow.dark",
+    "strokeWidth": 1.45,
+    "part": "golgi_apparatus"
+   },
+   {
+    "d": "M62.2 192.2C65.5 199.5 80.1 199.9 94.6 193.1C109.2 186.3 118.2 174.9 114.8 167.6C111.4 160.4 96.9 160 82.3 166.7C67.8 173.5 58.8 184.9 62.2 192.2Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.42,
+    "part": "mitochondria"
+   },
+   {
+    "d": "M276.2 206.8C273.4 214.3 283.4 224.9 298.5 230.4C313.6 235.8 328 234.2 330.8 226.6C333.5 219.1 323.5 208.5 308.4 203.1C293.4 197.6 278.9 199.2 276.2 206.8Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.42,
+    "part": "mitochondria"
+   },
+   {
+    "d": "M150.5 261.3C150.5 268.7 163.5 274.8 179.5 274.8C195.6 274.8 208.6 268.7 208.6 261.3C208.6 253.8 195.6 247.7 179.5 247.7C163.5 247.7 150.5 253.8 150.5 261.3Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.42,
+    "part": "mitochondria"
+   },
+   {
+    "d": "M72.5 195.9L73.6 184.7L86.4 193.7L86.8 176.4L98.8 183.7L100.1 168.1L107.8 170.9",
+    "fill": "none",
+    "stroke": "red.dark",
+    "strokeWidth": 1.74,
+    "part": "mitochondria"
+   },
+   {
+    "d": "M286.1 202.1L288.2 213.2L300.2 203.1L302.1 220.3L314.1 210.3L316.7 225.6L324.2 222.2",
+    "fill": "none",
+    "stroke": "red.dark",
+    "strokeWidth": 1.74,
+    "part": "mitochondria"
+   },
+   {
+    "d": "M158.2 261.3L164 253.5L171.8 269L179.5 253.5L187.3 269L195 253.5L200.8 261.3",
+    "fill": "none",
+    "stroke": "red.dark",
+    "strokeWidth": 1.74,
+    "part": "mitochondria"
+   },
+   {
+    "d": "M101.1 108.2C101.1 113.1 105 117 109.8 117C114.6 117 118.5 113.1 118.5 108.2C118.5 103.4 114.6 99.5 109.8 99.5C105 99.5 101.1 103.4 101.1 108.2Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.94,
+    "part": "lysosomes"
+   },
+   {
+    "d": "M328.7 164.4C328.7 168.7 332.1 172.2 336.4 172.2C340.7 172.2 344.1 168.7 344.1 164.4C344.1 160.1 340.7 156.7 336.4 156.7C332.1 156.7 328.7 160.1 328.7 164.4Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.94,
+    "part": "lysosomes"
+   },
+   {
+    "d": "M231.8 50.1C231.8 54.4 235.3 57.9 239.6 57.9C243.8 57.9 247.3 54.4 247.3 50.1C247.3 45.9 243.8 42.4 239.6 42.4C235.3 42.4 231.8 45.9 231.8 50.1Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.94,
+    "part": "lysosomes"
+   },
+   {
+    "d": "M76.9 71.4C111.7 38.5 166 23 224.1 21.1",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 5.81,
+    "opacity": 0.45
+   }
+  ],
+  "anchors": [
+   {
+    "name": "cytoplasm",
+    "x": 123.9,
+    "y": 230.9
+   },
+   {
+    "name": "cell_membrane",
+    "x": 191.2,
+    "y": 7.0
+   },
+   {
+    "name": "endoplasmic_reticulum",
+    "x": 237.6,
+    "y": 135.4
+   },
+   {
+    "name": "ribosomes",
+    "x": 315.0,
+    "y": 82.9
+   },
+   {
+    "name": "nucleus",
+    "x": 163.2,
+    "y": 181.0
+   },
+   {
+    "name": "nucleolus",
+    "x": 196.9,
+    "y": 154.7
+   },
+   {
+    "name": "golgi_apparatus",
+    "x": 353.9,
+    "y": 94.7
+   },
+   {
+    "name": "mitochondria",
+    "x": 78.7,
+    "y": 178.2
+   },
+   {
+    "name": "lysosomes",
+    "x": 239.4,
+    "y": 50.0
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/animal_cell.svg"
+ },
+ "quality": {
+  "score": 1.0,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "9 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 0.80 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "39 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "5,360 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "6cc08c68db84ae8d",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

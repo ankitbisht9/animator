@@ -1,0 +1,562 @@
+{
+ "id": "heart_chambers",
+ "version": 1,
+ "title": "Human heart, inside",
+ "concept": "human heart",
+ "description": "The heart cut open to show its four chambers: the right atrium and ventricle with blue blood, the left atrium and ventricle with red blood and a thicker wall, the septum, the tricuspid, mitral, pulmonary and aortic valves, and the vessels: venae cavae, pulmonary artery, pulmonary veins and aorta",
+ "view": "cut open from the front",
+ "aliases": [
+  "heart",
+  "human heart",
+  "the heart",
+  "heart chambers",
+  "four chambers",
+  "chambers of the heart",
+  "inside of the heart",
+  "heart cross section",
+  "heart diagram"
+ ],
+ "context": [
+  "blood",
+  "pump",
+  "circulat",
+  "arter",
+  "vein",
+  "vessel",
+  "organ",
+  "ventric",
+  "atri",
+  "atrium",
+  "cardi",
+  "heartbeat",
+  "beat",
+  "pulse",
+  "oxygen",
+  "aorta",
+  "chest",
+  "valve",
+  "lung",
+  "chamber",
+  "septum",
+  "anatom"
+ ],
+ "not_for": [
+  "heart shape",
+  "heart shaped",
+  "heart symbol",
+  "heart icon",
+  "heart emoji",
+  "broken heart",
+  "by heart",
+  "heart sign"
+ ],
+ "prefer": [
+  "chamber",
+  "inside",
+  "cross section",
+  "cut",
+  "valve",
+  "septum",
+  "ventric",
+  "atri",
+  "atrium",
+  "oxygenated",
+  "deoxygenated",
+  "flow through"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "right_atrium": "right atrium",
+  "right_ventricle": "right ventricle",
+  "left_atrium": "left atrium",
+  "left_ventricle": "left ventricle",
+  "septum": "septum",
+  "heart_wall": "heart muscle",
+  "tricuspid_valve": "tricuspid valve",
+  "mitral_valve": "mitral valve",
+  "pulmonary_valve": "pulmonary valve",
+  "aortic_valve": "aortic valve",
+  "aorta": "aorta",
+  "pulmonary_artery": "pulmonary artery",
+  "pulmonary_veins": "pulmonary veins",
+  "superior_vena_cava": "superior vena cava",
+  "inferior_vena_cava": "inferior vena cava"
+ },
+ "size": {
+  "min": 240.0,
+  "default": 360.0,
+  "max": 560.0
+ },
+ "art": {
+  "w": 312.0,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M8 110.6L181.8 108.8L181.8 131.2L8 132.1Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.69,
+    "part": "pulmonary_artery"
+   },
+   {
+    "d": "M4 121.3C4 127.2 5.8 132.1 8 132.1C10.3 132.1 12.1 127.2 12.1 121.3C12.1 115.4 10.3 110.6 8 110.6C5.8 110.6 4 115.4 4 121.3Z",
+    "fill": "blue.dark",
+    "part": "pulmonary_artery"
+   },
+   {
+    "d": "M172.8 40.7C171 30 169.2 19.2 166.5 8.5L181.8 6.7C183.5 17.4 185.3 28.2 186.2 38.9Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "aorta"
+   },
+   {
+    "d": "M198.8 35.3C199.7 25.5 199.7 15.6 199.7 6.7L214 6.7C214 15.6 214 25.5 213.1 35.3Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "aorta"
+   },
+   {
+    "d": "M225.6 40.7C230.1 30 235.5 21 242.6 12.1L254.3 19.2C248 28.2 242.6 37.1 239.1 47Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "aorta"
+   },
+   {
+    "d": "M169.2 169.7C162.1 139.2 149.5 114.1 145.9 92.7C141.5 58.6 162.1 35.3 197.9 33.6C237.3 31.8 264.1 56.8 267.7 96.2L269.5 167.9L235.5 167.9L233.7 99.8C231.9 78.3 217.6 64.9 198.8 65.8C182.6 66.7 175.5 79.2 177.3 91.8C180 111.5 190.7 139.2 196.1 169.7Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "aorta"
+   },
+   {
+    "d": "M166.6 8.2C166.7 10 170.2 11.1 174.4 10.7C178.6 10.3 181.9 8.6 181.7 6.9C181.6 5.2 178.1 4.1 173.9 4.5C169.7 4.8 166.4 6.5 166.6 8.2Z",
+    "fill": "red.dark",
+    "part": "aorta"
+   },
+   {
+    "d": "M199.7 7.1C199.7 8.9 202.9 10.3 206.8 10.3C210.8 10.3 214 8.9 214 7.1C214 5.4 210.8 4 206.8 4C202.9 4 199.7 5.4 199.7 7.1Z",
+    "fill": "red.dark",
+    "part": "aorta"
+   },
+   {
+    "d": "M242.6 11.5C241.6 13 243.4 15.9 246.7 18.2C249.9 20.5 253.3 21.2 254.3 19.8C255.3 18.3 253.5 15.3 250.3 13.1C247 10.8 243.6 10.1 242.6 11.5Z",
+    "fill": "red.dark",
+    "part": "aorta"
+   },
+   {
+    "d": "M60 148.2C60 128.5 76.1 119.5 95.8 119.5L231.9 119.5C255.2 119.5 269.5 132.1 271.3 152.7C283.8 184 289.2 224.3 282 260.1C273.1 307.6 231.9 350.6 174.6 390C165.6 396.2 154.9 396.2 145.9 390C90.4 352.3 52.8 309.4 42.1 264.6C33.1 228.8 40.3 184 60 148.2Z",
+    "fill": "surface",
+    "part": "heart_wall"
+   },
+   {
+    "d": "M60 148.2C60 128.5 76.1 119.5 95.8 119.5L231.9 119.5C255.2 119.5 269.5 132.1 271.3 152.7C283.8 184 289.2 224.3 282 260.1C273.1 307.6 231.9 350.6 174.6 390C165.6 396.2 154.9 396.2 145.9 390C90.4 352.3 52.8 309.4 42.1 264.6C33.1 228.8 40.3 184 60 148.2Z",
+    "fill": "red",
+    "opacity": 0.42,
+    "part": "heart_wall"
+   },
+   {
+    "d": "M60 148.2C60 128.5 76.1 119.5 95.8 119.5L231.9 119.5C255.2 119.5 269.5 132.1 271.3 152.7C283.8 184 289.2 224.3 282 260.1C273.1 307.6 231.9 350.6 174.6 390C165.6 396.2 154.9 396.2 145.9 390C90.4 352.3 52.8 309.4 42.1 264.6C33.1 228.8 40.3 184 60 148.2Z",
+    "fill": "none",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "heart_wall"
+   },
+   {
+    "d": "M70.7 17.4L103 17.4L104.7 144.6L72.5 144.6Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.69,
+    "part": "superior_vena_cava"
+   },
+   {
+    "d": "M70.7 17.4C70.7 20.2 77.9 22.4 86.8 22.4C95.7 22.4 103 20.2 103 17.4C103 14.7 95.7 12.5 86.8 12.5C77.9 12.5 70.7 14.7 70.7 17.4Z",
+    "fill": "blue.dark",
+    "part": "superior_vena_cava"
+   },
+   {
+    "d": "M122.7 169.7C122.7 137.4 131.6 115.9 147.7 105.2L169.2 89.1C178.2 82.8 187.1 81 197.9 81L294.6 80.1L294.6 102.5L203.2 104.3C194.3 104.3 187.1 107.9 181.8 113.2L163.8 132.1C154.9 141 149.5 153.5 148.6 169.7Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.69,
+    "part": "pulmonary_artery"
+   },
+   {
+    "d": "M290.6 91.3C290.6 97.5 292.4 102.5 294.6 102.5C296.8 102.5 298.6 97.5 298.6 91.3C298.6 85.1 296.8 80.1 294.6 80.1C292.4 80.1 290.6 85.1 290.6 91.3Z",
+    "fill": "blue.dark",
+    "part": "pulmonary_artery"
+   },
+   {
+    "d": "M244.4 141L303.5 133.8L305.3 150L246.2 157.1Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "pulmonary_veins"
+   },
+   {
+    "d": "M246.2 173.2L305.3 176.8L303.5 192.9L244.4 189.4Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 2.69,
+    "part": "pulmonary_veins"
+   },
+   {
+    "d": "M300.9 141.9C300.9 146.4 302.5 150 304.4 150C306.4 150 308 146.4 308 141.9C308 137.5 306.4 133.8 304.4 133.8C302.5 133.8 300.9 137.5 300.9 141.9Z",
+    "fill": "red.dark",
+    "part": "pulmonary_veins"
+   },
+   {
+    "d": "M300.9 184.9C300.9 189.3 302.5 192.9 304.4 192.9C306.4 192.9 308 189.3 308 184.9C308 180.4 306.4 176.8 304.4 176.8C302.5 176.8 300.9 180.4 300.9 184.9Z",
+    "fill": "red.dark",
+    "part": "pulmonary_veins"
+   },
+   {
+    "d": "M34.9 321.9L61.8 323.7L72.5 207.3L49.2 205.5Z",
+    "fill": "blue",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.69,
+    "part": "inferior_vena_cava"
+   },
+   {
+    "d": "M34.9 321.9C34.8 324.3 40.6 326.7 48 327.3C55.4 327.8 61.6 326.2 61.7 323.7C61.9 321.3 56 318.8 48.6 318.3C41.2 317.8 35.1 319.4 34.9 321.9Z",
+    "fill": "blue.dark",
+    "part": "inferior_vena_cava"
+   },
+   {
+    "d": "M67.1 158.9C65.3 141 77.9 130.3 95.8 130.3L106.5 130.3C113.7 130.3 117.3 135.6 117.3 142.8L117.3 207.3C117.3 221.6 106.5 228.8 92.2 228.8C76.1 228.8 65.3 219.8 63.5 205.5C61.8 191.2 63.5 173.2 67.1 158.9Z",
+    "fill": "blue.light",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.24,
+    "part": "right_atrium"
+   },
+   {
+    "d": "M201.5 142.8C201.5 135.6 205 130.3 212.2 130.3L233.7 130.3C249.8 130.3 257 141 257 157.1L257 205.5C257 219.8 244.4 228.8 228.3 228.8C212.2 228.8 201.5 221.6 201.5 207.3Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.24,
+    "part": "left_atrium"
+   },
+   {
+    "d": "M67.1 246.7C79.7 253.8 104.7 253.8 117.3 244.9C120.9 219.8 120.9 192.9 122.7 169.7L148.6 169.7C150.4 216.2 151.3 273.5 149.5 327.3C148.6 348.8 144.1 363.1 137 370.3C104.7 350.6 76.1 316.5 60.9 278.9C56.4 266.4 58.2 253.8 67.1 246.7Z",
+    "fill": "blue.light",
+    "stroke": "blue.dark",
+    "strokeWidth": 2.24,
+    "part": "right_ventricle"
+   },
+   {
+    "d": "M169.2 169.7L196.1 169.7C197.9 196.5 199.7 223.4 201.5 244.9C214 253.8 237.3 253.8 251.6 243.1C258.8 273.5 248 309.4 221.2 338C205 354.1 188.9 364.9 176.4 368.5C171 345.2 169.2 309.4 169.2 273.5Z",
+    "fill": "red.light",
+    "stroke": "red.dark",
+    "strokeWidth": 2.24,
+    "part": "left_ventricle"
+   },
+   {
+    "d": "M150.9 176.8L167.9 176.8C168.3 237.7 169.2 300.4 171 359.5C163.8 366.7 156.7 366.7 150.4 361.3C152.2 300.4 151.3 237.7 150.9 176.8Z",
+    "fill": "surface",
+    "part": "septum"
+   },
+   {
+    "d": "M150.9 176.8L167.9 176.8C168.3 237.7 169.2 300.4 171 359.5C163.8 366.7 156.7 366.7 150.4 361.3C152.2 300.4 151.3 237.7 150.9 176.8Z",
+    "fill": "red",
+    "opacity": 0.42,
+    "part": "septum"
+   },
+   {
+    "d": "M72.5 221.6C77.9 232.3 77.9 241.3 72.5 252.1L110.1 252.1C104.7 241.3 104.7 232.3 110.1 221.6Z",
+    "fill": "blue.light",
+    "part": "right_atrium"
+   },
+   {
+    "d": "M208.6 221.6C214 232.3 214 241.3 208.6 252.1L248 252.1C242.6 241.3 242.6 232.3 248 221.6Z",
+    "fill": "red.light",
+    "part": "left_atrium"
+   },
+   {
+    "d": "M68.9 300.4C76.1 293.2 85 295 88.6 304C85 311.2 76.1 312.9 70.7 311.2Z",
+    "fill": "red",
+    "part": "heart_wall"
+   },
+   {
+    "d": "M99.4 338C104.7 329.1 113.7 329.1 117.3 336.2C115.5 345.2 106.5 348.8 101.2 347Z",
+    "fill": "red",
+    "part": "heart_wall"
+   },
+   {
+    "d": "M246.2 300.4C239.1 293.2 230.1 295 226.5 304C230.1 311.2 239.1 312.9 244.4 311.2Z",
+    "fill": "red",
+    "part": "heart_wall"
+   },
+   {
+    "d": "M217.6 338C212.2 329.1 203.2 329.1 199.7 336.2C201.5 345.2 210.4 348.8 215.8 347Z",
+    "fill": "red",
+    "part": "heart_wall"
+   },
+   {
+    "d": "M82.4 273.5L76.1 300.4",
+    "fill": "none",
+    "stroke": "#f6f2ea",
+    "strokeWidth": 1.43,
+    "opacity": 0.9
+   },
+   {
+    "d": "M84.1 274.4L83.3 301.3",
+    "fill": "none",
+    "stroke": "#f6f2ea",
+    "strokeWidth": 1.43,
+    "opacity": 0.9
+   },
+   {
+    "d": "M98.5 274.4L104.7 331.7",
+    "fill": "none",
+    "stroke": "#f6f2ea",
+    "strokeWidth": 1.43,
+    "opacity": 0.9
+   },
+   {
+    "d": "M100.3 273.5L112.8 330.9",
+    "fill": "none",
+    "stroke": "#f6f2ea",
+    "strokeWidth": 1.43,
+    "opacity": 0.9
+   },
+   {
+    "d": "M218.5 273.5L205 330.9",
+    "fill": "none",
+    "stroke": "#f6f2ea",
+    "strokeWidth": 1.43,
+    "opacity": 0.9
+   },
+   {
+    "d": "M220.3 274.4L213.1 331.7",
+    "fill": "none",
+    "stroke": "#f6f2ea",
+    "strokeWidth": 1.43,
+    "opacity": 0.9
+   },
+   {
+    "d": "M234.6 274.4L233.7 301.3",
+    "fill": "none",
+    "stroke": "#f6f2ea",
+    "strokeWidth": 1.43,
+    "opacity": 0.9
+   },
+   {
+    "d": "M236.4 273.5L240.9 300.4",
+    "fill": "none",
+    "stroke": "#f6f2ea",
+    "strokeWidth": 1.43,
+    "opacity": 0.9
+   },
+   {
+    "d": "M73.4 235.9C77 252.1 80.6 264.6 83.3 275.3C87.7 273.5 88.6 268.2 86.8 261C85 252.1 81.5 243.1 79.7 235.9Z",
+    "fill": "#f6f2ea",
+    "stroke": "gray.dark",
+    "strokeWidth": 1.79,
+    "part": "tricuspid_valve"
+   },
+   {
+    "d": "M109.2 235.9C105.6 252.1 102.1 264.6 99.4 275.3C94.9 273.5 94 268.2 95.8 261C97.6 252.1 101.2 243.1 103 235.9Z",
+    "fill": "#f6f2ea",
+    "stroke": "gray.dark",
+    "strokeWidth": 1.79,
+    "part": "tricuspid_valve"
+   },
+   {
+    "d": "M209.5 235.9C213.1 252.1 216.7 264.6 219.4 275.3C223.8 273.5 224.7 268.2 222.9 261C221.2 252.1 217.6 243.1 215.8 235.9Z",
+    "fill": "#f6f2ea",
+    "stroke": "gray.dark",
+    "strokeWidth": 1.79,
+    "part": "mitral_valve"
+   },
+   {
+    "d": "M247.1 235.9C243.5 252.1 240 264.6 235.5 275.3C231 273.5 230.1 268.2 231.9 261C233.7 252.1 237.3 243.1 240.9 235.9Z",
+    "fill": "#f6f2ea",
+    "stroke": "gray.dark",
+    "strokeWidth": 1.79,
+    "part": "mitral_valve"
+   },
+   {
+    "d": "M123.5 171.5C127.1 181.3 133.4 182.2 136.1 173.2C138.8 182.2 145 181.3 147.7 171.5L147.7 175.9C145 185.8 138.8 186.7 136.1 179.5C133.4 186.7 127.1 185.8 123.5 175.9Z",
+    "fill": "#f6f2ea",
+    "stroke": "gray.dark",
+    "strokeWidth": 1.79,
+    "part": "pulmonary_valve"
+   },
+   {
+    "d": "M170.1 171.5C173.7 181.3 180 182.2 182.6 173.2C185.3 182.2 191.6 181.3 195.2 171.5L195.2 175.9C191.6 185.8 185.3 186.7 182.6 179.5C180 186.7 173.7 185.8 170.1 175.9Z",
+    "fill": "#f6f2ea",
+    "stroke": "gray.dark",
+    "strokeWidth": 1.79,
+    "part": "aortic_valve"
+   },
+   {
+    "d": "M79.7 31.8L80.6 137.4",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 4.48,
+    "opacity": 0.3
+   },
+   {
+    "d": "M154.9 105.2C154.9 67.6 172.8 47.9 196.1 44.3",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 4.48,
+    "opacity": 0.3
+   },
+   {
+    "d": "M137 148.2C137 130.3 144.1 117.7 154.9 110.6",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 4.48,
+    "opacity": 0.3
+   }
+  ],
+  "anchors": [
+   {
+    "name": "aorta",
+    "x": 198.8,
+    "y": 49.7
+   },
+   {
+    "name": "septum",
+    "x": 159.8,
+    "y": 273.5
+   },
+   {
+    "name": "heart_wall",
+    "x": 268.6,
+    "y": 264.6
+   },
+   {
+    "name": "pulmonary_artery",
+    "x": 191.6,
+    "y": 93.5
+   },
+   {
+    "name": "superior_vena_cava",
+    "x": 87.2,
+    "y": 40.7
+   },
+   {
+    "name": "pulmonary_veins",
+    "x": 282.9,
+    "y": 144.5
+   },
+   {
+    "name": "inferior_vena_cava",
+    "x": 51.1,
+    "y": 297.1
+   },
+   {
+    "name": "right_atrium",
+    "x": 90.1,
+    "y": 191.0
+   },
+   {
+    "name": "left_atrium",
+    "x": 229.2,
+    "y": 191.0
+   },
+   {
+    "name": "right_ventricle",
+    "x": 125.7,
+    "y": 272.9
+   },
+   {
+    "name": "left_ventricle",
+    "x": 193.5,
+    "y": 273.0
+   },
+   {
+    "name": "tricuspid_valve",
+    "x": 81.8,
+    "y": 255.7
+   },
+   {
+    "name": "mitral_valve",
+    "x": 238.2,
+    "y": 253.8
+   },
+   {
+    "name": "pulmonary_valve",
+    "x": 131.1,
+    "y": 181.8
+   },
+   {
+    "name": "aortic_valve",
+    "x": 187.7,
+    "y": 181.8
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/heart_chambers.svg"
+ },
+ "quality": {
+  "score": 1.0,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "15 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.28 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "51 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "5,536 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "50ae10261608672e",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

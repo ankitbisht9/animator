@@ -4,7 +4,7 @@ do is decided here, in one table.
 - learner: watches, creates lessons within a daily quota, asks doubts, shares privately (a link).
 - educator: everything a learner can, with larger quotas, and publishes lessons to Explore.
 - admin: everything, including people, every lesson, support, the audit log, credits and cost,
-  ratings and what Explore lists.
+  ratings and what Explore lists, and the saved drawings cost-saver lessons use.
 
 A new role (a curator, a finance viewer) is one more line in ROLE_PERMS: the routes already ask for
 the permission they need.
@@ -37,6 +37,8 @@ class Perm(StrEnum):
     RATINGS_READ = "ratings:read"  # every lesson's ratings and comments
     EXPLORE_CURATE = "explore:curate"  # add any lesson to Explore, or keep one out
     REVIEW_MANAGE = "review:manage"  # flag a lesson for the team to improve
+    OBJECTS_READ = "objects:read"  # the saved drawings, the warehouse and its harvest (ADR-055)
+    OBJECTS_CURATE = "objects:curate"  # approve, reject, edit or import a saved drawing
 
 
 ROLE_PERMS: dict[Role, frozenset[Perm]] = {

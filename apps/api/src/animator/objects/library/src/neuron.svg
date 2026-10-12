@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 240">
+  <!-- A neuron: dendrites, cell body with nucleus, the axon wrapped in myelin sheath, axon terminals. -->
+  <g data-part="dendrites" fill="none" data-stroke="pink.dark" stroke-width="7">
+    <path d="M86 96 C70 70 52 56 30 50"/><path d="M60 64 C56 46 58 30 66 16"/>
+    <path d="M80 140 C60 150 40 168 24 192"/><path d="M46 164 C34 162 22 166 10 172"/>
+    <path d="M104 82 C102 60 108 40 120 24"/><path d="M110 156 C108 180 112 200 122 220"/>
+    <path d="M70 116 C52 114 34 110 14 102"/>
+  </g>
+  <g data-part="dendrites" fill="none" data-stroke="pink" stroke-width="4">
+    <path d="M86 96 C70 70 52 56 30 50"/><path d="M60 64 C56 46 58 30 66 16"/>
+    <path d="M80 140 C60 150 40 168 24 192"/><path d="M46 164 C34 162 22 166 10 172"/>
+    <path d="M104 82 C102 60 108 40 120 24"/><path d="M110 156 C108 180 112 200 122 220"/>
+    <path d="M70 116 C52 114 34 110 14 102"/>
+  </g>
+  <path data-part="axon" d="M140 112 L428 112 L428 128 L140 128 Z" data-fill="pink" data-stroke="pink.dark" stroke-width="2.5"/>
+  <path data-part="cell_body" d="M74 120 C68 94 86 74 112 76 C136 78 152 96 150 120 C148 146 128 162 104 160 C84 158 78 140 74 120 Z" data-fill="pink" data-stroke="pink.dark" stroke-width="3"/>
+  <circle data-part="nucleus" cx="110" cy="118" r="18" data-fill="purple" data-stroke="purple.dark" stroke-width="2.5"/>
+  <circle cx="114" cy="114" r="6" data-part="nucleus" data-fill="purple.dark" stroke-width="0"/>
+  <g data-part="myelin_sheath" data-fill="yellow.light" data-stroke="yellow.dark" stroke-width="2.5">
+    <rect x="164" y="100" width="54" height="40" rx="18"/>
+    <rect x="228" y="100" width="54" height="40" rx="18"/>
+    <rect x="292" y="100" width="54" height="40" rx="18"/>
+    <rect x="356" y="100" width="54" height="40" rx="18"/>
+  </g>
+  <g data-part="axon_terminals" fill="none" data-stroke="pink.dark" stroke-width="5">
+    <path d="M426 120 C444 104 458 86 466 64"/><path d="M426 120 C448 120 468 120 486 116"/>
+    <path d="M426 120 C444 138 458 156 468 178"/><path d="M450 96 C460 100 470 102 480 98"/>
+  </g>
+  <g data-part="axon_terminals" data-fill="pink" data-stroke="pink.dark" stroke-width="2.5">
+    <circle cx="467" cy="60" r="9"/><circle cx="488" cy="116" r="9"/><circle cx="470" cy="182" r="9"/><circle cx="483" cy="97" r="7"/>
+  </g>
+  <circle data-anchor="node_of_ranvier" cx="223" cy="120" r="1"/>
+  <circle data-anchor="axon" cx="287" cy="120" r="1"/>
+  <circle data-anchor="dendrites" cx="42" cy="58" r="1"/>
+</svg>

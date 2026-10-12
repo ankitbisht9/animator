@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 360">
+  <!-- A glass test tube, upright, with liquid at the bottom. -->
+  <path data-part="liquid" d="M26 200 C44 194 76 194 94 200 L94 300 C94 320 80 336 60 336 C40 336 26 320 26 300 Z" data-fill="purple" stroke-width="0" opacity="0.7"/>
+  <path data-part="liquid" d="M26 200 C44 194 76 194 94 200 C76 206 44 206 26 200 Z" data-fill="purple.light" stroke-width="0"/>
+  <path data-part="glass" d="M26 24 L26 300 C26 320 40 336 60 336 C80 336 94 320 94 300 L94 24" fill="none" data-stroke="gray.dark" stroke-width="5"/>
+  <path data-part="glass" d="M18 22 L102 22" fill="none" data-stroke="gray.dark" stroke-width="7"/>
+  <path d="M40 46 L40 296" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="7" opacity="0.5"/>
+  <circle data-anchor="glass" cx="94" cy="110" r="1"/>
+</svg>

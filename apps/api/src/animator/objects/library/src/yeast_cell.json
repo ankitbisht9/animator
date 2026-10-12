@@ -1,0 +1,14 @@
+{
+ "id": "yeast_cell",
+ "title": "Yeast cell",
+ "concept": "yeast cell",
+ "view": "cut open, budding",
+ "description": "A single yeast cell cut open, with a new bud growing off it: the cell wall, cytoplasm, nucleus, a vacuole, mitochondria and storage granules",
+ "aliases": ["yeast", "yeast cell", "yeast cells", "budding yeast", "yeast fungus", "saccharomyces"],
+ "context": ["ferment", "sugar", "glucose", "alcohol", "ethanol", "carbon dioxide", "co2", "bread", "dough", "wine", "beer", "brew", "respirat", "anaerobic", "microb", "fung", "bud", "cell", "dna"],
+ "not_for": ["yeast extract", "yeast infection", "nutritional yeast", "yeast packet"],
+ "prefer": ["bud", "cell", "inside", "microscope"],
+ "subjects": ["biology", "chemistry"],
+ "parts": {"cell_wall": "cell wall", "cytoplasm": "cytoplasm", "nucleus": "nucleus", "vacuole": "vacuole", "mitochondria": "mitochondria", "storage_granules": "storage granules", "bud": "bud"},
+ "size": {"min": 90, "default": 220, "max": 460}
+}

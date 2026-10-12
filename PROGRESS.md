@@ -523,3 +523,20 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - **Permissions** for each of these (`usage:read`, `credits:manage`, `ratings:read`, `explore:curate`,
   `review:manage`).
 
+## Saved drawings and cost-saver lessons (ADR-055)
+
+- **A third lesson type, Cost saver** (Create → Advanced → Lesson type): a planned lesson whose scenes
+  place ready-made drawings where they show exactly that thing, and draw everything else. Classic and
+  planned lessons are unchanged.
+- **The drawing library:** 31 checked drawings (the heart outside and cut open, lungs, cells, chloroplast,
+  leaf, plant, flower, sun, Earth, battery, bulb, molecules, lab glass and more), labelled by parts, in
+  the lesson's theme colors. A label pointing at a part lands on what is visible of it; a part can be
+  brought into focus while it is named.
+- **Precision:** a drawing is offered only when the scene names it (names, context words, phrases that
+  mean something else); otherwise the scene draws it. A similar drawing is never used instead.
+- **The warehouse:** drawings collected from finished lessons and SVG imports, used only once an admin
+  approves them. Administration → Saved drawings: review, edit, approve, retire, import, collect, and try
+  which drawings a scene brief would get.
+- **Measured:** about a quarter less AI cost on three topics (see ADR-055), with consistent drawings across
+  scenes.
+- Guide: docs/OBJECTS.md.

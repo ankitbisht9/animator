@@ -1,0 +1,14 @@
+{
+ "id": "test_tube",
+ "title": "Test tube",
+ "concept": "test tube",
+ "view": "upright",
+ "description": "A glass test tube standing upright with liquid in the bottom",
+ "aliases": ["test tube", "test tubes", "testtube", "glass tube"],
+ "context": ["lab", "experiment", "liquid", "solution", "chemical", "react", "mix", "acid", "heat", "sample", "chemistry", "science", "indicator", "precipitat"],
+ "not_for": ["test tube baby"],
+ "prefer": ["sample", "react", "precipitat", "colour change", "color change"],
+ "subjects": ["chemistry", "biology"],
+ "parts": {"glass": "test tube", "liquid": "liquid"},
+ "size": {"min": 60, "default": 120, "max": 260}
+}

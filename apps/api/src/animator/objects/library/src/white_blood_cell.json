@@ -1,0 +1,14 @@
+{
+ "id": "white_blood_cell",
+ "title": "White blood cell",
+ "concept": "white blood cell",
+ "view": "a neutrophil, cut open",
+ "description": "A white blood cell (a neutrophil): a soft rounded cell with granules in its cytoplasm and a nucleus of three joined lobes",
+ "aliases": ["white blood cell", "white blood cells", "leukocyte", "leucocyte", "neutrophil", "phagocyte", "immune cell", "immune cells", "wbc"],
+ "context": ["immun", "pathogen", "infect", "bacteri", "virus", "germ", "blood", "defen", "engulf", "disease", "antibod", "antigen", "inflam", "body"],
+ "not_for": ["white blood cell count chart"],
+ "prefer": ["neutrophil", "engulf", "phagocyt", "granule", "nucleus"],
+ "subjects": ["biology"],
+ "parts": {"cell_membrane": "cell membrane", "cytoplasm": "cytoplasm", "nucleus": "lobed nucleus", "granules": "granules"},
+ "size": {"min": 80, "default": 200, "max": 420}
+}

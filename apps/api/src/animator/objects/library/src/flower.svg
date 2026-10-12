@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 460">
+  <!-- A flower cut in half, side view: petals, sepals, stamens (anther on a filament), the pistil (stigma, style,
+       ovary with ovules), the receptacle, the stem and a leaf. -->
+  <path data-part="leaf" d="M168 380 C200 350 244 342 284 356 C254 386 210 394 168 380 Z" data-fill="green" data-stroke="green.dark" stroke-width="3"/>
+  <path d="M170 378 C206 366 242 360 276 358" fill="none" data-stroke="green.light" stroke-width="2"/>
+  <path data-part="stem" d="M162 456 C160 410 160 360 162 300 L176 300 C176 360 176 410 178 456 Z" data-fill="green" data-stroke="green.dark" stroke-width="3"/>
+  <path data-part="petal" d="M170 200 C140 140 152 70 170 40 C188 70 200 140 170 200 Z" data-fill="pink.light" data-stroke="pink.dark" stroke-width="2.5" opacity="0.7"/>
+  <path data-part="sepal" d="M160 292 C130 296 100 288 80 268 C108 262 138 270 162 284 Z" data-fill="green" data-stroke="green.dark" stroke-width="2.5"/>
+  <path data-part="sepal" d="M178 292 C208 296 238 288 258 268 C230 262 200 270 176 284 Z" data-fill="green" data-stroke="green.dark" stroke-width="2.5"/>
+  <path data-part="petal" d="M158 280 C112 270 64 230 40 160 C34 140 44 130 60 140 C100 166 140 220 164 268 Z" data-fill="pink" data-stroke="pink.dark" stroke-width="3"/>
+  <path data-part="petal" d="M180 280 C226 270 274 230 298 160 C304 140 294 130 278 140 C238 166 198 220 174 268 Z" data-fill="pink" data-stroke="pink.dark" stroke-width="3"/>
+  <ellipse data-part="receptacle" cx="169" cy="290" rx="34" ry="16" data-fill="green.light" data-stroke="green.dark" stroke-width="2.5"/>
+  <g data-part="filament" fill="none" data-stroke="yellow.dark" stroke-width="3">
+    <path d="M150 282 C140 240 126 200 110 166"/><path d="M188 282 C198 240 212 200 228 166"/>
+    <path d="M158 280 C154 246 146 214 138 188"/><path d="M180 280 C184 246 192 214 200 188"/>
+  </g>
+  <g data-part="anther" data-fill="orange" data-stroke="orange.dark" stroke-width="2">
+    <ellipse cx="108" cy="158" rx="11" ry="16" transform="rotate(-30 108 158)"/>
+    <ellipse cx="230" cy="158" rx="11" ry="16" transform="rotate(30 230 158)"/>
+    <ellipse cx="136" cy="180" rx="9" ry="13" transform="rotate(-20 136 180)"/>
+    <ellipse cx="202" cy="180" rx="9" ry="13" transform="rotate(20 202 180)"/>
+  </g>
+  <g data-part="pollen" data-fill="yellow" stroke-width="0">
+    <circle cx="96" cy="140" r="3.5"/><circle cx="242" cy="140" r="3.5"/><circle cx="104" cy="134" r="3"/><circle cx="234" cy="134" r="3"/>
+  </g>
+  <path data-part="ovary" d="M169 290 C144 290 136 270 140 252 C144 234 158 226 169 224 C180 226 194 234 198 252 C202 270 194 290 169 290 Z" data-fill="green" data-stroke="green.dark" stroke-width="3"/>
+  <g data-part="ovule" data-fill="#f6f2ea" data-stroke="green.dark" stroke-width="1.5">
+    <circle cx="160" cy="258" r="6"/><circle cx="178" cy="258" r="6"/><circle cx="169" cy="274" r="6"/><circle cx="169" cy="242" r="5"/>
+  </g>
+  <path data-part="style" d="M165 226 L163 150 L175 150 L173 226 Z" data-fill="green.light" data-stroke="green.dark" stroke-width="2"/>
+  <path data-part="stigma" d="M150 150 C150 132 160 124 169 124 C178 124 188 132 188 150 C182 156 156 156 150 150 Z" data-fill="yellow.light" data-stroke="green.dark" stroke-width="2.5"/>
+  <circle data-anchor="petal" cx="64" cy="168" r="1"/>
+</svg>

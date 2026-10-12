@@ -1,0 +1,248 @@
+{
+ "id": "light_bulb",
+ "version": 1,
+ "title": "Light bulb",
+ "concept": "light bulb",
+ "description": "An incandescent light bulb, upright: the glass bulb, the coiled filament held by two support wires, the screw base with its threads and the contact at the bottom",
+ "view": "upright, from the side",
+ "aliases": [
+  "light bulb",
+  "bulb",
+  "lightbulb",
+  "lamp",
+  "electric bulb",
+  "filament bulb",
+  "incandescent bulb"
+ ],
+ "context": [
+  "circuit",
+  "current",
+  "electric",
+  "voltage",
+  "battery",
+  "switch",
+  "wire",
+  "glow",
+  "filament",
+  "energy",
+  "power",
+  "resistance",
+  "series",
+  "parallel",
+  "watt"
+ ],
+ "not_for": [
+  "bright idea",
+  "flower bulb",
+  "tulip bulb",
+  "onion bulb",
+  "bulb of",
+  "lamp post",
+  "street lamp",
+  "oil lamp",
+  "lava lamp",
+  "desk lamp",
+  "table lamp",
+  "floor lamp",
+  "lamp shade"
+ ],
+ "prefer": [
+  "filament",
+  "circuit",
+  "glow",
+  "light up",
+  "lights up"
+ ],
+ "subjects": [
+  "physics"
+ ],
+ "parts": {
+  "glass": "glass bulb",
+  "filament": "filament",
+  "wires": "support wires",
+  "base": "screw base",
+  "contact": "contact"
+ },
+ "size": {
+  "min": 90.0,
+  "default": 170.0,
+  "max": 360.0
+ },
+ "art": {
+  "w": 240.3,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M120.2 5.5C185.4 5.5 234.8 54.9 234.8 118.2C234.8 161.7 211.1 189.4 189.4 213.1C175.5 228.9 167.6 244.7 165.6 264.5L74.7 264.5C72.7 244.7 64.8 228.9 51 213.1C29.2 189.4 5.5 161.7 5.5 118.2C5.5 54.9 54.9 5.5 120.2 5.5Z",
+    "fill": "yellow.light",
+    "stroke": "yellow.dark",
+    "strokeWidth": 2.97,
+    "opacity": 0.6,
+    "part": "glass"
+   },
+   {
+    "d": "M120.2 5.5C185.4 5.5 234.8 54.9 234.8 118.2C234.8 161.7 211.1 189.4 189.4 213.1C175.5 228.9 167.6 244.7 165.6 264.5L74.7 264.5C72.7 244.7 64.8 228.9 51 213.1C29.2 189.4 5.5 161.7 5.5 118.2C5.5 54.9 54.9 5.5 120.2 5.5Z",
+    "fill": "none",
+    "stroke": "yellow.dark",
+    "strokeWidth": 2.97,
+    "part": "glass"
+   },
+   {
+    "d": "M100.4 264.5L100.4 193.3L74.7 130.1",
+    "fill": "none",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.97,
+    "part": "wires"
+   },
+   {
+    "d": "M139.9 264.5L139.9 193.3L165.6 130.1",
+    "fill": "none",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.97,
+    "part": "wires"
+   },
+   {
+    "d": "M74.7 130.1C80.6 114.2 86.6 145.9 92.5 130.1C98.4 114.2 104.3 145.9 110.3 130.1C116.2 114.2 122.1 145.9 128.1 130.1C134 114.2 139.9 145.9 145.9 130.1C151.8 114.2 157.7 145.9 165.6 130.1",
+    "fill": "none",
+    "stroke": "orange.dark",
+    "strokeWidth": 3.95,
+    "part": "filament"
+   },
+   {
+    "d": "M51 74.7C66.8 45 90.5 29.2 116.2 25.3",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 9.89,
+    "opacity": 0.55
+   },
+   {
+    "d": "M72.7 262.5L167.6 262.5L165.6 343.6C165.6 351.5 159.7 357.4 151.8 357.4L88.5 357.4C80.6 357.4 74.7 351.5 74.7 343.6Z",
+    "fill": "gray.light",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.97,
+    "part": "base"
+   },
+   {
+    "d": "M74.7 282.3L165.6 290.2",
+    "fill": "none",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.97,
+    "part": "base"
+   },
+   {
+    "d": "M74.7 302.1L165.6 310",
+    "fill": "none",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.97,
+    "part": "base"
+   },
+   {
+    "d": "M74.7 321.9L165.6 329.8",
+    "fill": "none",
+    "stroke": "gray.dark",
+    "strokeWidth": 2.97,
+    "part": "base"
+   },
+   {
+    "d": "M94.5 357.4L145.9 357.4L139.9 383.1C138 391.1 132 395 124.1 395L116.2 395C108.3 395 102.4 391.1 100.4 383.1Z",
+    "fill": "text",
+    "stroke": "text",
+    "strokeWidth": 1.98,
+    "part": "contact"
+   }
+  ],
+  "anchors": [
+   {
+    "name": "glass",
+    "x": 122.8,
+    "y": 65.9
+   },
+   {
+    "name": "wires",
+    "x": 100.4,
+    "y": 197.8
+   },
+   {
+    "name": "filament",
+    "x": 119.5,
+    "y": 130.6
+   },
+   {
+    "name": "base",
+    "x": 92.8,
+    "y": 340.5
+   },
+   {
+    "name": "contact",
+    "x": 120.1,
+    "y": 376.2
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/light_bulb.svg"
+ },
+ "quality": {
+  "score": 0.968,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "5 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.66 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "11 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "1,018 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "127a355cc74552f2",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

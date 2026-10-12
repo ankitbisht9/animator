@@ -1,0 +1,63 @@
+{
+ "id": "conical_flask",
+ "title": "Conical flask",
+ "concept": "conical flask",
+ "view": "from the side",
+ "description": "A glass conical (Erlenmeyer) flask with a narrow neck and liquid in the bottom",
+ "aliases": [
+  "conical flask",
+  "erlenmeyer flask",
+  "flask",
+  "lab flask",
+  "glass flask"
+ ],
+ "context": [
+  "lab",
+  "experiment",
+  "liquid",
+  "solution",
+  "chemical",
+  "react",
+  "mix",
+  "acid",
+  "titrat",
+  "heat",
+  "gas",
+  "chemistry",
+  "science",
+  "indicator",
+  "yeast",
+  "ferment"
+ ],
+ "not_for": [
+  "hip flask",
+  "thermos flask",
+  "vacuum flask",
+  "flask icon",
+  "flask app",
+  "round bottom flask",
+  "round-bottom flask",
+  "volumetric flask",
+  "florence flask",
+  "distillation flask"
+ ],
+ "prefer": [
+  "conical",
+  "erlenmeyer",
+  "titrat",
+  "swirl"
+ ],
+ "subjects": [
+  "chemistry"
+ ],
+ "parts": {
+  "glass": "flask",
+  "liquid": "liquid",
+  "neck": "neck"
+ },
+ "size": {
+  "min": 80,
+  "default": 180,
+  "max": 360
+ }
+}

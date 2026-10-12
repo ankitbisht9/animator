@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 340">
+  <!-- A conical (Erlenmeyer) flask with liquid in the bottom. -->
+  <path data-part="liquid" d="M60 220 C100 212 180 212 220 220 L256 300 C262 314 254 326 238 326 L42 326 C26 326 18 314 24 300 Z" data-fill="green" stroke-width="0" opacity="0.7"/>
+  <path data-part="liquid" d="M60 220 C100 212 180 212 220 220 C180 228 100 228 60 220 Z" data-fill="green.light" stroke-width="0"/>
+  <path data-part="glass" d="M106 20 L106 120 L24 300 C18 314 26 326 42 326 L238 326 C254 326 262 314 256 300 L174 120 L174 20" fill="none" data-stroke="gray.dark" stroke-width="5"/>
+  <path data-part="glass" d="M96 18 L184 18" fill="none" data-stroke="gray.dark" stroke-width="7"/>
+  <path d="M118 40 L118 126 L56 268" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="8" opacity="0.5"/>
+  <circle data-anchor="glass" cx="106" cy="70" r="1"/>
+  <circle data-anchor="neck" cx="140" cy="60" r="1"/>
+</svg>

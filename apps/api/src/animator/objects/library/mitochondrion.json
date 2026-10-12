@@ -1,0 +1,217 @@
+{
+ "id": "mitochondrion",
+ "version": 1,
+ "title": "Mitochondrion",
+ "concept": "mitochondrion",
+ "description": "A mitochondrion cut lengthwise: the smooth outer membrane, the inner membrane folded into cristae, and the matrix with a loop of DNA and ribosomes",
+ "view": "cut lengthwise",
+ "aliases": [
+  "mitochondrion",
+  "mitochondria",
+  "powerhouse of the cell",
+  "mitochondrial"
+ ],
+ "context": [
+  "respirat",
+  "energy",
+  "atp",
+  "cell",
+  "glucose",
+  "oxygen",
+  "organelle",
+  "powerhouse",
+  "krebs",
+  "aerobic",
+  "membrane",
+  "muscle",
+  "biology"
+ ],
+ "not_for": [
+  "mitochondrial disease chart"
+ ],
+ "prefer": [
+  "cristae",
+  "matrix",
+  "inner membrane",
+  "inside",
+  "atp"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "outer_membrane": "outer membrane",
+  "inner_membrane": "inner membrane",
+  "cristae": "cristae",
+  "matrix": "matrix",
+  "dna": "mitochondrial DNA",
+  "ribosomes": "ribosomes"
+ },
+ "size": {
+  "min": 120.0,
+  "default": 320.0,
+  "max": 620.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 215.8,
+  "shapes": [
+   {
+    "d": "M5.5 107.9C5.5 44.4 93.6 5.5 200 5.5C306.4 5.5 394.5 44.4 394.5 107.9C394.5 171.3 306.4 210.2 200 210.2C93.6 210.2 5.5 171.3 5.5 107.9Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 3.07,
+    "part": "outer_membrane"
+   },
+   {
+    "d": "M24 107.9C24 56.7 97.7 26 138.6 24L144.7 138.6L163.2 24L183.6 21.9L191.8 148.8L212.3 21.9L234.8 21.9L243 138.6L263.5 24L283.9 26L292.1 148.8L308.5 30.1C353.5 42.4 376 75.1 376 107.9C376 140.6 353.5 173.4 308.5 185.7L292.1 71L283.9 189.8L263.5 191.8L243 79.2L234.8 193.9L212.3 193.9L191.8 69L183.6 193.9L163.2 191.8L144.7 79.2L138.6 191.8C97.7 189.8 24 159.1 24 107.9Z",
+    "fill": "orange.soft",
+    "part": "matrix"
+   },
+   {
+    "d": "M24 107.9C24 56.7 97.7 26 138.6 24L144.7 138.6L163.2 24L183.6 21.9L191.8 148.8L212.3 21.9L234.8 21.9L243 138.6L263.5 24L283.9 26L292.1 148.8L308.5 30.1C353.5 42.4 376 75.1 376 107.9C376 140.6 353.5 173.4 308.5 185.7L292.1 71L283.9 189.8L263.5 191.8L243 79.2L234.8 193.9L212.3 193.9L191.8 69L183.6 193.9L163.2 191.8L144.7 79.2L138.6 191.8C97.7 189.8 24 159.1 24 107.9Z",
+    "fill": "none",
+    "stroke": "orange.dark",
+    "strokeWidth": 4.09,
+    "part": "inner_membrane"
+   },
+   {
+    "d": "M62.9 97.7C73.1 83.3 93.6 87.4 93.6 103.8C93.6 120.2 73.1 124.3 64.9 114C58.8 105.8 66.9 91.5 81.3 93.6",
+    "fill": "none",
+    "stroke": "purple",
+    "strokeWidth": 3.07,
+    "part": "dna"
+   },
+   {
+    "d": "M53.1 138.6C53.1 140.6 54.7 142.2 56.7 142.2C58.7 142.2 60.3 140.6 60.3 138.6C60.3 136.6 58.7 135 56.7 135C54.7 135 53.1 136.6 53.1 138.6Z",
+    "fill": "purple.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M104.3 66.9C104.3 68.9 105.9 70.5 107.9 70.5C109.9 70.5 111.5 68.9 111.5 66.9C111.5 65 109.9 63.4 107.9 63.4C105.9 63.4 104.3 65 104.3 66.9Z",
+    "fill": "purple.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M339.7 97.7C339.7 99.6 341.3 101.2 343.3 101.2C345.3 101.2 346.9 99.6 346.9 97.7C346.9 95.7 345.3 94.1 343.3 94.1C341.3 94.1 339.7 95.7 339.7 97.7Z",
+    "fill": "purple.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M329.5 134.5C329.5 136.5 331.1 138.1 333.1 138.1C335 138.1 336.6 136.5 336.6 134.5C336.6 132.5 335 130.9 333.1 130.9C331.1 130.9 329.5 132.5 329.5 134.5Z",
+    "fill": "purple.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M102.3 148.8C102.3 150.8 103.9 152.4 105.8 152.4C107.8 152.4 109.4 150.8 109.4 148.8C109.4 146.8 107.8 145.2 105.8 145.2C103.9 145.2 102.3 146.8 102.3 148.8Z",
+    "fill": "purple.dark",
+    "part": "ribosomes"
+   },
+   {
+    "d": "M46.5 56.7C87.4 26 138.6 15.8 193.9 13.7",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 7.16,
+    "opacity": 0.4
+   }
+  ],
+  "anchors": [
+   {
+    "name": "cristae",
+    "x": 191.8,
+    "y": 138.6
+   },
+   {
+    "name": "outer_membrane",
+    "x": 198.0,
+    "y": 21.5
+   },
+   {
+    "name": "matrix",
+    "x": 117.5,
+    "y": 114.2
+   },
+   {
+    "name": "inner_membrane",
+    "x": 198.3,
+    "y": 108.4
+   },
+   {
+    "name": "dna",
+    "x": 77.4,
+    "y": 93.5
+   },
+   {
+    "name": "ribosomes",
+    "x": 107.8,
+    "y": 67.0
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/mitochondrion.svg"
+ },
+ "quality": {
+  "score": 0.957,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "5 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 0.54 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "10 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "1,747 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "90ab53901c7033a6",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

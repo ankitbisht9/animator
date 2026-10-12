@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 340">
+  <!-- An antibody (Y-shaped): two heavy chains, two light chains, antigen-binding sites at the tips. -->
+  <g data-part="heavy_chain" data-fill="blue" data-stroke="blue.dark" stroke-width="3">
+    <path d="M140 326 L140 196 L74 112 L96 96 L158 176 L158 326 Z"/>
+    <path d="M180 326 L180 196 L246 112 L224 96 L162 176 L162 326 Z"/>
+  </g>
+  <g data-part="light_chain" data-fill="sky" data-stroke="blue.dark" stroke-width="3">
+    <path d="M78 117 L130 183 L119 192 L66 126 Z"/>
+    <path d="M242 117 L190 183 L201 192 L254 126 Z"/>
+  </g>
+  <g data-part="binding_site" data-fill="yellow" data-stroke="yellow.dark" stroke-width="3">
+    <path d="M44 138 C30 120 34 92 56 80 C70 72 88 78 98 94 L74 112 Z"/>
+    <path d="M276 138 C290 120 286 92 264 80 C250 72 232 78 222 94 L246 112 Z"/>
+  </g>
+  <g data-part="disulfide_bonds" fill="none" data-stroke="red" stroke-width="3.5">
+    <path d="M140 214 L180 214"/><path d="M140 230 L180 230"/>
+    <path d="M100 174 L114 162"/><path d="M220 174 L206 162"/>
+  </g>
+  <path d="M146 310 L146 200 L92 132" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="4" opacity="0.4"/>
+  <circle data-anchor="stem" cx="160" cy="290" r="1"/>
+</svg>

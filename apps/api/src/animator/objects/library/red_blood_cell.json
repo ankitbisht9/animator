@@ -1,0 +1,170 @@
+{
+ "id": "red_blood_cell",
+ "version": 1,
+ "title": "Red blood cell",
+ "concept": "red blood cell",
+ "description": "A red blood cell from above: a red disc, thinner and paler in the middle (biconcave), with no nucleus",
+ "view": "from above",
+ "aliases": [
+  "red blood cell",
+  "red blood cells",
+  "erythrocyte",
+  "erythrocytes",
+  "rbc",
+  "red cell"
+ ],
+ "context": [
+  "blood",
+  "oxygen",
+  "haemoglobin",
+  "hemoglobin",
+  "iron",
+  "artery",
+  "vein",
+  "capillar",
+  "circulat",
+  "lung",
+  "body",
+  "carry",
+  "anaemia",
+  "anemia"
+ ],
+ "not_for": [
+  "red blood cell count chart"
+ ],
+ "prefer": [
+  "disc",
+  "biconcave",
+  "oxygen",
+  "haemoglobin",
+  "hemoglobin"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "rim": "red blood cell",
+  "thin_center": "thin centre"
+ },
+ "size": {
+  "min": 40.0,
+  "default": 140.0,
+  "max": 360.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M6.8 200C6.8 306.7 93.3 393.2 200 393.2C306.7 393.2 393.2 306.7 393.2 200C393.2 93.3 306.7 6.8 200 6.8C93.3 6.8 6.8 93.3 6.8 200Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 5.68,
+    "part": "rim"
+   },
+   {
+    "d": "M32.4 200C32.4 292.6 107.4 367.6 200 367.6C292.6 367.6 367.6 292.6 367.6 200C367.6 107.4 292.6 32.4 200 32.4C107.4 32.4 32.4 107.4 32.4 200Z",
+    "fill": "none",
+    "stroke": "red.light",
+    "strokeWidth": 14.2,
+    "opacity": 0.6
+   },
+   {
+    "d": "M111.9 211.4C111.9 266.3 156.5 310.8 211.4 310.8C266.3 310.8 310.8 266.3 310.8 211.4C310.8 156.5 266.3 111.9 211.4 111.9C156.5 111.9 111.9 156.5 111.9 211.4Z",
+    "fill": "red.dark",
+    "opacity": 0.35,
+    "part": "thin_center"
+   },
+   {
+    "d": "M109.1 200C109.1 250.2 149.8 290.9 200 290.9C250.2 290.9 290.9 250.2 290.9 200C290.9 149.8 250.2 109.1 200 109.1C149.8 109.1 109.1 149.8 109.1 200Z",
+    "fill": "red.light",
+    "part": "thin_center"
+   },
+   {
+    "d": "M72.2 143.2C94.9 92.1 143.2 58 200 52.3",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 14.2,
+    "opacity": 0.35
+   }
+  ],
+  "anchors": [
+   {
+    "name": "rim",
+    "x": 96.9,
+    "y": 122.0
+   },
+   {
+    "name": "thin_center",
+    "x": 202.6,
+    "y": 202.6
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/red_blood_cell.svg"
+ },
+ "quality": {
+  "score": 0.814,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "2 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.00 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "5 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "612 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "1a8ba4fee58e15e9",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

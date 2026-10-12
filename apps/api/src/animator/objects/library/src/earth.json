@@ -1,0 +1,66 @@
+{
+ "id": "earth",
+ "title": "Earth",
+ "concept": "planet earth",
+ "view": "from space",
+ "description": "The Earth from space: blue oceans, green continents (Africa and Europe facing us, the Americas at the left edge), white clouds and a thin atmosphere",
+ "aliases": [
+  "earth",
+  "the earth",
+  "planet earth",
+  "our planet",
+  "globe"
+ ],
+ "context": [
+  "planet",
+  "orbit",
+  "sun",
+  "moon",
+  "space",
+  "gravity",
+  "solar system",
+  "rotat",
+  "revolv",
+  "season",
+  "climate",
+  "atmosphere",
+  "ocean",
+  "continent",
+  "global",
+  "day",
+  "night",
+  "axis",
+  "greenhouse",
+  "warming",
+  "population",
+  "world"
+ ],
+ "not_for": [
+  "earth wire",
+  "rare earth",
+  "down to earth"
+ ],
+ "prefer": [
+  "space",
+  "planet",
+  "orbit",
+  "globe",
+  "continent",
+  "ocean",
+  "atmosphere"
+ ],
+ "subjects": [
+  "geography",
+  "physics"
+ ],
+ "parts": {
+  "ocean": "ocean",
+  "land": "continents",
+  "atmosphere": "atmosphere"
+ },
+ "size": {
+  "min": 120,
+  "default": 260,
+  "max": 520
+ }
+}

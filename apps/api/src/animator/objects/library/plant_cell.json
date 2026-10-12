@@ -1,0 +1,396 @@
+{
+ "id": "plant_cell",
+ "version": 1,
+ "title": "Plant cell",
+ "concept": "plant cell",
+ "description": "A typical plant cell, box-shaped: the cell wall, the cell membrane just inside it, the cytoplasm, a large central vacuole, the nucleus with its nucleolus, green chloroplasts and two mitochondria",
+ "view": "cut open, from above",
+ "aliases": [
+  "plant cell",
+  "plant cells",
+  "leaf cell",
+  "cell of a plant"
+ ],
+ "context": [
+  "plant",
+  "leaf",
+  "leaves",
+  "cell",
+  "photosynth",
+  "chloroplast",
+  "vacuole",
+  "cell wall",
+  "organelle",
+  "biology",
+  "tissue",
+  "nucleus"
+ ],
+ "not_for": [
+  "solar cell",
+  "fuel cell",
+  "prison cell",
+  "battery cell",
+  "cell phone",
+  "spreadsheet cell"
+ ],
+ "prefer": [
+  "vacuole",
+  "cell wall",
+  "chloroplast",
+  "organelle",
+  "nucleus",
+  "inside"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "cell_wall": "cell wall",
+  "cell_membrane": "cell membrane",
+  "cytoplasm": "cytoplasm",
+  "vacuole": "vacuole",
+  "nucleus": "nucleus",
+  "nucleolus": "nucleolus",
+  "chloroplasts": "chloroplasts",
+  "mitochondria": "mitochondria"
+ },
+ "size": {
+  "min": 260.0,
+  "default": 420.0,
+  "max": 660.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 273.3,
+  "shapes": [
+   {
+    "d": "M21.7 9L376.5 5.4C387.4 5.4 392.8 12.6 392.8 23.5L394.6 248C394.6 258.8 387.4 266.1 376.5 266.1L25.3 267.9C14.4 267.9 7.2 260.7 7.2 249.8L5.4 25.3C5.4 14.4 10.8 9 21.7 9Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.72,
+    "part": "cell_wall"
+   },
+   {
+    "d": "M27.1 21.7L371.1 18C376.5 18 380.2 21.7 380.2 27.1L382 244.4C382 249.8 378.3 253.4 372.9 253.4L28.9 255.2C23.5 255.2 19.8 251.6 19.8 246.2L18 30.7C18 25.3 21.7 21.7 27.1 21.7Z",
+    "fill": "green.soft",
+    "part": "cytoplasm"
+   },
+   {
+    "d": "M27.1 21.7L371.1 18C376.5 18 380.2 21.7 380.2 27.1L382 244.4C382 249.8 378.3 253.4 372.9 253.4L28.9 255.2C23.5 255.2 19.8 251.6 19.8 246.2L18 30.7C18 25.3 21.7 21.7 27.1 21.7Z",
+    "fill": "none",
+    "stroke": "yellow.dark",
+    "strokeWidth": 3.62,
+    "part": "cell_membrane"
+   },
+   {
+    "d": "M126.7 65.1C171.9 48.8 271.5 52.4 307.7 74.2C336.7 92.3 338.5 168.3 311.4 191.9C273.3 220.8 177.4 219 135.7 199.1C97.7 181 94.1 85 126.7 65.1Z",
+    "fill": "sky.light",
+    "stroke": "fluid.dark",
+    "strokeWidth": 2.26,
+    "part": "vacuole"
+   },
+   {
+    "d": "M144.8 81.4C181 68.7 235.3 68.7 271.5 79.6",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 5.43,
+    "opacity": 0.5
+   },
+   {
+    "d": "M37.9 83.2C37.9 102.2 53.4 117.6 72.4 117.6C91.4 117.6 106.8 102.2 106.8 83.2C106.8 64.2 91.4 48.8 72.4 48.8C53.4 48.8 37.9 64.2 37.9 83.2Z",
+    "fill": "purple.light",
+    "stroke": "purple.dark",
+    "strokeWidth": 2.72,
+    "part": "nucleus"
+   },
+   {
+    "d": "M67.8 77.8C67.8 84.3 73.1 89.6 79.6 89.6C86.1 89.6 91.4 84.3 91.4 77.8C91.4 71.3 86.1 66 79.6 66C73.1 66 67.8 71.3 67.8 77.8Z",
+    "fill": "purple.dark",
+    "part": "nucleolus"
+   },
+   {
+    "d": "M39.3 175.7C41.3 181.4 52.1 182.6 63.4 178.5C74.7 174.4 82.1 166.5 80.1 160.9C78 155.2 67.2 154 56 158.1C44.7 162.2 37.2 170.1 39.3 175.7Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.81,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M58.6 213.4C57.1 219.2 65.2 226.4 76.8 229.5C88.4 232.6 99 230.4 100.6 224.6C102.1 218.8 94 211.6 82.4 208.5C70.8 205.4 60.2 207.6 58.6 213.4Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.81,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M168.3 229.9C168.3 235.9 178 240.7 190 240.7C202 240.7 211.8 235.9 211.8 229.9C211.8 223.9 202 219 190 219C178 219 168.3 223.9 168.3 229.9Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.81,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M250.1 230C251.2 235.9 261.6 239 273.4 237C285.2 234.9 294 228.4 292.9 222.5C291.9 216.6 281.5 213.5 269.6 215.6C257.8 217.6 249.1 224.1 250.1 230Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.81,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M344.1 179.1C342 190.9 345.1 201.3 351 202.4C356.9 203.4 363.4 194.7 365.5 182.9C367.6 171.1 364.5 160.6 358.6 159.6C352.7 158.5 346.2 167.3 344.1 179.1Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.81,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M340.7 80.6C343.8 92.2 351 100.3 356.8 98.8C362.6 97.2 364.8 86.6 361.7 75C358.6 63.4 351.4 55.2 345.6 56.8C339.8 58.3 337.6 69 340.7 80.6Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.81,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M186.4 39.8C186.4 45.3 196.1 49.7 208.1 49.7C220.1 49.7 229.9 45.3 229.9 39.8C229.9 34.3 220.1 29.8 208.1 29.8C196.1 29.8 186.4 34.3 186.4 39.8Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 1.81,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M47 171.9L72.4 162.9",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M50.6 164.7L68.7 159.3",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M66.9 215.4L92.3 222.6",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M70.5 222.6L88.6 228.1",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M177.4 229.9L202.7 229.9",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M181 224.4L199.1 224.4",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M258.8 228.1L284.2 224.4",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M262.5 233.5L280.6 230.8",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M353 168.3L356.6 193.7",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M347.6 171.9L350.3 190",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M347.6 65.1L354.8 90.5",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M342.1 70.5L347.6 86.8",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M195.5 39.8L220.8 39.8",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M199.1 45.2L217.2 45.2",
+    "fill": "none",
+    "stroke": "green.dark",
+    "strokeWidth": 1.45,
+    "part": "chloroplasts"
+   },
+   {
+    "d": "M115.8 235.3C115.8 240.3 123.9 244.4 133.9 244.4C143.9 244.4 152 240.3 152 235.3C152 230.3 143.9 226.3 133.9 226.3C123.9 226.3 115.8 230.3 115.8 235.3Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 1.81,
+    "part": "mitochondria"
+   },
+   {
+    "d": "M325.8 126.7C325.8 136.7 329.9 144.8 334.9 144.8C339.9 144.8 343.9 136.7 343.9 126.7C343.9 116.7 339.9 108.6 334.9 108.6C329.9 108.6 325.8 116.7 325.8 126.7Z",
+    "fill": "orange",
+    "stroke": "orange.dark",
+    "strokeWidth": 1.81,
+    "part": "mitochondria"
+   },
+   {
+    "d": "M121.2 235.3L126.7 229.9L132.1 240.7L137.5 229.9L143 240.7L146.6 235.3",
+    "fill": "none",
+    "stroke": "orange.dark",
+    "strokeWidth": 1.45,
+    "part": "mitochondria"
+   },
+   {
+    "d": "M334.9 114L329.5 119.4L340.3 124.9L329.5 130.3L340.3 135.7L334.9 139.3",
+    "fill": "none",
+    "stroke": "orange.dark",
+    "strokeWidth": 1.45,
+    "part": "mitochondria"
+   }
+  ],
+  "anchors": [
+   {
+    "name": "cell_wall",
+    "x": 11.7,
+    "y": 135.7
+   },
+   {
+    "name": "cytoplasm",
+    "x": 324.7,
+    "y": 222.2
+   },
+   {
+    "name": "cell_membrane",
+    "x": 196.1,
+    "y": 19.9
+   },
+   {
+    "name": "vacuole",
+    "x": 217.9,
+    "y": 134.6
+   },
+   {
+    "name": "nucleus",
+    "x": 56.8,
+    "y": 93.3
+   },
+   {
+    "name": "nucleolus",
+    "x": 79.6,
+    "y": 77.8
+   },
+   {
+    "name": "chloroplasts",
+    "x": 359.8,
+    "y": 172.9
+   },
+   {
+    "name": "mitochondria",
+    "x": 337.7,
+    "y": 118.0
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/plant_cell.svg"
+ },
+ "quality": {
+  "score": 1.0,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "8 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 0.68 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "32 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "2,730 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "5da53737f795b399",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

@@ -2352,3 +2352,144 @@ chose a public GitHub repository and a Blueprint.
 
 **Not changed.** The pipeline, the engine and the lessons' logic; local development (`make dev`) is as
 before.
+
+## ADR-055 Saved drawings and cost-saver lessons (2026-10-12)
+
+**Asked.**
+- Plan 1: drawings stored in advance (a library). Plan 2: a warehouse of drawings collected from finished
+  lessons, checked by code and approved by an admin. Both as isolated features that break nothing.
+- A third lesson type, **cost saver**, beside classic and planned (both unchanged): lessons place drawings
+  from the library or the warehouse at the right places, with extra precision.
+- When the drawing a scene needs does not exist, the scene draws it; it never uses a similar drawing of
+  something else.
+- The goal: less AI cost and better drawings.
+
+**Backups first:** tag `backup/before-objects` (b873169), `.env.backup-before-objects`, and a full copy in
+`D:\animation-backups\v2.2-before-objects` (bundle, `.env`, the platform database, `var/`).
+
+**Decision: one drawing format, one hidden engine object.**
+- A drawing is shapes (path data, a fill and a stroke as theme color roles or hex, an optional part name)
+  in its own box, plus named points.
+- In a scene it is one object, `figure`, with the drawing inline (a lesson plays without the library),
+  sized by width (it keeps its proportions).
+  - Its parts and named points are anchors (`heart.left_ventricle`).
+  - `focus` brings one part forward (ringed, the rest dimmed), changed over time by a `transform`.
+- `figure` is the pipeline's, never the model's: it is left out of the model's schema, the catalog and the
+  docs. Codegen proves it: `dsl.llm.schema.json`, `catalog.json`, `DSL.md` and `COMPONENTS.md` are
+  byte-identical; only the canonical `dsl.schema.json` gains it.
+
+**Decision: the built-in library (Plan 1).**
+- 31 drawings made for the product: the heart from outside and cut open, lungs, plant and animal cells,
+  chloroplast, mitochondrion, leaf, plant with roots, flower parts, sun, Earth, battery, light bulb, yeast,
+  grapes, antibody, white and red blood cells, bacterium, virus, neuron, DNA, an atom (carbon), water and
+  CO2 molecules, beaker, conical flask, test tube, thermometer and bar magnet.
+- Authored as SVG (`data-part`, theme colors in `data-fill`/`data-stroke`, `data-anchor`) with a JSON of
+  names, context words, never-for phrases, part labels and sizes. `python -m animator.objects build`
+  fits each drawing, gives each part an anchor and runs the checks; a drawing that fails any check is not
+  built. Every drawing was rendered and looked at in both themes, with its anchors shown.
+- **Anchors on what is seen.** A part's anchor is the point well inside what is visible of it: inside its
+  own shapes and not under shapes painted over it, as far as possible from every edge. A label's leader
+  line ends on the ventricle, not on whatever covers its middle.
+- **The checks (no model):** valid paths and colors; the drawing fills its box; every part visible with
+  its anchor on it; anchors inside; sensible proportions; something filled; detail; parts labelled;
+  compact. A test keeps the built files equal to their sources.
+
+**Decision: the warehouse and its harvest (Plan 2).**
+- A background reader goes through finished lessons once each, and only while no lesson is being made.
+- It keeps groups of plain shapes, or shapes sharing an id prefix (one drawing in the planned flow's
+  convention), when:
+  - there are at least three shapes, with no text, icons or components;
+  - the scene's brief names the thing, and the name is of a thing (not a chart, map, road or diagram);
+  - the shapes form one connected drawing at least 60 px each way;
+  - the drawing passes the checks.
+- The engine draws the scene at a moment when the whole drawing is on screen; the shapes are taken exactly
+  as drawn, with the scene's theme colors.
+- At most three of one thing wait for review (the best). Drawings turned down are remembered; no lesson is
+  changed.
+- Tried on the 194 finished lessons (into a scratch folder): 34 s, about 110 candidates. Useful ones (a
+  traffic light, a fridge, barrels, grapes, a pyramid, a potted plant) and wrong ones: a love-heart drawn
+  with four boxes as "heart", charts, a pink "earth". So nothing from the warehouse is used before an admin
+  approves it.
+
+**Decision: cost-saver lessons.**
+- The planned flow (ADR-047), with its own prompt file (`animation-costsaver.v1.md`: planned v4 plus
+  "Saved drawings") and its scene schema with one more kind of object: `{"type": "saved", "params": {"ref",
+  "width", "height"}}`.
+- Each scene is offered the drawings its brief names, in the user message after the cached instructions,
+  each with what it shows, its parts and its sizes.
+- The pipeline turns each reference into the `figure` before the engine sees the scene. Correction rounds
+  see the short reference again, not the drawing.
+- Sure fixes, made without a model call:
+  - a `draw` or `write` of a drawing becomes its `create`;
+  - something placed beside a drawing's part (`relativeTo: "heart.right_atrium"`, which the engine
+    refuses) goes beside the drawing, and a label gets its leader line to that part.
+- The visual director is told which drawings the lesson can use (in its message; its instructions stay
+  those of every lesson), so scenes are planned around them, the same drawing in every scene.
+- Each finished scene records what it was offered and placed. The lesson counts `saved_objects`; the
+  warehouse counts uses per drawing.
+
+**Decision: precision before reuse.**
+- A drawing is offered only when the scene names it:
+  - one of its names as whole words (plurals included), within a sentence;
+  - a context word outside its own names;
+  - no never-for phrase anywhere in the scene or the lesson title;
+  - where two drawings' names overlap, the longer name wins.
+- Never-for entries are phrases, never one everyday word: "idea" alone hid the bulb from a scene about
+  "the key idea". The build refuses one-word entries; the admin page warns.
+  - A never-for phrase inside one of the drawing's own names, where that name is said, does not count
+    ("candle" in "red comparison candle"); one that extends a name ("heart shape") does.
+  - Names never count as context: the admin page says so when a context word is a name.
+- The scene writer uses a drawing only for exactly the thing, in exactly the view. A brief's colors or
+  emphasis are no reason to draw it instead.
+- A reference to a drawing that was not offered, or a focus on a part the drawing does not have, is an
+  error for a correction round, never a substitute. A drawing that is not offered is drawn as in a planned
+  lesson.
+- A warehouse drawing needs context words and every required check passed before it can be approved, and
+  one without context words is never offered, whatever its status.
+- 50 tests cover geometry, SVG import, the checks, matching (including what must not match: a love-heart, a
+  heart-rate graph, "the train leaves", a computer virus, a sodium atom), placing, the store, the harvest,
+  lessons in all three modes and the admin API.
+
+**Measured, with real model calls, voice off.** Three one-minute topics (the heart, photosynthesis, a
+circuit), made as planned lessons and twice as cost-saver lessons:
+
+| | Planned | Cost saver, run 1 | Cost saver, run 2 |
+|---|---|---|---|
+| AI cost, three lessons | $0.242 | $0.190 (-22%) | $0.185 (-24%) |
+| Output tokens, all calls | 194k | 142k | 139k |
+| Saved drawings placed | 0 | 21 | 29 |
+| Scenes degraded | 0 | 0 | 0 |
+
+- Each of the six cost-saver lessons cost less than the planned lesson on its topic. Single runs vary, so
+  the figure is a direction, not a constant.
+- Run 1 showed two faults, fixed before run 2:
+  - a heart scene whose brief asked for "neutral-filled chambers" drew its own love-heart while the
+    others placed the drawing (now: colors are no reason, and the director plans with the drawings);
+  - the leaf was offered to a heart scene, because "blood leaves" and veins counted as leaf context (now:
+    plant-only context words).
+- Run 2 placed the anatomical heart in every heart scene, and the battery, bulb, plant, leaf and sun
+  consistently. Its labels point at the right parts: tricuspid valve, atria, ventricles, aorta.
+
+**Administration → Saved drawings** (permissions `objects:read`, `objects:curate`):
+- the drawings by status, with previews in either theme, checks, sources and uses;
+- review: names, context words, never-for phrases, part labels and sizes; approve, reject, retire, restore,
+  reset a built-in drawing; delete a warehouse one;
+- SVG import (shapes only; a DOCTYPE is refused);
+- harvest now;
+- **Try a scene**, to see what a brief would be offered.
+
+**Isolation.**
+- Classic and planned lessons have the same prompts, schemas, catalog and docs as before (tests assert it).
+- The pipeline's new steps run only for cost-saver lessons.
+- The new fields (`SceneRecord.saved`, `Metrics.saved_objects`) are ignored by older code.
+- `ANIMATOR_OBJECTS_ENABLED=false` makes cost-saver lessons planned ones and offers or collects nothing.
+- Render: harvest on request only.
+
+**Rollback.**
+- Switching off is `ANIMATOR_OBJECTS_ENABLED=false`.
+- Going back to v2.2 is the tag `backup/before-objects` (or `v2.2`) with the backup's data.
+- v2.2 cannot play cost-saver lessons made in between, because they contain `figure` objects. The
+  warehouse (`var/objects`) can be deleted.
+
+**Not changed:** classic and planned lessons, the fast pipeline, doubts, voice, export, the platform's
+other parts.

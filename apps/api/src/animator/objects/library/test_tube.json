@@ -1,0 +1,169 @@
+{
+ "id": "test_tube",
+ "version": 1,
+ "title": "Test tube",
+ "concept": "test tube",
+ "description": "A glass test tube standing upright with liquid in the bottom",
+ "view": "upright",
+ "aliases": [
+  "test tube",
+  "test tubes",
+  "testtube",
+  "glass tube"
+ ],
+ "context": [
+  "lab",
+  "experiment",
+  "liquid",
+  "solution",
+  "chemical",
+  "react",
+  "mix",
+  "acid",
+  "heat",
+  "sample",
+  "chemistry",
+  "science",
+  "indicator",
+  "precipitat"
+ ],
+ "not_for": [
+  "test tube baby"
+ ],
+ "prefer": [
+  "sample",
+  "react",
+  "precipitat",
+  "colour change",
+  "color change"
+ ],
+ "subjects": [
+  "chemistry",
+  "biology"
+ ],
+ "parts": {
+  "glass": "test tube",
+  "liquid": "liquid"
+ },
+ "size": {
+  "min": 60.0,
+  "default": 120.0,
+  "max": 260.0
+ },
+ "art": {
+  "w": 119.5,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M18.1 226.3C40.1 219 79.3 219 101.4 226.3L101.4 348.8C101.4 373.3 84.2 392.9 59.7 392.9C35.2 392.9 18.1 373.3 18.1 348.8Z",
+    "fill": "purple",
+    "opacity": 0.7,
+    "part": "liquid"
+   },
+   {
+    "d": "M18.1 226.3C40.1 219 79.3 219 101.4 226.3C79.3 233.7 40.1 233.7 18.1 226.3Z",
+    "fill": "purple.light",
+    "part": "liquid"
+   },
+   {
+    "d": "M18.1 10.7L18.1 348.8C18.1 373.3 35.2 392.9 59.7 392.9C84.2 392.9 101.4 373.3 101.4 348.8L101.4 10.7",
+    "fill": "none",
+    "stroke": "gray.dark",
+    "strokeWidth": 6.12,
+    "part": "glass"
+   },
+   {
+    "d": "M8.3 8.3L111.2 8.3",
+    "fill": "none",
+    "stroke": "gray.dark",
+    "strokeWidth": 8.58,
+    "part": "glass"
+   },
+   {
+    "d": "M35.2 37.7L35.2 343.9",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 8.58,
+    "opacity": 0.5
+   }
+  ],
+  "anchors": [
+   {
+    "name": "glass",
+    "x": 101.4,
+    "y": 116.1
+   },
+   {
+    "name": "liquid",
+    "x": 59.6,
+    "y": 306.6
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/test_tube.svg"
+ },
+ "quality": {
+  "score": 0.814,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "2 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 3.35 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "5 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "335 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "d1b496bb7f6c0384",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

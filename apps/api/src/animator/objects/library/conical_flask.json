@@ -1,0 +1,185 @@
+{
+ "id": "conical_flask",
+ "version": 1,
+ "title": "Conical flask",
+ "concept": "conical flask",
+ "description": "A glass conical (Erlenmeyer) flask with a narrow neck and liquid in the bottom",
+ "view": "from the side",
+ "aliases": [
+  "conical flask",
+  "erlenmeyer flask",
+  "flask",
+  "lab flask",
+  "glass flask"
+ ],
+ "context": [
+  "lab",
+  "experiment",
+  "liquid",
+  "solution",
+  "chemical",
+  "react",
+  "mix",
+  "acid",
+  "titrat",
+  "heat",
+  "gas",
+  "chemistry",
+  "science",
+  "indicator",
+  "yeast",
+  "ferment"
+ ],
+ "not_for": [
+  "hip flask",
+  "thermos flask",
+  "vacuum flask",
+  "flask icon",
+  "flask app",
+  "round bottom flask",
+  "round-bottom flask",
+  "volumetric flask",
+  "florence flask",
+  "distillation flask"
+ ],
+ "prefer": [
+  "conical",
+  "erlenmeyer",
+  "titrat",
+  "swirl"
+ ],
+ "subjects": [
+  "chemistry"
+ ],
+ "parts": {
+  "glass": "flask",
+  "liquid": "liquid",
+  "neck": "neck"
+ },
+ "size": {
+  "min": 80.0,
+  "default": 180.0,
+  "max": 360.0
+ },
+ "art": {
+  "w": 308.8,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M54.6 260.5C104.5 250.6 204.4 250.6 254.3 260.5L299.2 360.4C306.7 377.9 296.7 392.9 276.8 392.9L32.1 392.9C12.1 392.9 2.1 377.9 9.6 360.4Z",
+    "fill": "green",
+    "opacity": 0.7,
+    "part": "liquid"
+   },
+   {
+    "d": "M54.6 260.5C104.5 250.6 204.4 250.6 254.3 260.5C204.4 270.5 104.5 270.5 54.6 260.5Z",
+    "fill": "green.light",
+    "part": "liquid"
+   },
+   {
+    "d": "M112 10.9L112 135.7L9.6 360.4C2.1 377.9 12.1 392.9 32.1 392.9L276.8 392.9C296.7 392.9 306.7 377.9 299.2 360.4L196.9 135.7L196.9 10.9",
+    "fill": "none",
+    "stroke": "gray.dark",
+    "strokeWidth": 6.24,
+    "part": "glass"
+   },
+   {
+    "d": "M99.5 8.4L209.4 8.4",
+    "fill": "none",
+    "stroke": "gray.dark",
+    "strokeWidth": 8.74,
+    "part": "glass"
+   },
+   {
+    "d": "M127 35.8L127 143.2L49.6 320.5",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 9.99,
+    "opacity": 0.5
+   }
+  ],
+  "anchors": [
+   {
+    "name": "glass",
+    "x": 112.0,
+    "y": 73.3
+   },
+   {
+    "name": "neck",
+    "x": 154.4,
+    "y": 60.8
+   },
+   {
+    "name": "liquid",
+    "x": 154.0,
+    "y": 330.5
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/conical_flask.svg"
+ },
+ "quality": {
+  "score": 0.814,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "2 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.30 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "5 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "402 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "246f34af95ebb963",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

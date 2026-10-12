@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360">
+  <!-- An atom (Bohr model of carbon): a nucleus of 6 protons and 6 neutrons, 6 electrons in two shells. -->
+  <circle data-part="shells" cx="180" cy="180" r="80" fill="none" data-stroke="gray" stroke-width="3"/>
+  <circle data-part="shells" cx="180" cy="180" r="150" fill="none" data-stroke="gray" stroke-width="3"/>
+  <circle data-part="nucleus" cx="180" cy="180" r="44" data-fill="orange.soft" stroke-width="0" opacity="0.8"/>
+  <circle data-part="protons" cx="180" cy="180" r="13" data-fill="red" data-stroke="red.dark" stroke-width="2"/>
+  <circle data-part="neutrons" cx="166" cy="172" r="13" data-fill="gray" data-stroke="gray.dark" stroke-width="2"/>
+  <circle data-part="protons" cx="194" cy="172" r="13" data-fill="red" data-stroke="red.dark" stroke-width="2"/>
+  <circle data-part="neutrons" cx="166" cy="190" r="13" data-fill="gray" data-stroke="gray.dark" stroke-width="2"/>
+  <circle data-part="protons" cx="194" cy="190" r="13" data-fill="red" data-stroke="red.dark" stroke-width="2"/>
+  <circle data-part="neutrons" cx="180" cy="160" r="13" data-fill="gray" data-stroke="gray.dark" stroke-width="2"/>
+  <circle data-part="protons" cx="180" cy="200" r="13" data-fill="red" data-stroke="red.dark" stroke-width="2"/>
+  <circle data-part="neutrons" cx="154" cy="182" r="13" data-fill="gray" data-stroke="gray.dark" stroke-width="2"/>
+  <circle data-part="protons" cx="206" cy="182" r="13" data-fill="red" data-stroke="red.dark" stroke-width="2"/>
+  <circle data-part="neutrons" cx="170" cy="154" r="13" data-fill="gray" data-stroke="gray.dark" stroke-width="2"/>
+  <circle data-part="protons" cx="192" cy="206" r="13" data-fill="red" data-stroke="red.dark" stroke-width="2"/>
+  <circle data-part="neutrons" cx="204" cy="162" r="13" data-fill="gray" data-stroke="gray.dark" stroke-width="2"/>
+  <circle data-part="electrons" cx="180.0" cy="260.0" r="11" data-fill="blue" data-stroke="blue.dark" stroke-width="2"/>
+  <circle data-part="electrons" cx="180.0" cy="100.0" r="11" data-fill="blue" data-stroke="blue.dark" stroke-width="2"/>
+  <circle data-part="electrons" cx="286.1" cy="286.1" r="11" data-fill="blue" data-stroke="blue.dark" stroke-width="2"/>
+  <circle data-part="electrons" cx="73.9" cy="286.1" r="11" data-fill="blue" data-stroke="blue.dark" stroke-width="2"/>
+  <circle data-part="electrons" cx="73.9" cy="73.9" r="11" data-fill="blue" data-stroke="blue.dark" stroke-width="2"/>
+  <circle data-part="electrons" cx="286.1" cy="73.9" r="11" data-fill="blue" data-stroke="blue.dark" stroke-width="2"/>
+  <circle data-anchor="nucleus" cx="180" cy="180" r="1"/>
+  <circle data-anchor="shells" cx="286" cy="286" r="1"/>
+</svg>

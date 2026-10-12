@@ -1,0 +1,14 @@
+{
+ "id": "antibody",
+ "title": "Antibody",
+ "concept": "antibody",
+ "view": "Y-shaped molecule",
+ "description": "An antibody molecule, Y-shaped: two heavy chains (blue) forming the stem and the inner arms, two light chains (light blue) on the outer arms, antigen-binding sites (yellow) at the tips, and the bonds that hold the chains together",
+ "aliases": ["antibody", "antibodies", "immunoglobulin", "y shaped antibody", "y-shaped antibody"],
+ "context": ["immun", "antigen", "pathogen", "virus", "bacteri", "infect", "white blood", "lymphocyte", "b cell", "vaccin", "disease", "defen", "germ", "protein", "blood", "bind"],
+ "not_for": ["antibody test kit", "antibody test result"],
+ "prefer": ["binding", "antigen", "y shape", "chain"],
+ "subjects": ["biology"],
+ "parts": {"heavy_chain": "heavy chain", "light_chain": "light chain", "binding_site": "antigen-binding site", "disulfide_bonds": "bonds holding the chains", "stem": "stem"},
+ "size": {"min": 70, "default": 180, "max": 400}
+}

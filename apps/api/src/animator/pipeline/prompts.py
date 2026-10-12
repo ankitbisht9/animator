@@ -96,6 +96,8 @@ class PromptPack:
         # flow's prompts (`animation`, `critic`) are never affected.
         self.animation_planned = load_prompt("animation-planned")
         self.critic_planned = load_prompt("critic-planned")
+        # Cost-saver lessons (ADR-055): the planned flow's prompt plus saved drawings, its own file.
+        self.animation_costsaver = load_prompt("animation-costsaver")
         # How scenes relate (parallel: each on a clean stage; sequential: each continues the last).
         self.continuity = {mode: load_prompt(f"continuity-{mode}") for mode in ("parallel", "sequential")}
         self._animation_text: dict[str, str] = {}
@@ -187,6 +189,10 @@ class PromptPack:
         """The planned flow's scene instructions, with the same reference material as the classic
         ones (DSL reference, component catalog, example scenes)."""
         return self._with_reference(self.animation_planned)
+
+    def costsaver_animation_instructions(self) -> str:
+        """The cost-saver scene instructions (ADR-055), with the same reference material."""
+        return self._with_reference(self.animation_costsaver)
 
     def _with_reference(self, prompt: Prompt) -> str:
         if prompt.version not in self._animation_text:

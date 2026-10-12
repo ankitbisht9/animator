@@ -36,6 +36,7 @@ const AdminAudit = lazy(async () => ({ default: (await import("./platform/pages/
 const AdminSystem = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminSystem }));
 const AdminCredits = lazy(async () => ({ default: (await import("./platform/pages/AdminCredits")).AdminCredits }));
 const AdminRatings = lazy(async () => ({ default: (await import("./platform/pages/AdminRatings")).AdminRatings }));
+const AdminObjects = lazy(async () => ({ default: (await import("./platform/pages/AdminObjects")).AdminObjects }));
 const Playground = lazy(async () => ({ default: (await import("./pages/Playground")).Playground }));
 const DebugPage = lazy(async () => ({ default: (await import("./pages/DebugPage")).DebugPage }));
 const GenerationPage = lazy(async () => ({ default: (await import("./pages/GenerationPage")).GenerationPage }));
@@ -158,6 +159,7 @@ function Routes() {
   if (path === "/admin/system") return admin("analytics:read", <AdminSystem />);
   if (path === "/admin/credits") return admin("usage:read", <AdminCredits />);
   if (path === "/admin/ratings") return admin("ratings:read", <AdminRatings />);
+  if (path === "/admin/objects") return admin("objects:read", <AdminObjects />);
   if (path === "/admin/playground")
     return admin(
       "debug",

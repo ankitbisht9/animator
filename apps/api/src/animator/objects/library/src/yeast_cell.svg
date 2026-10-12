@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 260">
+  <!-- A budding yeast cell: wall, cytoplasm, nucleus, vacuole, mitochondria, and a bud growing off it. -->
+  <ellipse data-part="bud" cx="266" cy="74" rx="56" ry="50" data-fill="orange.soft" data-stroke="brown" stroke-width="5"/>
+  <circle data-part="bud" cx="276" cy="68" r="12" data-fill="purple.light" data-stroke="purple.dark" stroke-width="2"/>
+  <ellipse data-part="cytoplasm" cx="140" cy="146" rx="118" ry="100" data-fill="orange.soft" stroke-width="0"/>
+  <ellipse data-part="cell_wall" cx="140" cy="146" rx="118" ry="100" fill="none" data-stroke="brown" stroke-width="7"/>
+  <ellipse data-part="vacuole" cx="102" cy="168" rx="46" ry="38" data-fill="sky.light" data-stroke="fluid.dark" stroke-width="2.5"/>
+  <circle data-part="nucleus" cx="176" cy="114" r="30" data-fill="purple.light" data-stroke="purple.dark" stroke-width="3"/>
+  <circle cx="182" cy="108" r="9" data-fill="purple.dark" data-part="nucleus" stroke-width="0"/>
+  <g data-part="mitochondria" data-fill="red.light" data-stroke="red.dark" stroke-width="2">
+    <ellipse cx="190" cy="196" rx="20" ry="9" transform="rotate(-15 190 196)"/>
+    <ellipse cx="72" cy="96" rx="18" ry="8" transform="rotate(25 72 96)"/>
+  </g>
+  <g data-part="storage_granules" data-fill="yellow" data-stroke="yellow.dark" stroke-width="1.5">
+    <circle cx="214" cy="160" r="6"/><circle cx="140" cy="216" r="5"/><circle cx="56" cy="140" r="5"/><circle cx="120" cy="74" r="5"/>
+  </g>
+  <path d="M52 108 C70 72 104 52 142 48" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="8" opacity="0.45"/>
+</svg>

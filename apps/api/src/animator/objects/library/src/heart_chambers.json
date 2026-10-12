@@ -1,0 +1,91 @@
+{
+ "id": "heart_chambers",
+ "title": "Human heart, inside",
+ "concept": "human heart",
+ "view": "cut open from the front",
+ "description": "The heart cut open to show its four chambers: the right atrium and ventricle with blue blood, the left atrium and ventricle with red blood and a thicker wall, the septum, the tricuspid, mitral, pulmonary and aortic valves, and the vessels: venae cavae, pulmonary artery, pulmonary veins and aorta",
+ "aliases": [
+  "heart",
+  "human heart",
+  "the heart",
+  "heart chambers",
+  "four chambers",
+  "chambers of the heart",
+  "inside of the heart",
+  "heart cross section",
+  "heart diagram"
+ ],
+ "context": [
+  "blood",
+  "pump",
+  "circulat",
+  "arter",
+  "vein",
+  "vessel",
+  "organ",
+  "ventric",
+  "atri",
+  "atrium",
+  "cardi",
+  "heartbeat",
+  "beat",
+  "pulse",
+  "oxygen",
+  "aorta",
+  "chest",
+  "valve",
+  "lung",
+  "chamber",
+  "septum",
+  "anatom"
+ ],
+ "not_for": [
+  "heart shape",
+  "heart shaped",
+  "heart symbol",
+  "heart icon",
+  "heart emoji",
+  "broken heart",
+  "by heart",
+  "heart sign"
+ ],
+ "prefer": [
+  "chamber",
+  "inside",
+  "cross section",
+  "cut",
+  "valve",
+  "septum",
+  "ventric",
+  "atri",
+  "atrium",
+  "oxygenated",
+  "deoxygenated",
+  "flow through"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "right_atrium": "right atrium",
+  "right_ventricle": "right ventricle",
+  "left_atrium": "left atrium",
+  "left_ventricle": "left ventricle",
+  "septum": "septum",
+  "heart_wall": "heart muscle",
+  "tricuspid_valve": "tricuspid valve",
+  "mitral_valve": "mitral valve",
+  "pulmonary_valve": "pulmonary valve",
+  "aortic_valve": "aortic valve",
+  "aorta": "aorta",
+  "pulmonary_artery": "pulmonary artery",
+  "pulmonary_veins": "pulmonary veins",
+  "superior_vena_cava": "superior vena cava",
+  "inferior_vena_cava": "inferior vena cava"
+ },
+ "size": {
+  "min": 240,
+  "default": 360,
+  "max": 560
+ }
+}

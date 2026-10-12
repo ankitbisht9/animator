@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 440">
+  <!-- A single green leaf with its stalk, midrib and veins. -->
+  <path data-part="petiole" d="M146 340 C146 370 142 400 132 432 L144 436 C154 404 158 372 158 340 Z" data-fill="green.dark" data-stroke="green.dark" stroke-width="2"/>
+  <path data-part="blade" d="M152 8 C206 50 268 120 270 210 C272 290 220 346 152 360 C84 346 32 290 30 210 C32 120 98 50 152 8 Z" data-fill="green" data-stroke="green.dark" stroke-width="3"/>
+  <path d="M152 8 C206 50 268 120 270 210 C272 290 220 346 152 360 C190 320 214 270 212 210 C210 130 182 60 152 8 Z" data-fill="#000000" fill="#000000" stroke-width="0" opacity="0.08"/>
+  <g data-part="veins" fill="none" data-stroke="green.light" stroke-width="3">
+    <path d="M152 90 C130 80 108 74 86 76"/>
+    <path d="M152 90 C174 80 196 74 218 76"/>
+    <path d="M152 140 C124 126 92 120 62 124"/>
+    <path d="M152 140 C180 126 212 120 242 124"/>
+    <path d="M152 194 C122 180 86 176 50 184"/>
+    <path d="M152 194 C182 180 218 176 254 184"/>
+    <path d="M152 250 C124 240 92 240 62 252"/>
+    <path d="M152 250 C180 240 212 240 242 252"/>
+    <path d="M152 300 C132 294 112 296 92 306"/>
+    <path d="M152 300 C172 294 192 296 212 306"/>
+  </g>
+  <path data-part="midrib" d="M152 26 C153 120 154 240 152 356" fill="none" data-stroke="green.light" stroke-width="6"/>
+  <path d="M110 70 C92 100 76 140 70 180" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="7" opacity="0.28"/>
+  <circle data-anchor="veins" cx="98.6" cy="123.9" r="1"/>
+</svg>

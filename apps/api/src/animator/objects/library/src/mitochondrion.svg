@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 240">
+  <!-- A mitochondrion cut lengthwise: outer membrane, folded inner membrane (cristae), matrix with DNA and ribosomes. -->
+  <path data-part="outer_membrane" d="M30 120 C30 58 116 20 220 20 C324 20 410 58 410 120 C410 182 324 220 220 220 C116 220 30 182 30 120 Z" data-fill="orange" data-stroke="orange.dark" stroke-width="3"/>
+  <path data-part="matrix" d="M48 120 C48 70 120 40 160 38 L166 150 L184 38 L204 36 L212 160 L232 36 L254 36 L262 150 L282 38 L302 40 L310 160 L326 44 C370 56 392 88 392 120 C392 152 370 184 326 196 L310 84 L302 200 L282 202 L262 92 L254 204 L232 204 L212 82 L204 204 L184 202 L166 92 L160 202 C120 200 48 170 48 120 Z" data-fill="orange.soft" stroke-width="0"/>
+  <path data-part="inner_membrane" d="M48 120 C48 70 120 40 160 38 L166 150 L184 38 L204 36 L212 160 L232 36 L254 36 L262 150 L282 38 L302 40 L310 160 L326 44 C370 56 392 88 392 120 C392 152 370 184 326 196 L310 84 L302 200 L282 202 L262 92 L254 204 L232 204 L212 82 L204 204 L184 202 L166 92 L160 202 C120 200 48 170 48 120 Z" fill="none" data-stroke="orange.dark" stroke-width="4"/>
+  <path data-part="dna" d="M86 110 C96 96 116 100 116 116 C116 132 96 136 88 126 C82 118 90 104 104 106" fill="none" data-stroke="purple" stroke-width="3"/>
+  <g data-part="ribosomes" data-fill="purple.dark" stroke-width="0">
+    <circle cx="80" cy="150" r="3.5"/><circle cx="130" cy="80" r="3.5"/><circle cx="360" cy="110" r="3.5"/><circle cx="350" cy="146" r="3.5"/><circle cx="128" cy="160" r="3.5"/>
+  </g>
+  <path d="M70 70 C110 40 160 30 214 28" fill="none" data-stroke="#ffffff" stroke="#ffffff" stroke-width="7" opacity="0.4"/>
+  <circle data-anchor="cristae" cx="212" cy="150" r="1"/>
+</svg>

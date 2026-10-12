@@ -116,8 +116,10 @@ class Settings(BaseSettings):
     # them, then tidied (everything above). planned: the scene writer adds a stage plan (which
     # things are arranged how) and the layout planner measures everything with the engine and
     # places it precisely in the fixed frame; one draft per scene and a critic that checks meaning.
-    # A lesson can ask for either (its `layout` field); this is the default.
-    animator_layout_mode: Literal["classic", "planned"] = "classic"
+    # costsaver (ADR-055): the planned flow, where the scene writer may place saved drawings from the
+    # object library (exactly the thing the scene shows) instead of drawing them; it draws the rest.
+    # A lesson can ask for any of them (its `layout` field); this is the default.
+    animator_layout_mode: Literal["classic", "planned", "costsaver"] = "classic"
     # Drafts per scene and per correction round in the planned flow (no racing: cheaper).
     animator_planned_scene_drafts: int = Field(default=1, ge=1, le=4)
     animator_planned_correction_drafts: int = Field(default=1, ge=1, le=4)
@@ -224,6 +226,18 @@ class Settings(BaseSettings):
     # Speech-to-text for browsers without built-in speech recognition (OpenAI).
     animator_doubt_transcribe_model: str = "gpt-4o-mini-transcribe"
 
+    # --- Saved objects (ADR-055) ---
+    # Cost-saver lessons place saved drawings (the built-in library and the approved warehouse).
+    # Off: a cost-saver lesson is made like a planned one, and nothing is offered or harvested.
+    animator_objects_enabled: bool = True
+    # The warehouse: harvested and imported drawings, curation decisions, the harvest's progress.
+    animator_objects_dir: Path = Path("var/objects")
+    # Collect candidate drawings from finished lessons in the background (an admin approves each).
+    animator_objects_harvest: bool = True
+    animator_objects_harvest_every_s: float = Field(default=900.0, ge=60.0)
+    # Saved drawings offered to one scene at most (the ones its brief names, best first).
+    animator_objects_max_offers: int = Field(default=6, ge=1, le=12)
+
     # --- Storage: no database for now (see ADR-003) ---
     animator_storage_backend: Literal["memory", "files"] = "files"
     animator_data_dir: Path = Path("var")
@@ -238,7 +252,7 @@ class Settings(BaseSettings):
     # --- API server ---
     api_host: str = "127.0.0.1"
     api_port: int = 8000
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,"
     log_level: str = "INFO"
     log_format: Literal["console", "json"] = "console"
 

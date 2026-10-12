@@ -1,0 +1,261 @@
+{
+ "id": "leaf",
+ "version": 1,
+ "title": "Leaf",
+ "concept": "leaf",
+ "description": "One green leaf, upright: the blade, the midrib, side veins and the stalk (petiole)",
+ "view": "flat, from above",
+ "aliases": [
+  "leaf",
+  "leaves",
+  "green leaf",
+  "plant leaf",
+  "tree leaf"
+ ],
+ "context": [
+  "photosynth",
+  "plant",
+  "tree",
+  "chlorophyll",
+  "chloroplast",
+  "stomat",
+  "transpir",
+  "botan",
+  "autumn",
+  "foliage",
+  "petiole",
+  "midrib",
+  "deciduous",
+  "evergreen",
+  "garden",
+  "forest",
+  "grow",
+  "sunlight"
+ ],
+ "not_for": [
+  "leaf through",
+  "leaf node",
+  "leaf spring",
+  "gold leaf",
+  "table leaf"
+ ],
+ "prefer": [
+  "vein",
+  "midrib",
+  "blade",
+  "stalk",
+  "petiole",
+  "single leaf"
+ ],
+ "subjects": [
+  "biology"
+ ],
+ "parts": {
+  "blade": "leaf blade",
+  "midrib": "midrib",
+  "veins": "veins",
+  "petiole": "stalk (petiole)"
+ },
+ "size": {
+  "min": 120.0,
+  "default": 220.0,
+  "max": 400.0
+ },
+ "art": {
+  "w": 229.3,
+  "h": 400.0,
+  "shapes": [
+   {
+    "d": "M111 307.7C111 335 107.3 362.3 98.2 391.4L109.2 395.1C118.3 366 121.9 336.8 121.9 307.7Z",
+    "fill": "green.dark",
+    "stroke": "green.dark",
+    "strokeWidth": 1.82,
+    "part": "petiole"
+   },
+   {
+    "d": "M116.5 5.4C165.6 43.6 222.1 107.3 223.9 189.3C225.7 262.1 178.4 313.1 116.5 325.9C54.5 313.1 7.2 262.1 5.4 189.3C7.2 107.3 67.3 43.6 116.5 5.4Z",
+    "fill": "green",
+    "stroke": "green.dark",
+    "strokeWidth": 2.73,
+    "part": "blade"
+   },
+   {
+    "d": "M116.5 5.4C165.6 43.6 222.1 107.3 223.9 189.3C225.7 262.1 178.4 313.1 116.5 325.9C151.1 289.5 172.9 243.9 171.1 189.3C169.3 116.5 143.8 52.7 116.5 5.4Z",
+    "fill": "#000000",
+    "opacity": 0.08
+   },
+   {
+    "d": "M116.5 80C96.4 70.9 76.4 65.5 56.4 67.3",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 80C136.5 70.9 156.5 65.5 176.6 67.3",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 125.6C91 112.8 61.8 107.3 34.5 111",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 125.6C142 112.8 171.1 107.3 198.4 111",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 174.7C89.1 162 56.4 158.3 23.6 165.6",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 174.7C143.8 162 176.6 158.3 209.3 165.6",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 225.7C91 216.6 61.8 216.6 34.5 227.5",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 225.7C142 216.6 171.1 216.6 198.4 227.5",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 271.3C98.2 265.8 80 267.6 61.8 276.7",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 271.3C134.7 265.8 152.9 267.6 171.1 276.7",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 2.73,
+    "part": "veins"
+   },
+   {
+    "d": "M116.5 21.8C117.4 107.3 118.3 216.6 116.5 322.2",
+    "fill": "none",
+    "stroke": "green.light",
+    "strokeWidth": 5.46,
+    "part": "midrib"
+   },
+   {
+    "d": "M78.2 61.8C61.8 89.1 47.3 125.6 41.8 162",
+    "fill": "none",
+    "stroke": "#ffffff",
+    "strokeWidth": 6.37,
+    "opacity": 0.28
+   }
+  ],
+  "anchors": [
+   {
+    "name": "veins",
+    "x": 67.8,
+    "y": 110.9
+   },
+   {
+    "name": "petiole",
+    "x": 109.6,
+    "y": 371.3
+   },
+   {
+    "name": "blade",
+    "x": 36.4,
+    "y": 194.4
+   },
+   {
+    "name": "midrib",
+    "x": 117.5,
+    "y": 174.1
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/leaf.svg"
+ },
+ "quality": {
+  "score": 0.97,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "4 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 1.74 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "15 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "904 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "7e9db51f52041ba1",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

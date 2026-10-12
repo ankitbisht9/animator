@@ -132,6 +132,10 @@ class GenerationRunner:
         task = self._tasks.get(gen_id)
         return task is not None and not task.done()
 
+    def busy(self) -> bool:
+        """Is any lesson being made now? (Background work such as the object harvest waits.)"""
+        return any(not t.done() for t in self._tasks.values())
+
     async def resume(self, gen_id: str) -> Generation | None:
         gen = await self.get(gen_id)
         if gen is None or gen.status in ("complete", "cancelled") or self.running(gen_id):
@@ -476,7 +480,9 @@ class GenerationRunner:
                 add(len(gen.scenes))
 
         try:
-            direction = await stages.direct(gen, script, ctx, on_look, on_scene)
+            direction = await stages.direct(
+                gen, script, ctx, on_look, on_scene, library=self.pipeline.library_note(gen, script)
+            )
             teaching["look"] = teaching["look"] or direction.look
             for directed in direction.scenes:
                 on_scene(directed)

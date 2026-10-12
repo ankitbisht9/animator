@@ -1,0 +1,14 @@
+{
+ "id": "thermometer",
+ "title": "Thermometer",
+ "concept": "thermometer",
+ "view": "upright",
+ "description": "A glass thermometer, upright: the bulb at the bottom, the red liquid column rising up the tube, and the scale marks",
+ "aliases": ["thermometer", "thermometers", "glass thermometer", "lab thermometer", "clinical thermometer"],
+ "context": ["temperature", "heat", "hot", "cold", "warm", "degree", "celsius", "fahrenheit", "kelvin", "fever", "measure", "boil", "melt", "freez", "thermal", "expand", "weather"],
+ "not_for": ["thermometer icon", "digital thermometer", "smart thermostat"],
+ "prefer": ["liquid", "column", "rise", "scale", "bulb"],
+ "subjects": ["physics", "chemistry"],
+ "parts": {"tube": "glass tube", "bulb": "bulb", "liquid": "liquid column", "scale": "scale"},
+ "size": {"min": 50, "default": 110, "max": 240}
+}

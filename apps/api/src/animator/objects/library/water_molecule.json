@@ -1,0 +1,195 @@
+{
+ "id": "water_molecule",
+ "version": 1,
+ "title": "Water molecule",
+ "concept": "water molecule",
+ "description": "A water molecule (H2O) as balls and sticks: a red oxygen atom bonded to two white hydrogen atoms at an angle",
+ "view": "ball and stick",
+ "aliases": [
+  "water molecule",
+  "water molecules",
+  "h2o",
+  "h2o molecule",
+  "molecule of water"
+ ],
+ "context": [
+  "atom",
+  "bond",
+  "oxygen",
+  "hydrogen",
+  "polar",
+  "chemical",
+  "chemistry",
+  "molecul",
+  "evaporat",
+  "boil",
+  "freez",
+  "liquid",
+  "gas",
+  "photosynth",
+  "react",
+  "formula"
+ ],
+ "not_for": [
+  "water molecule count"
+ ],
+ "prefer": [
+  "ball",
+  "stick",
+  "bond",
+  "angle",
+  "atom"
+ ],
+ "subjects": [
+  "chemistry"
+ ],
+ "parts": {
+  "oxygen": "oxygen atom",
+  "hydrogen": "hydrogen atoms",
+  "bonds": "bonds"
+ },
+ "size": {
+  "min": 60.0,
+  "default": 180.0,
+  "max": 360.0
+ },
+ "art": {
+  "w": 400.0,
+  "h": 292.2,
+  "shapes": [
+   {
+    "d": "M200 108.4L81.5 213.5",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 21.55,
+    "part": "bonds"
+   },
+   {
+    "d": "M200 108.4L318.5 213.5",
+    "fill": "none",
+    "stroke": "gray",
+    "strokeWidth": 21.55,
+    "part": "bonds"
+   },
+   {
+    "d": "M6 226.9C6 259.7 32.6 286.2 65.3 286.2C98 286.2 124.6 259.7 124.6 226.9C124.6 194.2 98 167.7 65.3 167.7C32.6 167.7 6 194.2 6 226.9Z",
+    "fill": "#f4f6fa",
+    "stroke": "gray.dark",
+    "strokeWidth": 4.04,
+    "part": "hydrogen"
+   },
+   {
+    "d": "M275.4 226.9C275.4 259.7 302 286.2 334.7 286.2C367.4 286.2 394 259.7 394 226.9C394 194.2 367.4 167.7 334.7 167.7C302 167.7 275.4 194.2 275.4 226.9Z",
+    "fill": "#f4f6fa",
+    "stroke": "gray.dark",
+    "strokeWidth": 4.04,
+    "part": "hydrogen"
+   },
+   {
+    "d": "M105.7 100.3C105.7 152.4 147.9 194.6 200 194.6C252.1 194.6 294.3 152.4 294.3 100.3C294.3 48.2 252.1 6 200 6C147.9 6 105.7 48.2 105.7 100.3Z",
+    "fill": "red",
+    "stroke": "red.dark",
+    "strokeWidth": 4.04,
+    "part": "oxygen"
+   },
+   {
+    "d": "M144.3 76.1C148.8 83.8 162.9 84 175.8 76.6C188.6 69.2 195.5 56.9 191 49.1C186.5 41.4 172.5 41.2 159.6 48.6C146.7 56 139.9 68.3 144.3 76.1Z",
+    "fill": "#ffffff",
+    "opacity": 0.45
+   },
+   {
+    "d": "M32.4 213.5C35 218 43.4 218 51.1 213.6C58.9 209.1 63 201.8 60.4 197.3C57.8 192.8 49.4 192.8 41.7 197.2C34 201.7 29.8 209 32.4 213.5Z",
+    "fill": "#ffffff",
+    "opacity": 0.45
+   },
+   {
+    "d": "M301.8 213.5C304.5 218 312.8 218 320.6 213.6C328.3 209.1 332.5 201.8 329.8 197.3C327.2 192.8 318.9 192.8 311.1 197.2C303.4 201.7 299.2 209 301.8 213.5Z",
+    "fill": "#ffffff",
+    "opacity": 0.45
+   }
+  ],
+  "anchors": [
+   {
+    "name": "bonds",
+    "x": 130.6,
+    "y": 169.9
+   },
+   {
+    "name": "hydrogen",
+    "x": 65.1,
+    "y": 226.8
+   },
+   {
+    "name": "oxygen",
+    "x": 200.2,
+    "y": 100.1
+   }
+  ]
+ },
+ "status": "approved",
+ "origin": "library",
+ "source": {
+  "kind": "library",
+  "file": "src/water_molecule.svg"
+ },
+ "quality": {
+  "score": 0.876,
+  "checks": [
+   {
+    "name": "paths",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "fits",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "parts_visible",
+    "ok": true,
+    "detail": "3 parts"
+   },
+   {
+    "name": "anchors_inside",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "anchors_on_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "proportions",
+    "ok": true,
+    "detail": "height = 0.73 x width"
+   },
+   {
+    "name": "painted",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "detail",
+    "ok": true,
+    "detail": "8 shapes"
+   },
+   {
+    "name": "named_parts",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "compact",
+    "ok": true,
+    "detail": "881 characters of path data"
+   }
+  ],
+  "checked_at": 1791504000.0
+ },
+ "fingerprint": "1277518f3646b260",
+ "note": "",
+ "created_at": 1791504000.0,
+ "updated_at": 1791504000.0
+}

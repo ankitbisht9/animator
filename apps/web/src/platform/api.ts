@@ -4,12 +4,14 @@ import { HttpError, http, qs } from "./http";
 export type Role = "learner" | "educator" | "admin";
 export type Visibility = "private" | "unlisted" | "public";
 export type ThemePref = "light" | "dark" | "system";
+/** How a lesson's scenes are laid out (ADR-047), or cost saver: planned, placing saved drawings (ADR-055). */
+export type LessonLayout = "classic" | "planned" | "costsaver";
 
 export interface Preferences {
   language: "English" | "Hinglish";
   audience: string;
   duration_min: number;
-  layout: "classic" | "planned" | null;
+  layout: LessonLayout | null;
   interests: string[];
   weekly_goal_min: number;
   playback_rate: number;
@@ -209,6 +211,8 @@ export interface PublicInfo {
   mail: boolean;
   doubts: boolean;
   voice: boolean;
+  /** Cost-saver lessons can be made (saved drawings are on, ADR-055). */
+  costsaver?: boolean;
   languages: string[];
   subjects: { key: string; label: string }[];
   password_min_length: number;
@@ -443,9 +447,152 @@ export interface CreateLesson {
   style?: string | null;
   language: string;
   paced: boolean;
-  layout?: "classic" | "planned" | null;
+  layout?: LessonLayout | null;
   visibility: Visibility;
   subject?: string | null;
+}
+
+// ---------------------------------------------------------------------- saved drawings (ADR-055)
+
+export type ObjectStatus = "approved" | "candidate" | "rejected" | "retired";
+export type ObjectOrigin = "library" | "harvest" | "import";
+export type ObjectView = "all" | ObjectStatus | "library";
+
+/** A drawing as the engine's `figure` takes it: shapes in its own box, painted in order. */
+export interface FigureArt {
+  w: number;
+  h: number;
+  shapes: {
+    d: string;
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+    opacity?: number;
+    fillRule?: "nonzero" | "evenodd";
+    part?: string;
+  }[];
+  anchors?: { name: string; x: number; y: number }[];
+}
+
+export interface ObjectCheck {
+  name: string;
+  ok: boolean;
+  detail: string;
+}
+
+export interface SavedObjectSummary {
+  id: string;
+  version: number;
+  title: string;
+  concept: string;
+  view: string;
+  status: ObjectStatus;
+  origin: ObjectOrigin;
+  score: number | null;
+  passed: boolean | null;
+  parts: number;
+  shapes: number;
+  aspect: number;
+  subjects: string[];
+  source: {
+    kind: ObjectOrigin;
+    generation_id?: string;
+    scene_id?: string;
+    object_id?: string;
+    lesson_title?: string;
+    file?: string;
+  };
+  updated_at: number;
+  reviewed_at: number | null;
+  aliases: string[];
+  uses: number;
+  art: FigureArt;
+}
+
+export interface SavedObjectDetail {
+  id: string;
+  version: number;
+  ref: string;
+  title: string;
+  concept: string;
+  description: string;
+  view: string;
+  aliases: string[];
+  context: string[];
+  not_for: string[];
+  prefer: string[];
+  subjects: string[];
+  parts: Record<string, string>;
+  anchors: string[];
+  size: { min: number; default: number; max: number };
+  art: FigureArt;
+  status: ObjectStatus;
+  origin: ObjectOrigin;
+  source: SavedObjectSummary["source"];
+  quality: { score: number; checks: ObjectCheck[]; checked_at: number } | null;
+  note: string;
+  created_at: number;
+  updated_at: number;
+  reviewed_at: number | null;
+  reviewed_by: string | null;
+  uses: number;
+  cautions: string[];
+  approvable: boolean;
+  why_not: string | null;
+  import_warnings?: string[];
+}
+
+export interface ObjectsPage {
+  items: SavedObjectSummary[];
+  total: number;
+  has_more: boolean;
+  counts: Record<ObjectStatus, number>;
+  library: number;
+}
+
+export interface ObjectStats {
+  by_status: Record<ObjectStatus, number>;
+  by_origin: Record<ObjectOrigin, number>;
+  placed: number;
+  harvest: {
+    background: boolean;
+    lessons_read: number;
+    turned_down: number;
+    last_run: number | null;
+    last: { lessons: number; added: number; turned_down: number } | null;
+  };
+  errors: string[];
+}
+
+export type ObjectEdit = Partial<
+  Pick<
+    SavedObjectDetail,
+    | "title"
+    | "concept"
+    | "description"
+    | "view"
+    | "aliases"
+    | "context"
+    | "not_for"
+    | "prefer"
+    | "subjects"
+    | "parts"
+    | "size"
+    | "note"
+  >
+>;
+
+export interface ObjectMatch {
+  offered: { id: string; title: string; for: string[]; mentions: number }[];
+  candidates: { id: string; title: string; for: string[] }[];
+}
+
+export interface HarvestReport {
+  lessons: number;
+  scenes: number;
+  added: string[];
+  turned_down: number;
+  seconds: number;
 }
 
 type U = { user: User };
@@ -575,6 +722,27 @@ export const v1 = {
       status,
       note,
     }),
+  // saved drawings (ADR-055)
+  objects: (p: { view?: ObjectView; origin?: string; q?: string; sort?: string; offset?: number; limit?: number }) =>
+    http.get<ObjectsPage>(`/api/v1/admin/objects${qs(p)}`),
+  objectStats: () => http.get<ObjectStats>("/api/v1/admin/objects/stats"),
+  object: (id: string) => http.get<SavedObjectDetail>(`/api/v1/admin/objects/${id}`),
+  editObject: (id: string, body: ObjectEdit) => http.patch<SavedObjectDetail>(`/api/v1/admin/objects/${id}`, body),
+  reviewObject: (id: string, decision: "approve" | "reject" | "retire" | "restore", note = "") =>
+    http.post<SavedObjectDetail>(`/api/v1/admin/objects/${id}/review`, { decision, note }),
+  resetObject: (id: string) => http.post<SavedObjectDetail>(`/api/v1/admin/objects/${id}/reset`),
+  deleteObject: (id: string) => http.del<{ ok: boolean }>(`/api/v1/admin/objects/${id}`),
+  importObject: (body: {
+    svg: string;
+    title: string;
+    concept: string;
+    aliases: string[];
+    description: string;
+    file: string;
+  }) => http.post<SavedObjectDetail>("/api/v1/admin/objects/import", body),
+  harvestObjects: (lessons: number) => http.post<HarvestReport>("/api/v1/admin/objects/harvest", { lessons }),
+  matchObjects: (brief: string, lesson: string) =>
+    http.post<ObjectMatch>("/api/v1/admin/objects/match", { brief, lesson }),
 };
 
 /** The usage ledger of a period as a CSV file, downloaded through the session-aware fetch (it renews an

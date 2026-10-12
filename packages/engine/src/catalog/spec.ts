@@ -75,6 +75,8 @@ export interface ComponentSpec {
   oneShot?: boolean;
   /** Geometry is expressed in world coordinates (endpoints come from params). */
   worldSpace?: boolean;
+  /** Written by the pipeline, never by the model: left out of the LLM schema, the catalog and the docs. */
+  hidden?: boolean;
   /** Params that hold a Point (raw or anchor reference), resolved every frame. */
   pointParams?: readonly string[];
   /** Params that reference another object id (creates an evaluation dependency). */

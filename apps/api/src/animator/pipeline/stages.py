@@ -26,6 +26,7 @@ from animator.llm import (
     LLMResult,
     Message,
 )
+from animator.objects.prompting import with_saved
 from animator.pipeline.language import language_line
 from animator.pipeline.layout_plan import planned_patch_schema, planned_scene_schema
 from animator.pipeline.models import (
@@ -108,6 +109,15 @@ class Stages:
         # The planned layout flow (ADR-047): the same scene, with its stage plan.
         self.planned_schema = planned_scene_schema(dsl_schema)
         self.planned_patch_schema = planned_patch_schema(self.patch_schema)
+        # Cost-saver lessons (ADR-055): the planned schemas, whose objects may also be saved drawings.
+        # Without them (an engine schema this code does not know), cost-saver scenes are planned ones.
+        self.costsaver_schema: dict[str, Any] | None = None
+        self.costsaver_patch_schema: dict[str, Any] | None = None
+        try:
+            self.costsaver_schema = with_saved(self.planned_schema)
+            self.costsaver_patch_schema = with_saved(self.planned_patch_schema)
+        except (ValueError, KeyError, TypeError):
+            log.exception("cost-saver scene schema unavailable: cost-saver scenes are planned ones")
 
     def _request(
         self,
@@ -375,9 +385,12 @@ class Stages:
         ctx: CallContext,
         on_look: Callable[[str], None] | None = None,
         on_scene: Callable[[DirectedScene], None] | None = None,
+        library: str | None = None,
     ) -> Direction:
         """The visual director: every scene's picture, planned together so the lesson looks
-        consistent. Streamed: each scene's plan is handed over as soon as it is complete."""
+        consistent. Streamed: each scene's plan is handed over as soon as it is complete. A cost-saver
+        lesson (ADR-055) also tells it which saved drawings the lesson can use (`library`), in the
+        message: its instructions stay those of every lesson."""
         r = gen.request
         scenes = [
             {
@@ -400,6 +413,7 @@ class Stages:
                     "",
                     "The script, scene by scene:",
                     compact(scenes),
+                    *(["", library] if library else []),
                 ]
             )
         )
@@ -474,12 +488,17 @@ class Stages:
         llm_error: str | None = None,
         critic_notes: str | None = None,
         planned: bool = False,
+        saved: str | None = None,
     ) -> LLMResult:
         """Attempt 1 drafts the scene; later attempts correct it (issues from the engine or the
         critic) or repair it (the previous reply was unusable). A correction replies with only
         what changes (a patch, merged here), unless `animator_patch_corrections` is off. A planned
-        scene (ADR-047) also carries its stage plan, which a patch may replace."""
+        scene (ADR-047) also carries its stage plan, which a patch may replace. A cost-saver scene
+        (ADR-055, `saved`: the drawings it may use) is a planned one that may place saved drawings."""
         parts = [self.scene_context(gen, rec, prev_summary)]
+        costsaver = saved is not None and self.costsaver_schema is not None and planned
+        if costsaver:
+            parts.append(str(saved))
         patch = (
             attempt > 1
             and previous is not None
@@ -518,7 +537,12 @@ class Stages:
                     "Write the scene again, more compactly if needed (fewer objects and actions), "
                     "following the schema exactly."
                 )
-        if planned:
+        if costsaver:
+            assert self.costsaver_schema is not None and self.costsaver_patch_schema is not None
+            version = self.pack.animation_costsaver.version
+            instructions = self.pack.costsaver_animation_instructions()
+            schema = self.costsaver_patch_schema if patch else self.costsaver_schema
+        elif planned:
             version = self.pack.animation_planned.version
             instructions = self.pack.planned_animation_instructions()
             schema = self.planned_patch_schema if patch else self.planned_schema
