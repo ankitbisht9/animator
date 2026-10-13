@@ -44,6 +44,9 @@ export function explain(error: string): string | null {
   if (/API key|OPENAI_API_KEY|deactivated|401/i.test(error))
     return "Check OPENAI_API_KEY in .env, restart the API server, then press Resume.";
   if (/quota/i.test(error)) return "The OpenAI account has no quota left. Add credit, then press Resume.";
+  // Model trials (ADR-056): a trial lesson's model is paid through OpenRouter, not OpenAI.
+  if (/OpenRouter credits/i.test(error))
+    return "The OpenRouter account has no credits left for this trial model. Add credits at openrouter.ai, then press Resume.";
   if (/none of the configured models/i.test(error))
     return "None of the configured models is available to this key. Adjust ANIMATOR_MODEL_* or ANIMATOR_MODEL_FALLBACKS in .env.";
   if (/budget/i.test(error)) return "The per-lesson budget was reached (LLM_BUDGET_USD_PER_GENERATION in .env).";

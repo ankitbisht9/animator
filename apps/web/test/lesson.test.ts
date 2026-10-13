@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildLesson, type LessonCache, locate } from "../src/lesson/lesson";
+import { explain } from "../src/lesson/useLessonStream";
 import { voiceAt } from "../src/player/voice";
 
 const scene = (id: string, duration: number, extra: Record<string, unknown> = {}) => ({
@@ -107,5 +108,16 @@ describe("narration audio", () => {
     const spoken = buildLesson("L", [twoBeats], cache, [narration]);
     expect(silent.scenes[0]?.narration).toBeNull();
     expect(spoken.scenes[0]?.narration).toBe(narration);
+  });
+});
+
+describe("a stopped lesson", () => {
+  it("says when OpenRouter stopped a trial lesson for credits (ADR-056)", () => {
+    const error =
+      "OpenRouter credits are used up: This request would exceed your available credits given your current " +
+      "in-flight requests. Retry after in-flight requests settle, or add credits. (resume to continue)";
+    expect(explain(error)).toMatch(/OpenRouter account has no credits left.*Resume/);
+    expect(explain("The OpenAI account: insufficient_quota")).toMatch(/OpenAI account has no quota/);
+    expect(explain("something else went wrong")).toBeNull();
   });
 });
