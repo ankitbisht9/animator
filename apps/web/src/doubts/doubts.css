@@ -15,12 +15,12 @@
   padding: 0 13px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #d90429 0%, #ef476f 100%);
+  background: linear-gradient(135deg, var(--brand-solid) 0%, var(--brand-alt) 100%);
   color: #fff;
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
-  box-shadow: 0 10px 28px rgba(217, 4, 41, 0.45), 0 2px 6px rgba(28, 37, 65, 0.25);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--brand-solid) 45%, transparent), 0 2px 6px rgba(28, 37, 65, 0.25);
   transition: transform 0.2s ease, box-shadow 0.2s ease, gap 0.25s ease;
 }
 
@@ -28,7 +28,7 @@
 .hand-raise:focus-visible {
   transform: translateY(-2px);
   gap: 8px;
-  box-shadow: 0 14px 34px rgba(217, 4, 41, 0.55), 0 2px 6px rgba(28, 37, 65, 0.25);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--brand-solid) 55%, transparent), 0 2px 6px rgba(28, 37, 65, 0.25);
   outline: none;
 }
 
@@ -229,7 +229,7 @@
 .tutor-face svg {
   position: relative;
   display: block;
-  filter: drop-shadow(0 6px 14px rgba(217, 4, 41, 0.35));
+  filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--brand-solid) 35%, transparent));
 }
 
 .tutor-ring {
@@ -383,7 +383,7 @@
 
 .doubt-progress > div {
   height: 100%;
-  background: linear-gradient(90deg, #d90429, #ef476f);
+  background: linear-gradient(90deg, var(--brand-solid), var(--brand-alt));
 }
 
 /* ---------------- the conversation ---------------- */
@@ -454,7 +454,7 @@
 }
 
 .doubt-msg.student .doubt-bubble {
-  background: linear-gradient(135deg, #d90429, #b80322);
+  background: linear-gradient(135deg, var(--brand-solid), var(--brand-solid-600));
   color: #fff;
   border-bottom-right-radius: 6px;
 }
@@ -529,7 +529,7 @@
 
 .doubt-chip.strong {
   border-color: transparent;
-  background: linear-gradient(135deg, #d90429, #b80322);
+  background: linear-gradient(135deg, var(--brand-solid), var(--brand-solid-600));
   color: #fff;
 }
 
@@ -616,7 +616,7 @@
 }
 
 .doubt-send {
-  background: linear-gradient(135deg, #d90429, #b80322);
+  background: linear-gradient(135deg, var(--brand-solid), var(--brand-solid-600));
   color: #fff;
 }
 

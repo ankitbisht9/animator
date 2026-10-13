@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from animator.llm.trials import TrialLog
 from animator.pipeline.models import GenerationRequest
-from animator.platform import curation, usage
+from animator.platform import curation, sharing, usage
 from animator.platform.catalog import SUBJECTS, new_row
 from animator.platform.core import Principal
 from animator.platform.deps import DB, MaybeMe, Me, Plat, client_ip
@@ -65,6 +65,7 @@ def lesson_out(
     owner_name: str | None = None,
     progress: Progress | None = None,
     saved: bool = False,
+    owner_avatar: str | None = None,
 ) -> dict[str, Any]:
     mine = me is not None and row.owner_id == me.user_id
     staff = me is not None and me.can(Perm.LESSON_ANY)
@@ -91,7 +92,11 @@ def lesson_out(
         "updated_at": row.updated_at,
         "completed_at": row.completed_at,
         "deleted": row.deleted_at is not None,
-        "owner": {"id": row.owner_id, "name": owner_name or "Animator"} if row.owner_id else None,
+        "owner": (
+            {"id": row.owner_id, "name": owner_name or "Animator", "avatar": owner_avatar or ""}
+            if row.owner_id
+            else None
+        ),
         "mine": mine,
         "can_edit": mine or staff,
         "can_rate": me is not None and not mine and row.status == "complete",
@@ -123,7 +128,7 @@ def _joined(me: Principal | None) -> Any:
     """Lessons with owner name, and (for a signed-in learner) their progress and saved flag."""
     uid = me.user_id if me else ""
     return (
-        select(Lesson, User.name, Progress, Saved.created_at)
+        select(Lesson, User.name, Progress, Saved.created_at, User.avatar)
         .outerjoin(User, User.id == Lesson.owner_id)
         .outerjoin(Progress, and_(Progress.lesson_id == Lesson.id, Progress.user_id == uid))
         .outerjoin(Saved, and_(Saved.lesson_id == Lesson.id, Saved.user_id == uid))
@@ -131,7 +136,7 @@ def _joined(me: Principal | None) -> Any:
 
 
 def _rows(result: Any, me: Principal | None) -> list[dict[str, Any]]:
-    return [lesson_out(r[0], me, r[1], r[2], r[3] is not None) for r in result.all()]
+    return [lesson_out(r[0], me, r[1], r[2], r[3] is not None, r[4]) for r in result.all()]
 
 
 def _search(q: str | None) -> Any:
@@ -303,10 +308,12 @@ async def subjects(s: DB) -> list[dict[str, Any]]:
 
 @router.get("/explore/featured")
 async def featured(me: MaybeMe, s: DB) -> list[dict[str, Any]]:
+    """Lessons an admin featured: public ones in Explore (ADR-057). Only those: Explore's Featured
+    shelf is empty, and hidden, until an admin features a lesson."""
     stmt = (
         _joined(me)
-        .where(*IN_EXPLORE)
-        .order_by(Lesson.featured.desc(), Lesson.views.desc(), Lesson.created_at.desc())
+        .where(*IN_EXPLORE, Lesson.featured.is_(True), Lesson.visibility == "public")
+        .order_by(Lesson.views.desc(), Lesson.created_at.desc())
         .limit(8)
     )
     return _rows(await s.execute(stmt), me)
@@ -356,6 +363,11 @@ async def patch_lesson(
         raise HTTPException(422, "Unknown subject.")
     if body.featured is not None and not p.can(Perm.LESSON_FEATURE):
         raise HTTPException(403, "Only admins can feature lessons.")
+    # Sharing by its rules (ADR-057): a lesson that stops being public stops being featured.
+    try:
+        sharing.apply(row, visibility=visibility, featured=body.featured)
+    except sharing.SharingError as e:
+        raise HTTPException(409, str(e)) from e
     if visibility == "private":
         # Private is private: an admin's "add to Explore" ends with it (sharing it again later does not
         # bring it back by surprise).
@@ -367,14 +379,10 @@ async def patch_lesson(
                 p.user_id,
                 time.time(),
             )
-    if visibility is not None:
-        row.visibility = visibility
     if opt_out is not None:
         row.explore_opt_out = opt_out
     if body.subject is not None:
         row.subject = body.subject
-    if body.featured is not None:
-        row.featured = body.featured
     relist = visibility is not None or opt_out is not None
     listed = await curation.refresh(s, platform.settings, [row.id]) if relist else []
     await s.commit()
@@ -393,9 +401,7 @@ async def patch_lesson(
 @router.delete("/lessons/{lesson_id}", status_code=204)
 async def delete_lesson(lesson_id: str, request: Request, p: Me, platform: Plat, s: DB) -> Response:
     row = await editable(s, lesson_id, p)
-    row.deleted_at = time.time()
-    row.visibility = "private"
-    row.featured = False
+    sharing.apply(row, deleted=True)  # private and not featured
     await curation.refresh(s, platform.settings, [row.id])  # out of Explore
     await s.commit()
     platform.forget_lesson(row.id)

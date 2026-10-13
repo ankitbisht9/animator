@@ -16,13 +16,13 @@ import {
   Trash,
   User as UserIcon,
 } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
-import { type Preferences, type ThemePref, v1 } from "../api";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type Accent, type Preferences, type ThemePref, v1 } from "../api";
 import { useAuth, useUser } from "../auth";
 import { ago, credits, date, device } from "../format";
 import { useResource, useTitle } from "../hooks";
 import { Link, navigate } from "../nav";
-import { applyTheme } from "../theme";
+import { ACCENT_NAMES, ACCENTS, applyAccent, applyTheme, isAccent } from "../theme";
 import { AUDIENCES, SUBJECTS } from "../ui/brand";
 import {
   Alert,
@@ -116,12 +116,32 @@ function AccountTab() {
   const [avatar, setAvatar] = useState(user.avatar);
   const [busy, setBusy] = useState(false);
   const dirty = name !== user.name || bio !== user.bio || avatar !== user.avatar;
+  // The app's color follows the avatar's (ADR-057): a new avatar color shows across the app at once and
+  // is kept when the profile is saved; leaving without saving puts the saved color back.
+  const savedAccent = user.preferences.accent;
+  const saved = useRef(savedAccent);
+  saved.current = savedAccent;
+  const newColor = avatar !== user.avatar && isAccent(avatar);
+  useEffect(() => {
+    applyAccent(newColor ? (avatar as Accent) : savedAccent);
+  }, [newColor, avatar, savedAccent]);
+  useEffect(() => () => applyAccent(saved.current), []);
+  const matchAvatarColor = async () => {
+    if (!isAccent(user.avatar)) return;
+    try {
+      setUser((await v1.updateMe({ preferences: { accent: user.avatar } })).user);
+      toast.success(`The app is ${ACCENT_NAMES[user.avatar]} now.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
   const save = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     try {
-      setUser((await v1.updateMe({ name: name.trim(), bio: bio.trim(), avatar })).user);
-      toast.success("Profile updated.");
+      const preferences = newColor ? { accent: avatar as Accent } : undefined;
+      setUser((await v1.updateMe({ name: name.trim(), bio: bio.trim(), avatar, preferences })).user);
+      toast.success(newColor ? "Profile updated: the app takes your new color too." : "Profile updated.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
@@ -144,11 +164,26 @@ function AccountTab() {
                   type="button"
                   aria-pressed={avatar === c}
                   aria-label={c}
+                  title={isAccent(c) ? ACCENT_NAMES[c] : c}
                   className={`swatch av-${c} ${avatar === c ? "on" : ""}`}
                   onClick={() => setAvatar(c)}
                 />
               ))}
             </fieldset>
+            <p className="field-note swatch-note">
+              {newColor ? (
+                "The whole app shows this color now; save to keep it."
+              ) : savedAccent === avatar || !isAccent(avatar) ? (
+                "The app takes your avatar's color: buttons, links and highlights."
+              ) : (
+                <>
+                  The app is {ACCENT_NAMES[savedAccent]}.{" "}
+                  <button type="button" className="link-btn" onClick={() => void matchAvatarColor()}>
+                    Use {ACCENT_NAMES[avatar as Accent]} for the app too
+                  </button>
+                </>
+              )}
+            </p>
           </div>
         </div>
         <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required />
@@ -333,6 +368,10 @@ function AppearanceTab() {
     applyTheme(theme, p.reduced_motion);
     void save({ theme }, true);
   };
+  const chooseAccent = (accent: Accent) => {
+    applyAccent(accent);
+    void save({ accent }, true);
+  };
   return (
     <Card>
       <h2 className="card-h">Appearance</h2>
@@ -363,6 +402,39 @@ function AppearanceTab() {
           </button>
         ))}
       </fieldset>
+      <div className="accent-section">
+        <h3 className="settings-sub">App color</h3>
+        <p className="muted small">
+          Buttons, links and highlights across the app (lessons keep their own colors). Changing your avatar color
+          changes it too.
+        </p>
+        <fieldset className="swatches accent-pick">
+          <legend className="sr-only">App color</legend>
+          {ACCENTS.map((a) => (
+            <button
+              key={a}
+              type="button"
+              aria-pressed={p.accent === a}
+              aria-label={a === "crimson" ? `${ACCENT_NAMES[a]} (default)` : ACCENT_NAMES[a]}
+              title={a === "crimson" ? `${ACCENT_NAMES[a]} (default)` : ACCENT_NAMES[a]}
+              className={`swatch av-${a} ${p.accent === a ? "on" : ""}`}
+              onClick={() => chooseAccent(a)}
+            />
+          ))}
+        </fieldset>
+        <p className="field-note">
+          {ACCENT_NAMES[p.accent] ?? ACCENT_NAMES.crimson}
+          {p.accent === "crimson" ? " (default)" : ""}
+          {p.accent !== "crimson" && (
+            <>
+              {" · "}
+              <button type="button" className="link-btn" onClick={() => chooseAccent("crimson")}>
+                Back to the default red
+              </button>
+            </>
+          )}
+        </p>
+      </div>
       <Switch
         label="Reduce motion"
         description="Fewer animations in the interface (lessons still play)."

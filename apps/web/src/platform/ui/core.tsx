@@ -1,12 +1,15 @@
 /** The platform's building blocks. Styles: styles/ui.css. */
-import { Eye, EyeOff, LoaderCircle, type LucideIcon, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, LoaderCircle, type LucideIcon, Search, X } from "lucide-react";
 import {
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
+  useCallback,
+  useEffect,
   useId,
+  useRef,
   useState,
 } from "react";
 import { initials } from "../format";
@@ -486,22 +489,78 @@ export function Tabs<T extends string>({
   tabs: { value: T; label: string; icon?: LucideIcon; count?: number }[];
   label: string;
 }) {
+  // More tabs than fit (ADR-057): the hidden side fades and gets an arrow; the chosen tab stays in view.
+  const ref = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState({ start: false, end: false });
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const start = el.scrollLeft > 1;
+    const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setMore((m) => (m.start === start && m.end === end ? m : { start, end }));
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    ro?.observe(el);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro?.disconnect();
+    };
+  }, [measure]);
+  const shape = tabs.map((t) => `${t.label}:${t.count ?? ""}`).join("|");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the tabs' words and counts set their widths
+  useEffect(measure, [shape, measure]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: again each time another tab is chosen
+  useEffect(() => {
+    const box = ref.current;
+    const tab = box?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!box || !tab) return;
+    const left = tab.offsetLeft;
+    const right = left + tab.offsetWidth;
+    if (left < box.scrollLeft) box.scrollLeft = Math.max(0, left - 24);
+    else if (right > box.scrollLeft + box.clientWidth) box.scrollLeft = right - box.clientWidth + 24;
+  }, [value]);
+  const step = (dir: 1 | -1) => {
+    const el = ref.current;
+    el?.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: "smooth" });
+  };
   return (
-    <div className="ui-tabs" role="tablist" aria-label={label}>
-      {tabs.map((t) => (
+    <div className="ui-tabs-wrap" data-more-start={more.start || undefined} data-more-end={more.end || undefined}>
+      <div className="ui-tabs" role="tablist" aria-label={label} ref={ref}>
+        {tabs.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            role="tab"
+            aria-selected={t.value === value}
+            className={t.value === value ? "on" : ""}
+            onClick={() => onChange(t.value)}
+          >
+            {t.icon && <t.icon size={16} />}
+            {t.label}
+            {t.count !== undefined && <span className="ui-tab-count">{t.count}</span>}
+          </button>
+        ))}
+      </div>
+      {more.start && (
         <button
-          key={t.value}
           type="button"
-          role="tab"
-          aria-selected={t.value === value}
-          className={t.value === value ? "on" : ""}
-          onClick={() => onChange(t.value)}
+          className="ui-tabs-step start"
+          tabIndex={-1}
+          aria-label="Earlier tabs"
+          onClick={() => step(-1)}
         >
-          {t.icon && <t.icon size={16} />}
-          {t.label}
-          {t.count !== undefined && <span className="ui-tab-count">{t.count}</span>}
+          <ChevronLeft size={16} />
         </button>
-      ))}
+      )}
+      {more.end && (
+        <button type="button" className="ui-tabs-step end" tabIndex={-1} aria-label="More tabs" onClick={() => step(1)}>
+          <ChevronRight size={16} />
+        </button>
+      )}
     </div>
   );
 }

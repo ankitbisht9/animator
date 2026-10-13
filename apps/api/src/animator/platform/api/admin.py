@@ -1,5 +1,6 @@
 """/api/v1/admin: the platform at a glance, people (roles, suspension), every lesson (sharing,
-featuring, removal), the audit log, and the system (engine workers, request metrics)."""
+featuring, removal, one at a time or many at once), the audit log, and the system (engine workers,
+request metrics). Sharing follows `sharing.apply` (ADR-057): featured lessons are public ones."""
 
 from __future__ import annotations
 
@@ -8,9 +9,9 @@ import time
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, func, or_, select
 
-from animator.platform import curation
+from animator.platform import curation, sharing
 from animator.platform.accounts import revoke_sessions
 from animator.platform.api.lessons import _joined, _rows, _search
 from animator.platform.catalog import SUBJECTS
@@ -26,7 +27,7 @@ from animator.platform.models import (
     UsageEntry,
     User,
 )
-from animator.platform.schemas import AdminLessonPatchIn, UserPatchIn
+from animator.platform.schemas import AdminLessonPatchIn, AdminLessonsBulkIn, UserPatchIn
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
@@ -237,6 +238,32 @@ async def end_sessions(user_id: str, request: Request, p: Admin, platform: Plat,
     return {"signed_out": n}
 
 
+# The admin list's orders (`sort`), newest first by default.
+_ORDERS: dict[str, list[Any]] = {
+    "new": [Lesson.created_at.desc()],
+    "old": [Lesson.created_at.asc()],
+    "views": [Lesson.views.desc(), Lesson.created_at.desc()],
+    "cost": [Lesson.cost_usd.desc(), Lesson.created_at.desc()],
+    "title": [func.lower(Lesson.title).asc(), Lesson.created_at.desc()],
+}
+_STATUSES = ("queued", "planning", "generating", "complete", "failed", "cancelled", "paused")
+
+
+def _admin_filters(q: str | None, status: str | None, subject: str | None) -> list[Any]:
+    """What narrows the admin list besides its tab: words (title, topic, owner's name or the lesson's
+    id), statuses (comma separated) and a subject."""
+    conds: list[Any] = []
+    if q and q.strip():
+        term = f"%{q.strip()[:80].lower()}%"
+        conds.append(or_(_search(q), func.lower(User.name).like(term), func.lower(Lesson.id).like(term)))
+    wanted = [x for x in (status or "").split(",") if x in _STATUSES]
+    if wanted:
+        conds.append(Lesson.status.in_(wanted))
+    if subject and subject in SUBJECTS:
+        conds.append(Lesson.subject == subject)
+    return conds
+
+
 @router.get("/lessons")
 async def admin_lessons(
     p: Moderator,
@@ -244,21 +271,52 @@ async def admin_lessons(
     q: str | None = None,
     status: str | None = None,
     visibility: str | None = None,
+    featured: bool | None = None,
+    subject: str | None = None,
     deleted: bool = False,
+    sort: str = "new",
     offset: int = 0,
     limit: int = 25,
 ) -> dict[str, Any]:
+    """Every lesson, a page at a time, with how many each tab holds (for the words and filters given)."""
     limit = max(1, min(limit, 100))
-    stmt = _joined(p).where(Lesson.deleted_at.is_not(None) if deleted else Lesson.deleted_at.is_(None))
-    if status:
-        stmt = stmt.where(Lesson.status == status)
-    if visibility in ("private", "unlisted", "public"):
+    conds = _admin_filters(q, status, subject)
+    stmt = _joined(p).where(
+        Lesson.deleted_at.is_not(None) if deleted else Lesson.deleted_at.is_(None), *conds
+    )
+    if visibility in sharing.VISIBILITIES:
         stmt = stmt.where(Lesson.visibility == visibility)
-    if (cond := _search(q)) is not None:
-        stmt = stmt.where(cond)
+    if featured is not None:
+        stmt = stmt.where(Lesson.featured.is_(featured))
     total = await s.scalar(select(func.count()).select_from(stmt.with_only_columns(Lesson.id).subquery()))
-    result = await s.execute(stmt.order_by(Lesson.created_at.desc()).offset(max(0, offset)).limit(limit))
-    return {"total": int(total or 0), "items": _rows(result, p)}
+    order = _ORDERS.get(sort, _ORDERS["new"])
+    result = await s.execute(stmt.order_by(*order, Lesson.id).offset(max(0, offset)).limit(limit))
+    live = Lesson.deleted_at.is_(None)
+
+    def n(*when: Any) -> Any:
+        return func.coalesce(func.sum(case((and_(*when), 1), else_=0)), 0)
+
+    counted = (
+        await s.execute(
+            select(
+                n(live),
+                n(live, Lesson.visibility == "public"),
+                n(live, Lesson.visibility == "public", Lesson.featured.is_(True)),
+                n(live, Lesson.visibility == "unlisted"),
+                n(live, Lesson.visibility == "private"),
+                n(Lesson.deleted_at.is_not(None)),
+            )
+            .select_from(Lesson)
+            .outerjoin(User, User.id == Lesson.owner_id)
+            .where(*conds)
+        )
+    ).one()
+    keys = ("all", "public", "featured", "unlisted", "private", "deleted")
+    return {
+        "total": int(total or 0),
+        "items": _rows(result, p),
+        "counts": {k: int(v or 0) for k, v in zip(keys, counted, strict=True)},
+    }
 
 
 @router.patch("/lessons/{lesson_id}")
@@ -270,19 +328,12 @@ async def moderate(
         raise HTTPException(404, "No such lesson.")
     if body.subject is not None and body.subject not in SUBJECTS:
         raise HTTPException(422, "Unknown subject.")
-    if body.visibility is not None:
-        if body.visibility == "public" and row.status != "complete":
-            raise HTTPException(409, "A lesson can be published once it is ready.")
-        row.visibility = body.visibility
-    if body.featured is not None:
-        row.featured = body.featured
+    try:
+        sharing.apply(row, visibility=body.visibility, featured=body.featured, deleted=body.deleted)
+    except sharing.SharingError as e:
+        raise HTTPException(409, str(e)) from e
     if body.subject is not None:
         row.subject = body.subject
-    if body.deleted is not None:
-        row.deleted_at = time.time() if body.deleted else None
-        if body.deleted:
-            row.visibility = "private"
-            row.featured = False
     listed = await curation.refresh(s, platform.settings, [row.id])
     await s.commit()
     platform.forget_lesson(row.id)
@@ -292,6 +343,49 @@ async def moderate(
     )
     result = await s.execute(_joined(p).where(Lesson.id == row.id))
     return _rows(result, p)[0]
+
+
+# What each bulk action asks of every lesson it is given (ADR-057).
+_BULK: dict[str, dict[str, Any]] = {
+    "publish": {"visibility": "public"},
+    "unlist": {"visibility": "unlisted"},
+    "private": {"visibility": "private"},
+    "feature": {"featured": True},
+    "unfeature": {"featured": False},
+    "delete": {"deleted": True},
+    "restore": {"deleted": False},
+}
+
+
+@router.post("/lessons/bulk")
+async def bulk_lessons(
+    body: AdminLessonsBulkIn, request: Request, p: Moderator, platform: Plat, s: DB
+) -> dict[str, Any]:
+    """One action on many lessons. Each lesson follows the same rules as one at a time: those the rules
+    refuse are skipped with the reason, the others change together."""
+    rows = {r.id: r for r in (await s.scalars(select(Lesson).where(Lesson.id.in_(body.ids)))).all()}
+    now = time.time()
+    changed: list[str] = []
+    unchanged: list[str] = []
+    skipped: list[dict[str, str]] = []
+    for lid in body.ids:
+        row = rows.get(lid)
+        if row is None:
+            skipped.append({"id": lid, "reason": "No such lesson."})
+            continue
+        try:
+            (changed if sharing.apply(row, now=now, **_BULK[body.action]) else unchanged).append(lid)
+        except sharing.SharingError as e:
+            skipped.append({"id": lid, "reason": str(e)})
+    listed = await curation.refresh(s, platform.settings, changed) if changed else []
+    await s.commit()
+    for lid in changed:
+        platform.forget_lesson(lid)
+    await curation.announce(platform, listed)
+    ip = client_ip(request)
+    for lid in changed:
+        await platform.audit("lesson.moderate", p.user_id, lid, ip, change=body.action, bulk=True)
+    return {"action": body.action, "changed": changed, "unchanged": unchanged, "skipped": skipped}
 
 
 @router.get("/audit")

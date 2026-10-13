@@ -3,27 +3,25 @@
 import {
   Ban,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   CircleCheck,
   Clock,
   DollarSign,
-  ExternalLink,
   Inbox,
   LogOut,
-  RotateCcw,
   Server,
-  Star,
-  Trash,
+  ShieldCheck,
   TrendingUp,
   UserCheck,
   Users,
 } from "lucide-react";
-import { useState } from "react";
-import { type AdminUser, type Lesson, type Role, v1 } from "../api";
+import { Fragment, useState } from "react";
+import { type AdminUser, type Role, v1 } from "../api";
 import { useAuth } from "../auth";
 import { ago, date, money, plural } from "../format";
 import { useDebounced, useResource, useTitle } from "../hooks";
-import { TrialBadge } from "../lesson/TrialBadge";
-import { Link, navigate } from "../nav";
+import { Link } from "../nav";
 import { StatusBadge, subject } from "../ui/brand";
 import { BarChart, Donut } from "../ui/charts";
 import {
@@ -41,6 +39,7 @@ import {
   Tabs,
 } from "../ui/core";
 import { Confirm, useToast } from "../ui/overlay";
+import { Pager, SkeletonRows } from "../ui/table";
 
 export function Forbidden() {
   return <Alert tone="danger">You do not have access to this page.</Alert>;
@@ -56,7 +55,7 @@ export function AdminOverview() {
   const o = res.data;
   if (!o)
     return <div className="page">{res.error ? <Alert tone="danger">{res.error.message}</Alert> : <Spinner />}</div>;
-  const roleColors: Record<string, string> = { learner: "#8d93a8", educator: "#f4a261", admin: "#d90429" };
+  const roleColors: Record<string, string> = { learner: "#8d93a8", educator: "#f4a261", admin: "var(--brand-solid)" };
   return (
     <div className="page admin">
       <header className="page-head">
@@ -268,100 +267,117 @@ export function AdminUsers() {
           />
         </div>
       </div>
-      <Card padded={false}>
-        <div className="table-wrap">
-          <table className="table">
+      <Card padded={false} className="table-card">
+        <div className="table-wrap sticky-head">
+          <table className="table fixed people-table">
+            <colgroup>
+              <col />
+              <col className="w-role" />
+              <col className="w-status" />
+              <col className="w-count" />
+              <col className="w-date" />
+              <col className="w-seen" />
+              <col className="w-actions" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Person</th>
                 <th>Role</th>
                 <th>Status</th>
-                <th>Lessons</th>
+                <th className="num">Lessons</th>
                 <th>Joined</th>
                 <th>Last sign-in</th>
                 <th aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
-              {(res.data?.items ?? []).map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    <span className="person">
-                      <Avatar name={u.name} color={u.avatar} size={32} />
-                      <span>
-                        <b>
-                          {u.name} {u.me && <Badge tone="neutral">You</Badge>}
-                        </b>
-                        <small>
-                          {u.email} {u.verified ? "" : "· unconfirmed"}
-                        </small>
+              {res.loading && !res.data ? (
+                <SkeletonRows cols={7} rows={6} />
+              ) : (
+                (res.data?.items ?? []).map((u) => (
+                  <tr key={u.id}>
+                    <td>
+                      <span className="person">
+                        <Avatar name={u.name} color={u.avatar} size={34} />
+                        <span>
+                          <b className="person-name">
+                            <span className="truncate" title={u.name}>
+                              {u.name}
+                            </span>
+                            {u.me && <Badge tone="neutral">You</Badge>}
+                          </b>
+                          <small className="truncate" title={u.email}>
+                            {u.email}
+                            {u.verified ? "" : " · unconfirmed"}
+                          </small>
+                        </span>
                       </span>
-                    </span>
-                  </td>
-                  <td>
-                    <select
-                      className="ui-select compact"
-                      aria-label={`Role of ${u.name}`}
-                      value={u.role}
-                      disabled={u.me}
-                      onChange={(e) => void setRoleOf(u, e.target.value as Role)}
-                    >
-                      <option value="learner">Learner</option>
-                      <option value="educator">Educator</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </td>
-                  <td>
-                    <Badge tone={u.status === "active" ? "success" : "danger"}>
-                      {u.status === "active" ? "Active" : "Suspended"}
-                    </Badge>
-                  </td>
-                  <td>{u.lessons}</td>
-                  <td>{date(u.created_at)}</td>
-                  <td>{ago(u.last_login_at)}</td>
-                  <td className="table-actions">
-                    {!u.me && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          icon={LogOut}
-                          onClick={() => setConfirm({ user: u, action: "signout" })}
-                          aria-label={`Sign ${u.name} out everywhere`}
-                        />
-                        {u.status === "active" ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            icon={Ban}
-                            onClick={() => setConfirm({ user: u, action: "suspend" })}
+                    </td>
+                    <td>
+                      <select
+                        className="ui-select compact"
+                        aria-label={`Role of ${u.name}`}
+                        value={u.role}
+                        disabled={u.me}
+                        onChange={(e) => void setRoleOf(u, e.target.value as Role)}
+                      >
+                        <option value="learner">Learner</option>
+                        <option value="educator">Educator</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </td>
+                    <td>
+                      <Badge tone={u.status === "active" ? "success" : "danger"}>
+                        {u.status === "active" ? "Active" : "Suspended"}
+                      </Badge>
+                    </td>
+                    <td className="num">{u.lessons.toLocaleString()}</td>
+                    <td title={date(u.created_at, true)}>{date(u.created_at)}</td>
+                    <td title={u.last_login_at ? date(u.last_login_at, true) : undefined}>{ago(u.last_login_at)}</td>
+                    <td className="cell-actions">
+                      {!u.me && (
+                        <span className="row-actions">
+                          <button
+                            type="button"
+                            className="ui-icon-btn"
+                            onClick={() => setConfirm({ user: u, action: "signout" })}
+                            aria-label={`Sign ${u.name} out everywhere`}
+                            title="Sign out everywhere"
                           >
-                            Suspend
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            icon={UserCheck}
-                            onClick={() => setConfirm({ user: u, action: "activate" })}
-                          >
-                            Activate
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                            <LogOut size={17} />
+                          </button>
+                          {u.status === "active" ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon={Ban}
+                              className="danger-ghost"
+                              onClick={() => setConfirm({ user: u, action: "suspend" })}
+                            >
+                              Suspend
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon={UserCheck}
+                              onClick={() => setConfirm({ user: u, action: "activate" })}
+                            >
+                              Activate
+                            </Button>
+                          )}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        {res.loading && !res.data && (
-          <div className="table-empty">
-            <Spinner />
-          </div>
+        {res.data && res.data.items.length === 0 && (
+          <EmptyState icon={Users} title="No one matches" text="Try another name or email, role or status." />
         )}
-        {res.data && res.data.items.length === 0 && <div className="table-empty">No one matches.</div>}
       </Card>
       <Pager offset={offset} size={25} total={total} onChange={setOffset} />
       <Confirm
@@ -392,210 +408,8 @@ export function AdminUsers() {
   );
 }
 
-export function Pager({
-  offset,
-  size,
-  total,
-  onChange,
-}: {
-  offset: number;
-  size: number;
-  total: number;
-  onChange: (o: number) => void;
-}) {
-  if (total <= size) return null;
-  const page = Math.floor(offset / size) + 1;
-  const pages = Math.ceil(total / size);
-  return (
-    <div className="pager">
-      <Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => onChange(Math.max(0, offset - size))}>
-        Previous
-      </Button>
-      <span>
-        Page {page} of {pages}
-      </span>
-      <Button size="sm" variant="secondary" disabled={page >= pages} onClick={() => onChange(offset + size)}>
-        Next
-      </Button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------- lessons
-
-export function AdminLessons() {
-  useTitle("All lessons");
-  const { can } = useAuth();
-  const toast = useToast();
-  const [q, setQ] = useState("");
-  const [tab, setTab] = useState<"all" | "public" | "deleted">("all");
-  const [offset, setOffset] = useState(0);
-  const term = useDebounced(q, 250);
-  const key = `admin:lessons:${term}:${tab}:${offset}`;
-  const res = useResource(can("lesson:any") ? key : null, () =>
-    v1.adminLessons({
-      q: term,
-      visibility: tab === "public" ? "public" : undefined,
-      deleted: tab === "deleted",
-      offset,
-    }),
-  );
-  if (!can("lesson:any")) return <Forbidden />;
-  const moderate = async (
-    l: Lesson,
-    body: { visibility?: "private" | "unlisted" | "public"; featured?: boolean; deleted?: boolean },
-    done: string,
-  ) => {
-    try {
-      await v1.moderate(l.id, body);
-      toast.success(done);
-      void res.reload();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
-    }
-  };
-  const total = res.data?.total ?? 0;
-  return (
-    <div className="page admin">
-      <header className="page-head">
-        <div>
-          <p className="page-kicker">Administration</p>
-          <h1>All lessons</h1>
-          <p className="page-sub">{total} lessons</p>
-        </div>
-      </header>
-      <div className="toolbar">
-        <Tabs
-          label="Lessons"
-          value={tab}
-          onChange={(v) => {
-            setTab(v);
-            setOffset(0);
-          }}
-          tabs={[
-            { value: "all", label: "All" },
-            { value: "public", label: "Public" },
-            { value: "deleted", label: "Deleted" },
-          ]}
-        />
-        <SearchBox
-          value={q}
-          onChange={(v) => {
-            setQ(v);
-            setOffset(0);
-          }}
-          placeholder="Search lessons"
-        />
-      </div>
-      <Card padded={false}>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Lesson</th>
-                <th>Owner</th>
-                <th>Status</th>
-                <th>Sharing</th>
-                <th>Views</th>
-                <th>AI cost</th>
-                <th>Created</th>
-                <th aria-label="Actions" />
-              </tr>
-            </thead>
-            <tbody>
-              {(res.data?.items ?? []).map((l) => (
-                <tr key={l.id}>
-                  <td>
-                    <Link href={`/lessons/${l.id}`} className="table-title">
-                      <b>{l.title}</b>
-                      <small>
-                        {subject(l.subject).label} · {l.id}
-                      </small>
-                    </Link>
-                  </td>
-                  <td>{l.owner?.name ?? <span className="muted">nobody</span>}</td>
-                  <td>
-                    <StatusBadge status={l.status} />
-                  </td>
-                  <td>
-                    {l.visibility}
-                    {l.featured && (
-                      <Badge tone="brand" icon={Star}>
-                        Featured
-                      </Badge>
-                    )}
-                  </td>
-                  <td>{l.views}</td>
-                  <td>
-                    {money(l.cost_usd)}
-                    <TrialBadge model={l.trial_model} />
-                  </td>
-                  <td>{date(l.created_at)}</td>
-                  <td className="table-actions">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      icon={ExternalLink}
-                      onClick={() => navigate(`/admin/raw/${l.id}`)}
-                      aria-label="Pipeline view"
-                    />
-                    {tab === "deleted" ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        icon={RotateCcw}
-                        onClick={() => void moderate(l, { deleted: false }, "Lesson restored.")}
-                      >
-                        Restore
-                      </Button>
-                    ) : (
-                      <>
-                        {l.visibility === "public" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            icon={Star}
-                            onClick={() =>
-                              void moderate(
-                                l,
-                                { featured: !l.featured },
-                                l.featured ? "No longer featured." : "Featured in Explore.",
-                              )
-                            }
-                          >
-                            {l.featured ? "Unfeature" : "Feature"}
-                          </Button>
-                        )}
-                        {l.visibility === "public" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => void moderate(l, { visibility: "private" }, "Removed from Explore.")}
-                          >
-                            Unpublish
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          icon={Trash}
-                          onClick={() => void moderate(l, { deleted: true }, "Lesson removed.")}
-                          aria-label="Remove"
-                        />
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {res.data && res.data.items.length === 0 && <div className="table-empty">No lessons.</div>}
-      </Card>
-      <Pager offset={offset} size={25} total={total} onChange={setOffset} />
-    </div>
-  );
-}
+/** The pager every admin list shares (it lives with the other table parts). */
+export { Pager };
 
 // ---------------------------------------------------------------------- support queue
 
@@ -676,24 +490,67 @@ export function AdminSupport() {
 
 // ---------------------------------------------------------------------- audit
 
-const ACTIONS = ["", "login", "user.", "password.", "session.", "lesson.", "ticket."];
+const ACTIONS = [
+  { value: "", label: "All events" },
+  { value: "login", label: "Sign-ins" },
+  { value: "logout", label: "Sign-outs" },
+  { value: "session.", label: "Sessions" },
+  { value: "password.", label: "Passwords" },
+  { value: "user.", label: "People" },
+  { value: "lesson.", label: "Lessons" },
+  { value: "explore.", label: "Explore" },
+  { value: "objects.", label: "Objects Warehouse" },
+  { value: "credits.", label: "Credits" },
+  { value: "usage.", label: "Exports" },
+  { value: "ticket.", label: "Support" },
+];
+const AUDIT_PAGE = 50;
+
+/** An event's kind at a glance: failures and removals red, sign-ins blue, accounts amber, lessons
+ * violet, the warehouse green (fixed colors: the app's own color could be any of them). */
+function eventTone(action: string): string {
+  if (/failed|reused|locked|delete|reject/.test(action)) return "danger";
+  if (/^(login|logout|session)/.test(action)) return "info";
+  if (/^(user|password|credits)\./.test(action)) return "warning";
+  if (/^(lesson|explore)\./.test(action)) return "lesson";
+  if (/^objects\./.test(action)) return "success";
+  return "neutral";
+}
+
+/** An event's details on one line ("to: public · bulk: true"). */
+function detailLine(d: Record<string, unknown>): string {
+  return Object.entries(d)
+    .map(([k, v]) => `${k.replaceAll("_", " ")}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
+    .join(" · ");
+}
 
 export function AdminAudit() {
   useTitle("Audit log");
   const { can } = useAuth();
   const [action, setAction] = useState("");
   const [offset, setOffset] = useState(0);
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const res = useResource(can("audit:read") ? `admin:audit:${action}:${offset}` : null, () =>
     v1.audit({ action, offset }),
   );
   if (!can("audit:read")) return <Forbidden />;
+  const items = res.data?.items ?? [];
+  const toggle = (id: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   return (
     <div className="page admin">
       <header className="page-head">
         <div>
           <p className="page-kicker">Administration</p>
           <h1>Audit log</h1>
-          <p className="page-sub">Security and administration events, newest first.</p>
+          <p className="page-sub">
+            Security and administration events, newest first. Open an event's details to read them whole.
+          </p>
         </div>
         <SelectField
           aria-label="Event type"
@@ -702,12 +559,20 @@ export function AdminAudit() {
             setAction(e.target.value);
             setOffset(0);
           }}
-          options={ACTIONS.map((a) => ({ value: a, label: a ? a.replace(/\.$/, "") : "All events" }))}
+          options={ACTIONS}
         />
       </header>
-      <Card padded={false}>
-        <div className="table-wrap">
-          <table className="table">
+      <Card padded={false} className="table-card">
+        <div className="table-wrap sticky-head">
+          <table className="table fixed audit-table">
+            <colgroup>
+              <col className="w-when" />
+              <col className="w-event" />
+              <col className="w-by" />
+              <col className="w-target" />
+              <col className="w-ip" />
+              <col />
+            </colgroup>
             <thead>
               <tr>
                 <th>When</th>
@@ -719,37 +584,93 @@ export function AdminAudit() {
               </tr>
             </thead>
             <tbody>
-              {(res.data?.items ?? []).map((e) => (
-                <tr key={e.id}>
-                  <td title={date(e.created_at, true)}>{ago(e.created_at)}</td>
-                  <td>
-                    <code>{e.action}</code>
-                  </td>
-                  <td>{e.actor ?? <span className="muted">–</span>}</td>
-                  <td>
-                    <code className="muted">{e.target.slice(0, 18)}</code>
-                  </td>
-                  <td>{e.ip}</td>
-                  <td className="muted small">{Object.keys(e.detail).length ? JSON.stringify(e.detail) : ""}</td>
-                </tr>
-              ))}
+              {res.loading && !res.data ? (
+                <SkeletonRows cols={6} />
+              ) : (
+                items.map((e) => {
+                  const line = Object.keys(e.detail).length ? detailLine(e.detail) : "";
+                  const shown = open.has(e.id);
+                  return (
+                    <Fragment key={e.id}>
+                      <tr className={shown ? "expanded" : undefined}>
+                        <td title={date(e.created_at, true)}>{ago(e.created_at)}</td>
+                        <td>
+                          <code className={`audit-event tone-${eventTone(e.action)}`} title={e.action}>
+                            {e.action}
+                          </code>
+                        </td>
+                        <td title={e.actor ?? undefined}>{e.actor ?? <span className="muted">–</span>}</td>
+                        <td title={e.target}>
+                          <code className="muted">{e.target}</code>
+                        </td>
+                        <td title={e.ip}>{e.ip}</td>
+                        <td>
+                          {line ? (
+                            <button
+                              type="button"
+                              className="audit-detail"
+                              aria-expanded={shown}
+                              onClick={() => toggle(e.id)}
+                              title={shown ? "Hide the details" : "Show the details"}
+                            >
+                              <ChevronRight size={14} className="audit-chevron" />
+                              <span className="truncate">{line}</span>
+                            </button>
+                          ) : (
+                            <span className="muted">–</span>
+                          )}
+                        </td>
+                      </tr>
+                      {shown && (
+                        <tr className="detail-row">
+                          <td colSpan={6}>
+                            <pre>{JSON.stringify(e.detail, null, 2)}</pre>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
+        {res.data && items.length === 0 && (
+          <EmptyState icon={ShieldCheck} title="No events" text="Nothing of this kind has been recorded." />
+        )}
       </Card>
-      <div className="pager">
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={offset === 0}
-          onClick={() => setOffset(Math.max(0, offset - 50))}
-        >
-          Newer
-        </Button>
-        <Button size="sm" variant="secondary" disabled={!res.data?.has_more} onClick={() => setOffset(offset + 50)}>
-          Older
-        </Button>
-      </div>
+      <nav className="pager" aria-label="Pages">
+        <span className="pager-range">
+          {items.length > 0 && (
+            <>
+              <b>
+                {(offset + 1).toLocaleString()}–{(offset + items.length).toLocaleString()}
+              </b>
+              , newest first
+            </>
+          )}
+        </span>
+        <span className="pager-steps">
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={ChevronLeft}
+            disabled={offset === 0}
+            onClick={() => setOffset(Math.max(0, offset - AUDIT_PAGE))}
+          >
+            Newer
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            iconRight={ChevronRight}
+            disabled={!res.data?.has_more}
+            onClick={() => setOffset(offset + AUDIT_PAGE)}
+          >
+            Older
+          </Button>
+        </span>
+      </nav>
     </div>
   );
 }
@@ -834,10 +755,10 @@ export function AdminSystem() {
               <thead>
                 <tr>
                   <th>Route</th>
-                  <th>Calls</th>
-                  <th>p50</th>
-                  <th>p95</th>
-                  <th>5xx</th>
+                  <th className="num">Calls</th>
+                  <th className="num">p50</th>
+                  <th className="num">p95</th>
+                  <th className="num">5xx</th>
                 </tr>
               </thead>
               <tbody>
@@ -846,10 +767,10 @@ export function AdminSystem() {
                     <td>
                       <code>{r.route}</code>
                     </td>
-                    <td>{r.count}</td>
-                    <td>{r.p50_ms != null ? `${r.p50_ms} ms` : "stream"}</td>
-                    <td>{r.p95_ms != null ? `${r.p95_ms} ms` : "–"}</td>
-                    <td>{r.errors}</td>
+                    <td className="num">{r.count}</td>
+                    <td className="num">{r.p50_ms != null ? `${r.p50_ms} ms` : "stream"}</td>
+                    <td className="num">{r.p95_ms != null ? `${r.p95_ms} ms` : "–"}</td>
+                    <td className="num">{r.errors}</td>
                   </tr>
                 ))}
               </tbody>

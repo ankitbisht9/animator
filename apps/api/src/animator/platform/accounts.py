@@ -33,6 +33,7 @@ DEFAULT_PREFERENCES: dict[str, Any] = {
     "voice": True,
     "autoplay": False,
     "theme": "light",
+    "accent": "crimson",  # the brand's red (ADR-057); changing the avatar color changes it too
     "reduced_motion": False,
     "notify_lesson_ready": True,
     "notify_support": True,

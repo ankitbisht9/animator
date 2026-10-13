@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 
 Visibility = Literal["private", "unlisted", "public"]
 Theme = Literal["light", "dark", "system"]
+# The app's color (ADR-057): one of the avatar colors; crimson is the brand's red, the default.
+Accent = Literal["crimson", "ruby", "amber", "teal", "indigo", "slate", "plum", "forest"]
 
 
 class _In(BaseModel):
@@ -60,6 +62,7 @@ class Preferences(_In):
     voice: bool | None = None
     autoplay: bool | None = None
     theme: Theme | None = None
+    accent: Accent | None = None
     reduced_motion: bool | None = None
     notify_lesson_ready: bool | None = None
     notify_support: bool | None = None
@@ -176,6 +179,21 @@ class AdminLessonPatchIn(_In):
     subject: str | None = Field(default=None, max_length=32)
 
 
+class AdminLessonsBulkIn(_In):
+    """One action on many lessons from the admin's lesson list (ADR-057)."""
+
+    ids: list[str] = Field(min_length=1, max_length=100)
+    action: Literal["publish", "unlist", "private", "feature", "unfeature", "delete", "restore"]
+
+    @field_validator("ids")
+    @classmethod
+    def _ids(cls, v: list[str]) -> list[str]:
+        out = list(dict.fromkeys(x.strip() for x in v))
+        if any(not x or len(x) > 64 or not x.replace("_", "").replace("-", "").isalnum() for x in out):
+            raise ValueError("lesson ids are letters, digits, - and _")
+        return out
+
+
 # ---------------------------------------------------------------------- credits and Explore (ADR-053)
 
 
@@ -257,6 +275,23 @@ class ObjectEditIn(_In):
 class ObjectReviewIn(_In):
     decision: Literal["approve", "reject", "retire", "restore"]
     note: str = Field(default="", max_length=500)
+
+
+class ObjectBulkReviewIn(_In):
+    """Many drawings waiting for review, rejected at once (ADR-057). Approving stays one at a time: it
+    needs each drawing's words checked."""
+
+    ids: list[str] = Field(min_length=1, max_length=200)
+    decision: Literal["reject"]
+    note: str = Field(default="", max_length=500)
+
+    @field_validator("ids")
+    @classmethod
+    def _ids(cls, v: list[str]) -> list[str]:
+        out = list(dict.fromkeys(x.strip() for x in v))
+        if any(not x or len(x) > 80 for x in out):
+            raise ValueError("drawing ids are 1 to 80 characters")
+        return out
 
 
 class ObjectImportIn(_In):

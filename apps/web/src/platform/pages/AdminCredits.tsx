@@ -40,6 +40,7 @@ import {
   TextField,
 } from "../ui/core";
 import { Modal, useToast } from "../ui/overlay";
+import { SkeletonRows } from "../ui/table";
 import { Forbidden, Pager } from "./Admin";
 
 const PERIODS: { value: UsagePeriod; label: string; noun: string }[] = [
@@ -50,7 +51,7 @@ const PERIODS: { value: UsagePeriod; label: string; noun: string }[] = [
 ];
 
 const KINDS: { kind: UsageKind; label: string; color: string }[] = [
-  { kind: "lesson_ai", label: "Lessons: AI", color: "#d90429" },
+  { kind: "lesson_ai", label: "Lessons: AI", color: "var(--brand-solid)" },
   { kind: "lesson_voice", label: "Lessons: voice", color: "#f4a261" },
   { kind: "doubt_ai", label: "Doubts: AI", color: "#2554c7" },
   { kind: "doubt_voice", label: "Doubts: voice", color: "#7ea6ff" },
@@ -483,75 +484,87 @@ function PeopleTable({ period, onOpen }: { period: UsagePeriod; onOpen: (id: str
           />
         </div>
       </div>
-      <Card padded={false}>
-        <div className="table-wrap">
-          <table className="table">
+      <Card padded={false} className="table-card">
+        <div className="table-wrap sticky-head">
+          <table className="table fixed usage-people-table">
+            <colgroup>
+              <col />
+              <col className="w-credits" />
+              <col className="w-money2" />
+              <col className="w-money" />
+              <col className="w-money" />
+              <col className="w-activity" />
+              <col className="w-seen" />
+              <col className="w-open" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Person</th>
                 <th>Credits this month</th>
-                <th>Spent {noun}</th>
-                <th>Making</th>
-                <th>Learning</th>
+                <th className="num">Spent {noun}</th>
+                <th className="num">Making</th>
+                <th className="num">Learning</th>
                 <th>Activity</th>
                 <th>Last spend</th>
                 <th aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
-              {(res.data?.items ?? []).map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    <span className="person">
-                      <Avatar name={u.name} color={u.avatar} size={32} />
-                      <span>
-                        <b>
-                          {u.name} {u.status === "suspended" && <Badge tone="danger">Suspended</Badge>}
-                        </b>
-                        <small>
-                          {u.email} · {u.role}
-                        </small>
+              {res.loading && !res.data ? (
+                <SkeletonRows cols={8} rows={6} />
+              ) : (
+                (res.data?.items ?? []).map((u) => (
+                  <tr key={u.id}>
+                    <td>
+                      <span className="person">
+                        <Avatar name={u.name} color={u.avatar} size={34} />
+                        <span>
+                          <b className="person-name">
+                            <span className="truncate" title={u.name}>
+                              {u.name}
+                            </span>
+                            {u.status === "suspended" && <Badge tone="danger">Suspended</Badge>}
+                          </b>
+                          <small className="truncate" title={u.email}>
+                            {u.email} · {u.role}
+                          </small>
+                        </span>
                       </span>
-                    </span>
-                  </td>
-                  <td>
-                    <CreditMeter c={u.credits} />
-                  </td>
-                  <td>
-                    <span className="num-pair">
-                      <b>{usd(u.spent.cost_usd)}</b>
-                      <small>{credits(u.spent.credits)} credits</small>
-                    </span>
-                  </td>
-                  <td>{usd(u.spent.create_usd)}</td>
-                  <td>{usd(u.spent.learn_usd)}</td>
-                  <td>
-                    <span className="num-pair">
-                      <span>{plural(u.lessons, "lesson")}</span>
-                      <small>{plural(u.doubts, "doubt")}</small>
-                    </span>
-                  </td>
-                  <td>{u.spent.last_at ? ago(u.spent.last_at) : <span className="muted">–</span>}</td>
-                  <td className="table-actions">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      icon={Settings2}
-                      aria-label={`Details for ${u.name}`}
-                      title="Details and credits"
-                      onClick={() => onOpen(u.id)}
-                    />
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <CreditMeter c={u.credits} />
+                    </td>
+                    <td className="num">
+                      <span className="num-pair">
+                        <b>{usd(u.spent.cost_usd)}</b>
+                        <small>{credits(u.spent.credits)} credits</small>
+                      </span>
+                    </td>
+                    <td className="num">{usd(u.spent.create_usd)}</td>
+                    <td className="num">{usd(u.spent.learn_usd)}</td>
+                    <td>
+                      <span className="num-pair">
+                        <span>{plural(u.lessons, "lesson")}</span>
+                        <small>{plural(u.doubts, "doubt")}</small>
+                      </span>
+                    </td>
+                    <td>{u.spent.last_at ? ago(u.spent.last_at) : <span className="muted">–</span>}</td>
+                    <td className="table-actions">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={Settings2}
+                        aria-label={`Details for ${u.name}`}
+                        title="Details and credits"
+                        onClick={() => onOpen(u.id)}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        {res.loading && !res.data && (
-          <div className="table-empty">
-            <Spinner />
-          </div>
-        )}
         {res.error && <div className="table-empty">{res.error.message}</div>}
         {res.data && res.data.items.length === 0 && (
           <div className="table-empty">{active ? `Nobody spent anything ${noun}.` : "No one matches."}</div>
@@ -583,62 +596,72 @@ function LessonsTable({ period }: { period: UsagePeriod }) {
           Making: the lesson's own AI and voice, charged to its owner. Doubts: answers to anyone who asked on it.
         </p>
       </div>
-      <Card padded={false}>
-        <div className="table-wrap">
-          <table className="table">
+      <Card padded={false} className="table-card">
+        <div className="table-wrap sticky-head">
+          <table className="table fixed usage-lessons-table">
+            <colgroup>
+              <col />
+              <col className="w-owner" />
+              <col className="w-money" />
+              <col className="w-money2" />
+              <col className="w-money" />
+              <col className="w-credits2" />
+              <col className="w-seen" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Lesson</th>
                 <th>Owner</th>
-                <th>Making</th>
-                <th>Doubts</th>
-                <th>Total {noun}</th>
-                <th>Credits</th>
+                <th className="num">Making</th>
+                <th className="num">Doubts</th>
+                <th className="num">Total {noun}</th>
+                <th className="num">Credits</th>
                 <th>Last spend</th>
               </tr>
             </thead>
             <tbody>
-              {(res.data?.items ?? []).map((l) => (
-                <tr key={l.id}>
-                  <td>
-                    {l.removed ? (
-                      <span className="table-title">
-                        <b>{l.title}</b>
-                        <small>Removed · {l.id}</small>
+              {res.loading && !res.data ? (
+                <SkeletonRows cols={7} rows={6} />
+              ) : (
+                (res.data?.items ?? []).map((l) => (
+                  <tr key={l.id}>
+                    <td>
+                      {l.removed ? (
+                        <span className="table-title">
+                          <b title={l.title}>{l.title}</b>
+                          <small>Removed · {l.id}</small>
+                        </span>
+                      ) : (
+                        <Link href={`/lessons/${l.id}`} className="table-title">
+                          <b title={l.title}>{l.title}</b>
+                          <small className="title-meta">
+                            <TrialBadge model={l.trial_model} />
+                            <span className="truncate">
+                              {l.subject ? subject(l.subject).label : "–"} · {l.id}
+                            </span>
+                          </small>
+                        </Link>
+                      )}
+                    </td>
+                    <td title={l.owner ?? undefined}>{l.owner ?? <span className="muted">No account</span>}</td>
+                    <td className="num">{usd(l.create_usd)}</td>
+                    <td className="num">
+                      <span className="num-pair">
+                        <b>{usd(l.learn_usd)}</b>
+                        <small>{plural(l.answers, "answer")}</small>
                       </span>
-                    ) : (
-                      <Link href={`/lessons/${l.id}`} className="table-title">
-                        <b>{l.title}</b>
-                        <small>
-                          {l.subject ? subject(l.subject).label : "–"} · {l.id}
-                        </small>
-                      </Link>
-                    )}
-                  </td>
-                  <td>{l.owner ?? <span className="muted">No account</span>}</td>
-                  <td>{usd(l.create_usd)}</td>
-                  <td>
-                    <span className="num-pair">
-                      <b>{usd(l.learn_usd)}</b>
-                      <small>{plural(l.answers, "answer")}</small>
-                    </span>
-                  </td>
-                  <td>
-                    <b>{usd(l.cost_usd)}</b>
-                    <TrialBadge model={l.trial_model} />
-                  </td>
-                  <td>{credits(l.credits)}</td>
-                  <td>{ago(l.last_at)}</td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="num">
+                      <b>{usd(l.cost_usd)}</b>
+                    </td>
+                    <td className="num">{credits(l.credits)}</td>
+                    <td>{ago(l.last_at)}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        {res.loading && !res.data && (
-          <div className="table-empty">
-            <Spinner />
-          </div>
-        )}
         {res.data && res.data.items.length === 0 && <div className="table-empty">No lesson cost anything {noun}.</div>}
       </Card>
       <Pager offset={offset} size={25} total={total} onChange={setOffset} />

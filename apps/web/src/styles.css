@@ -143,7 +143,7 @@ h2 {
 .btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--brand-ink);
 }
 
 .btn:disabled {
@@ -234,10 +234,10 @@ h2 {
   border-radius: 999px;
   border: none;
   background: color-mix(in srgb, var(--accent) 92%, transparent);
-  color: #fff;
+  color: var(--brand-ink);
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 12px 40px rgba(217, 4, 41, 0.32);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--brand-solid) 32%, transparent);
   opacity: 0.94;
 }
 
@@ -378,7 +378,7 @@ h2 {
 
 .scene-dot.playing {
   background: var(--accent);
-  color: #fff;
+  color: var(--brand-ink);
 }
 
 .scene-dot.done {

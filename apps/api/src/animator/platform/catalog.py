@@ -20,7 +20,7 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import literal, select, update
+from sqlalchemy import literal, or_, select, update
 
 from animator.platform import curation, usage
 from animator.platform.db import chunked
@@ -233,12 +233,31 @@ class Catalog:
             ("posting what doubts spent", self.reconcile_doubts),
             ("counting ratings", self.recount_ratings),
             ("deciding what Explore lists", self.refresh_explore),
+            ("keeping featured lessons public", self.unfeature_unshared),
         ]
         for what, step in steps:
             try:
                 await step()
             except Exception:
                 log.exception("catalog: %s failed (tried again at the next start)", what)
+
+    async def unfeature_unshared(self) -> int:
+        """A featured lesson is a public one (ADR-057): a lesson featured before that rule and no
+        longer public (or removed) stops being featured."""
+        async with self.platform.db.session() as s:
+            result = await s.execute(
+                update(Lesson)
+                .where(
+                    Lesson.featured.is_(True),
+                    or_(Lesson.visibility != "public", Lesson.deleted_at.is_not(None)),
+                )
+                .values(featured=False)
+            )
+            await s.commit()
+        n = int(getattr(result, "rowcount", 0) or 0)
+        if n:
+            log.info("catalog: %d lesson(s) that are not public are no longer featured", n)
+        return n
 
     async def first_admin(self) -> str | None:
         async with self.platform.db.session() as s:

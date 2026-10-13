@@ -902,3 +902,80 @@ def test_admins_review_import_and_try_saved_drawings(tmp_path: Path, worker_scri
             headers=csrf(c),
         )
         assert made.status_code == 201, made.text
+
+
+def test_admins_reject_many_drawings_waiting_for_review_at_once(tmp_path: Path, worker_script: Path) -> None:
+    from fastapi.testclient import TestClient
+
+    from animator.api.app import create_app
+    from animator.jobs.store import MemoryStore
+    from animator.llm import FakeLLM
+    from tests.test_pipeline import Script, settings
+    from tests.test_platform import admin_client, csrf, platform_settings, register
+
+    s = settings(animator_objects_dir=tmp_path / "objects", animator_objects_harvest=False)
+    app = create_app(
+        settings=s,
+        llm=FakeLLM(Script()),
+        store=MemoryStore(),
+        resume_on_start=False,
+        platform=platform_settings(tmp_path),
+    )
+    shapes = [
+        '<rect data-part="body" width="120" height="300" rx="20" data-fill="gray.dark"/>'
+        '<circle data-part="lamp" cx="60" cy="60" r="36" data-fill="red"/>',
+        '<rect data-part="box" width="200" height="140" rx="12" data-fill="blue"/>'
+        '<rect data-part="lid" y="-30" width="200" height="30" rx="6" data-fill="blue.dark"/>',
+    ]
+    with TestClient(app) as c:
+        a = admin_client(c)
+        h = csrf(a)
+        ids = []
+        for i, inner in enumerate(shapes):
+            body = {
+                "svg": f'<svg xmlns="http://www.w3.org/2000/svg">{inner}</svg>',
+                "title": f"Thing {i}",
+                "concept": f"thing {i}",
+            }
+            r = a.post("/api/v1/admin/objects/import", json=body, headers=h)
+            assert r.status_code == 200, r.text
+            ids.append(r.json()["id"])
+        waiting = a.get("/api/v1/admin/objects?view=candidate").json()["counts"]["candidate"]
+        r = a.post(
+            "/api/v1/admin/objects/review",
+            json={
+                "ids": [*ids, "heart_exterior", "no_such_thing", ids[0]],
+                "decision": "reject",
+                "note": "Not exact",
+            },
+            headers=h,
+        )
+        assert r.status_code == 200, r.text
+        out = r.json()
+        assert out["changed"] == ids
+        assert {x["id"]: x["reason"] for x in out["skipped"]} == {
+            "heart_exterior": "A built-in drawing is retired, not rejected.",
+            "no_such_thing": "No saved drawing with this id.",
+        }
+        after = a.get("/api/v1/admin/objects?view=rejected").json()
+        assert after["counts"]["candidate"] == waiting - 2 and set(ids) <= {o["id"] for o in after["items"]}
+        assert a.get(f"/api/v1/admin/objects/{ids[0]}").json()["note"] == "Not exact"
+        again = a.post(
+            "/api/v1/admin/objects/review", json={"ids": [ids[0]], "decision": "reject"}, headers=h
+        )
+        assert again.json()["skipped"] == [{"id": ids[0], "reason": "It is not waiting for review."}]
+        assert (
+            a.post(
+                "/api/v1/admin/objects/review", json={"ids": [], "decision": "reject"}, headers=h
+            ).status_code
+            == 422
+        )
+        approve = a.post("/api/v1/admin/objects/review", json={"ids": ids, "decision": "approve"}, headers=h)
+        assert approve.status_code == 422  # approving stays one at a time
+        audit = a.get("/api/v1/admin/audit", params={"action": "objects.reject"}).json()["items"]
+        assert sorted(e["target"] for e in audit) == sorted(ids) and all(e["detail"]["bulk"] for e in audit)
+        register(c, "lena@example.org", "Lena")
+        learner = c.post(
+            "/api/v1/admin/objects/review", json={"ids": ids, "decision": "reject"}, headers=csrf(c)
+        )
+        assert learner.status_code == 403

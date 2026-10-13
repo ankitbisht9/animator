@@ -35,7 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setUser = useCallback((u: User | null) => {
     setUserState(u);
     setStatus(u ? "signed-in" : "signed-out");
-    applyTheme(u?.preferences.theme ?? "light", u?.preferences.reduced_motion ?? false);
+    // Signed out: the brand's red again (a person's color is theirs, ADR-057).
+    applyTheme(
+      u?.preferences.theme ?? "light",
+      u?.preferences.reduced_motion ?? false,
+      u?.preferences.accent ?? "crimson",
+    );
   }, []);
 
   const reload = useCallback(async () => {

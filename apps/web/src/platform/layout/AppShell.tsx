@@ -24,7 +24,6 @@ import {
   Plus,
   Server,
   Settings,
-  Shapes,
   ShieldCheck,
   Sparkles,
   Star,
@@ -32,6 +31,7 @@ import {
   TrendingUp,
   User,
   Users,
+  Warehouse,
   X,
 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
@@ -45,6 +45,7 @@ import { Logo } from "../ui/brand";
 import { Avatar, Badge, Button } from "../ui/core";
 import { useToast } from "../ui/overlay";
 import { GlobalSearch } from "./GlobalSearch";
+import { PageDeco } from "./PageDeco";
 
 interface NavItem {
   href: string;
@@ -72,7 +73,7 @@ const ADMIN: NavItem[] = [
   { href: "/admin/lessons", label: "All lessons", icon: Clapperboard, perm: "lesson:any" },
   { href: "/admin/ratings", label: "Ratings & Explore", icon: Star, perm: "ratings:read" },
   { href: "/admin/credits", label: "Credits & cost", icon: Coins, perm: "usage:read" },
-  { href: "/admin/objects", label: "Saved drawings", icon: Shapes, perm: "objects:read" },
+  { href: "/admin/objects", label: "Objects Warehouse", icon: Warehouse, perm: "objects:read" },
   { href: "/admin/support", label: "Support queue", icon: Inbox, perm: "support:manage" },
   { href: "/admin/audit", label: "Audit log", icon: ShieldCheck, perm: "audit:read" },
   { href: "/admin/system", label: "System", icon: Server, perm: "analytics:read" },
@@ -97,6 +98,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   // A lesson gets the room: the sidebar folds to icons on lesson pages (one click opens it).
   const lessonPage = /^\/(lessons\/g_|samples\/)/.test(path);
+  // The heading band's pattern (ADR-057): not where lessons or scenes play (a lesson, a sample, the
+  // pipeline and debug views, the playground). Those pages stay exactly as light as before.
+  const plain = lessonPage || /^\/admin\/(playground|raw\/|debug\/)/.test(path);
   const [lessonOpen, setLessonOpen] = useState(false);
   const folded = lessonPage ? !lessonOpen : collapsed;
 
@@ -134,7 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className={`shell ${folded ? "collapsed" : ""} ${drawer ? "drawer-open" : ""}`}>
+    <div className={`shell ${folded ? "collapsed" : ""} ${drawer ? "drawer-open" : ""} ${plain ? "plain" : ""}`}>
       <aside className="sidebar" aria-label="Main">
         <div className="sidebar-head">
           <Link href="/dashboard" className="sidebar-brand" aria-label="Animator home">
@@ -211,6 +215,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
         {!user.verified && <VerifyBanner />}
         <main className="shell-content" id="main">
+          {!plain && <PageDeco />}
           <div className="page-enter" key={path}>
             {children}
           </div>

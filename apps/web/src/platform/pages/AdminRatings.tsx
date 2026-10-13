@@ -46,6 +46,7 @@ import {
   TextArea,
 } from "../ui/core";
 import { Confirm, Modal, useToast } from "../ui/overlay";
+import { SkeletonRows } from "../ui/table";
 import { Forbidden, Pager } from "./Admin";
 
 const VIEWS: { value: RatingsView; label: string; count?: (s: RatingsSummary) => number }[] = [
@@ -212,15 +213,18 @@ export function AdminRatings() {
           <SelectField aria-label="Order" value={sort} onChange={(e) => setSort(e.target.value)} options={SORTS} />
         </div>
       </div>
-      <Card padded={false}>
-        <div className="table-wrap">
+      <Card padded={false} className="table-card">
+        <div className="table-wrap sticky-head">
           <table className="table ratings-table">
             <thead>
               <tr>
                 <th>Lesson</th>
                 <th>Rating</th>
                 <th>Stars</th>
-                <th title="The average pulled towards the platform's mean until a lesson has about 10 ratings">
+                <th
+                  className="num"
+                  title="The average pulled towards the platform's mean until a lesson has about 10 ratings"
+                >
                   Score
                 </th>
                 <th>Explore</th>
@@ -229,45 +233,51 @@ export function AdminRatings() {
               </tr>
             </thead>
             <tbody>
-              {(list.data?.items ?? []).map((l) => (
-                <tr key={l.id}>
-                  <td>
-                    <button type="button" className="table-title link-button" onClick={() => setOpen(l.id)}>
-                      <b>{l.title}</b>
-                      <small>
-                        {l.subject_label} · {l.owner?.name ?? "No owner"} · {l.visibility}
-                      </small>
-                    </button>
-                  </td>
-                  <td>
-                    <RatingCell lesson={l} rule={list.data?.rule} />
-                  </td>
-                  <td>
-                    <Spread stars={l.rating.stars} />
-                  </td>
-                  <td>{l.rating.count ? l.rating.score.toFixed(2) : <span className="muted">–</span>}</td>
-                  <td>
-                    <ExploreState lesson={l} />
-                  </td>
-                  <td>
-                    <ReviewBadge status={l.review.status} />
-                  </td>
-                  <td className="table-actions">
-                    <QuickCurate lesson={l} onDone={changed} />
-                    <Button size="sm" variant="ghost" icon={MessageSquareText} onClick={() => setOpen(l.id)}>
-                      Details
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {list.loading && !list.data ? (
+                <SkeletonRows cols={7} rows={6} />
+              ) : (
+                (list.data?.items ?? []).map((l) => (
+                  <tr key={l.id}>
+                    <td>
+                      <button
+                        type="button"
+                        className="table-title link-button"
+                        onClick={() => setOpen(l.id)}
+                        title={l.title}
+                      >
+                        <b>{l.title}</b>
+                        <small>
+                          {l.subject_label} · {l.owner?.name ?? "No owner"} · {l.visibility}
+                        </small>
+                      </button>
+                    </td>
+                    <td>
+                      <RatingCell lesson={l} rule={list.data?.rule} />
+                    </td>
+                    <td>
+                      <Spread stars={l.rating.stars} />
+                    </td>
+                    <td className="num">
+                      {l.rating.count ? l.rating.score.toFixed(2) : <span className="muted">–</span>}
+                    </td>
+                    <td>
+                      <ExploreState lesson={l} />
+                    </td>
+                    <td>
+                      <ReviewBadge status={l.review.status} />
+                    </td>
+                    <td className="table-actions">
+                      <QuickCurate lesson={l} onDone={changed} />
+                      <Button size="sm" variant="ghost" icon={MessageSquareText} onClick={() => setOpen(l.id)}>
+                        Details
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        {list.loading && !list.data && (
-          <div className="table-empty">
-            <Spinner />
-          </div>
-        )}
         {list.error && <div className="table-empty">{list.error.message}</div>}
         {list.data && list.data.items.length === 0 && (
           <EmptyState icon={Star} title="Nothing here" text="No lesson matches this view yet." />

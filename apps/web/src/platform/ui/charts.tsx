@@ -128,7 +128,7 @@ export function Donut({
               cy={size / 2}
               r={r}
               fill="none"
-              stroke={p.color}
+              style={{ stroke: p.color }}
               strokeWidth="18"
               strokeDasharray={`${len} ${c - len}`}
               strokeDashoffset={-acc}

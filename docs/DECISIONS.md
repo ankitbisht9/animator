@@ -2600,3 +2600,109 @@ the badge on each page.
 
 **Not changed:** the normal models and how they are called, prompts, the engine, voice, doubts for other
 lessons, credits and costs for lessons that are not trials.
+
+## ADR-057 Lesson management, tidy lists, the Objects Warehouse, the app's color, patterns (2026-10-13)
+
+**Asked.**
+1. Administration → All lessons was not pixel perfect: a featured or public lesson made its row taller and
+   moved the whole list. Make the list excellent to work with, and the other lists (people, the audit
+   log...) too.
+2. Manage lessons from that list: publish there; feature only public lessons, and only as an admin. A lesson
+   made public showed up in both Explore's All lessons and its Featured shelf.
+3. Rename Saved drawings to Objects Warehouse, and reject several waiting objects at once from their cards
+   (approving stays one at a time).
+4. Keep the current theme as the default; changing the avatar color switches the app's primary color to it.
+5. Professional, classic, interactive patterns in the primary color, in the sidebar and on pages, without
+   breaking anything.
+
+**Backups first:** tag `backup/before-ui-enhancements` (504c56d), `.env.backup-before-ui-enhancements`, and the
+platform database copied with SQLite's backup into `D:\animation-backups\v2.4-before-ui-enhancements`.
+
+**Found.**
+- Rows grew because titles, ids and owner names wrapped, "public" and the Featured badge stacked in one
+  cell, and some rows had text buttons (Unfeature, Unpublish) where others had none.
+- Explore's Featured shelf listed the 8 most watched lessons in Explore, featured ones first: any public
+  lesson filled it until 8 were featured.
+- The server featured any lesson, public or not, and a featured lesson made private stayed featured.
+- Avatars in People and Credits & cost had their initials at the top: the rule for the name beside an
+  avatar (`.person > span`) styled the avatar too.
+- The audit log wrapped "38 min ago" on three lines and let JSON details run past the table.
+- Ratings & Explore's tabs ran off the page with nothing to show more were there.
+- The landing page's white button on the red band turned red, with red text, on hover.
+
+**Decision: the sharing rules in one place** (`platform/sharing.py`), used by the admin list, its bulk
+actions, a lesson's share dialog and deleting:
+- public needs a ready lesson that is not removed;
+- featured needs a public lesson; a lesson that stops being public (link only, private, removed) stops being
+  featured;
+- a refusal changes nothing (a 409 with the reason).
+- Explore's Featured shelf holds only featured lessons; it is hidden until an admin features one. Explore's
+  All lessons lists every public lesson, featured ones included.
+- At start, a lesson featured before the rule and no longer public is unfeatured (none in this database).
+- Closing an account unfeatures its lessons with the rest.
+
+**Decision: All lessons, managed from the list.**
+- Tabs with counts: All, Public, Featured, Link only, Private, Removed. Search by title, topic, owner or id;
+  filter by status (ready, being made, stopped) and subject; order by newest, oldest, views, AI cost, title.
+  The counts follow the words and filters.
+- Each row: the subject's tile, title and a one-line meta (subject, date, id, the trial badge), the owner
+  with their avatar's color, status, a sharing picker (Public once the lesson is ready), a star to feature
+  (enabled only for public lessons), views, AI cost, and open / pipeline view / remove or restore.
+- Changes from a row show at once and are put right by the server's answer.
+- Choosing rows (a checkbox, shift-click for a range, or every row on the page) brings a bar with Publish,
+  Feature, Unfeature, Link only, Make private and Remove (Restore under Removed). Each button counts the
+  chosen lessons it applies to, and says why when none can take it. Questions come first where lessons leave
+  Explore or are removed. `POST /api/v1/admin/lessons/bulk` applies one action to up to 100 lessons by the
+  same rules: refused lessons are skipped with the reason, the others change together, one audit event each.
+
+**Decision: one table system for every admin list** (`ui/table.tsx`, the tables in `ui.css`).
+- Fixed columns, one row height, long text ending in "…" with the whole text on hover, numbers on the right
+  in even figures. Column names stay in view while scrolling on screens wide enough for the table; narrower
+  screens scroll it sideways.
+- Rows that load keep the table's shape. The pager says which rows are shown, of how many.
+- Applied to All lessons, People, the audit log (events colored by kind; details on one line, opened in
+  place as formatted JSON), Credits & cost (people and lessons), Ratings & Explore, System and the support
+  queue.
+- Tabs with more than fit fade at the edge and get an arrow; the chosen tab stays in view.
+- Admin pages are up to 1400 px wide.
+
+**Decision: the Objects Warehouse.** The admin page for saved drawings is named Objects Warehouse. Under
+Waiting for review, each card has a checkbox (shift-click for a range, or all on the page); the bar
+rejects the chosen ones, with an optional review note. `POST /api/v1/admin/objects/review` rejects only
+drawings waiting for review; the others are skipped with the reason. Approving stays one at a time.
+
+**Decision: the app's color.**
+- `preferences.accent`, one of the eight avatar colors; crimson, the brand's red, is the default, so
+  existing accounts (whose avatar colors were drawn at random when they signed up) keep the red.
+- Changing the avatar color (Settings → Account) shows the whole app in it at once and keeps it when the
+  profile is saved (not when it is left unsaved). Settings → Appearance picks the app's color on its own,
+  with a way back to the default red. Signing out shows the red again.
+- Crimson keeps every value it had: the other colors are set by `data-accent` on the page, each with a shade
+  for light pages and one for dark pages (button text at least 5:1 on light pages; dark-page shades with
+  dark ink where white would not read). Every tint, hover and ring is mixed from those (`color-mix`).
+- The colors fixed in the code (the logo, the doubt button, charts, the sign-in art, shadows) became tokens;
+  white text on the app's color became its ink. Lessons keep their own colors (the engine reads none of
+  these).
+
+**Decision: patterns in the app's color**, drawn by CSS only:
+- a grid of dots behind the logo and rings (an orbit, the brand's mark) behind the account in the sidebar;
+- a band behind each page's heading: a soft glow and a fine grid that fades out towards the heading, drawn
+  brighter around the pointer as it moves over the band (a fine pointer only; not with reduced motion);
+- a glow under the top bar, a short rule before kickers, corner dots on stat cards, rings around
+  empty-state icons, a light that sweeps across primary buttons on hover.
+- None on pages that play lessons or scenes (a lesson, a sample, the pipeline and debug views, the
+  playground): they keep exactly their layout and layers, so the doubt screen still covers the whole window
+  and playback stays as light as ADR-052 left it.
+
+**Tests:** 7 new (sharing rules, the admin list and its bulk actions, the Featured shelf, the share dialog's
+rule, the start-up clean-up, rejecting many drawings, the app's color as a preference) and one web test.
+Browser checks on test servers over a copy of the data: choosing and acting on lessons, sharing and featuring
+from rows, removing and restoring, words and filters, rejecting objects, the app's color (default, chosen,
+previewed, kept, signed out), the pointer's band, lesson pages unchanged, every page in light and dark
+without errors.
+
+**Not changed:** lessons and how they are made, the engine and lesson visuals, the lesson page, doubts,
+voice, the player, the default red.
+
+**Rollback:** the tag `backup/before-ui-enhancements` (no database change; `preferences.accent` is ignored
+by older code).

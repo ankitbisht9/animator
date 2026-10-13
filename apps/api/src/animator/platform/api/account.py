@@ -318,6 +318,7 @@ async def delete_account(body: DeleteAccountIn, request: Request, p: Me, platfor
         .values(
             deleted_at=time.time(),
             visibility="private",
+            featured=False,
             explore_listed=False,
             explore_source="",
             explore_at=None,

@@ -30,7 +30,7 @@ const SampleView = lazy(async () => ({ default: (await import("./platform/pages/
 const CreatePage = lazy(async () => ({ default: (await import("./platform/pages/Create")).CreatePage }));
 const AdminOverview = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminOverview }));
 const AdminUsers = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminUsers }));
-const AdminLessons = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminLessons }));
+const AdminLessons = lazy(async () => ({ default: (await import("./platform/pages/AdminLessons")).AdminLessons }));
 const AdminSupport = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminSupport }));
 const AdminAudit = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminAudit }));
 const AdminSystem = lazy(async () => ({ default: (await import("./platform/pages/Admin")).AdminSystem }));

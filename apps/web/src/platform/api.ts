@@ -4,6 +4,8 @@ import { HttpError, http, qs } from "./http";
 export type Role = "learner" | "educator" | "admin";
 export type Visibility = "private" | "unlisted" | "public";
 export type ThemePref = "light" | "dark" | "system";
+/** The app's color (ADR-057): one of the avatar colors; crimson is the brand's red, the default. */
+export type Accent = "crimson" | "ruby" | "amber" | "teal" | "indigo" | "slate" | "plum" | "forest";
 /** How a lesson's scenes are laid out (ADR-047), or cost saver: planned, placing saved drawings (ADR-055). */
 export type LessonLayout = "classic" | "planned" | "costsaver";
 
@@ -19,6 +21,7 @@ export interface Preferences {
   voice: boolean;
   autoplay: boolean;
   theme: ThemePref;
+  accent: Accent;
   reduced_motion: boolean;
   notify_lesson_ready: boolean;
   notify_support: boolean;
@@ -92,7 +95,7 @@ export interface Lesson {
   updated_at: number;
   completed_at: number | null;
   deleted: boolean;
-  owner: { id: string; name: string } | null;
+  owner: { id: string; name: string; avatar?: string } | null;
   mine: boolean;
   can_edit: boolean;
   cost_usd: number | null;
@@ -129,6 +132,27 @@ export interface PageOf<T> {
   items: T[];
   has_more?: boolean;
   total?: number;
+}
+
+// ---------------------------------------------------------------------- lesson management (ADR-057)
+
+/** How many lessons each tab of the admin's lesson list holds (for the words and filters given). */
+export interface AdminLessonCounts {
+  all: number;
+  public: number;
+  featured: number;
+  unlisted: number;
+  private: number;
+  deleted: number;
+}
+
+export type LessonBulkAction = "publish" | "unlist" | "private" | "feature" | "unfeature" | "delete" | "restore";
+
+/** What an action on many items did: changed, already so, or skipped by the rules (with why). */
+export interface BulkResult {
+  changed: string[];
+  unchanged?: string[];
+  skipped: { id: string; reason: string }[];
 }
 
 export interface Stats {
@@ -679,8 +703,18 @@ export const v1 = {
   patchUser: (id: string, body: { role?: Role; status?: "active" | "suspended" }) =>
     http.patch<{ id: string; role: Role; status: string }>(`/api/v1/admin/users/${id}`, body),
   endUserSessions: (id: string) => http.post<{ signed_out: number }>(`/api/v1/admin/users/${id}/revoke-sessions`),
-  adminLessons: (p: { q?: string; status?: string; visibility?: string; deleted?: boolean; offset?: number }) =>
-    http.get<PageOf<Lesson>>(`/api/v1/admin/lessons${qs(p)}`),
+  adminLessons: (p: {
+    q?: string;
+    status?: string;
+    visibility?: string;
+    featured?: boolean;
+    subject?: string;
+    deleted?: boolean;
+    sort?: string;
+    offset?: number;
+  }) => http.get<PageOf<Lesson> & { counts: AdminLessonCounts }>(`/api/v1/admin/lessons${qs(p)}`),
+  bulkLessons: (ids: string[], action: LessonBulkAction) =>
+    http.post<BulkResult & { action: LessonBulkAction }>("/api/v1/admin/lessons/bulk", { ids, action }),
   moderate: (id: string, body: { visibility?: Visibility; featured?: boolean; deleted?: boolean; subject?: string }) =>
     http.patch<Lesson>(`/api/v1/admin/lessons/${id}`, body),
   queue: (p: { status?: string; q?: string }) => http.get<PageOf<Ticket>>(`/api/v1/admin/tickets${qs(p)}`),
@@ -735,6 +769,9 @@ export const v1 = {
   editObject: (id: string, body: ObjectEdit) => http.patch<SavedObjectDetail>(`/api/v1/admin/objects/${id}`, body),
   reviewObject: (id: string, decision: "approve" | "reject" | "retire" | "restore", note = "") =>
     http.post<SavedObjectDetail>(`/api/v1/admin/objects/${id}/review`, { decision, note }),
+  /** Reject many drawings waiting for review at once (approving stays one at a time). */
+  rejectObjects: (ids: string[], note = "") =>
+    http.post<BulkResult>("/api/v1/admin/objects/review", { ids, decision: "reject", note }),
   resetObject: (id: string) => http.post<SavedObjectDetail>(`/api/v1/admin/objects/${id}/reset`),
   deleteObject: (id: string) => http.del<{ ok: boolean }>(`/api/v1/admin/objects/${id}`),
   importObject: (body: {

@@ -1,7 +1,8 @@
 /*
  * Design tokens. The brand: white and red (#d90429) with a deep navy-grey ink; serif headings
  * (Source Serif 4) for a classic, academic feel, Inter for everything you read and click.
- * Light is the default; dark is chosen in settings (data-theme on <html>).
+ * Light is the default; dark is chosen in settings (data-theme on <html>). The app's color is the
+ * brand's red unless the person picks another (data-accent on <html>, ADR-057).
  * The older names (--accent, --good, ...) are kept for the player, the playground and doubts.
  */
 
@@ -14,6 +15,16 @@
   --brand-100: #ffe0e5;
   --brand-200: #fdbac5;
   --brand-ink: #ffffff;
+  /* The brand's red on light and dark pages alike (see "the app's color" below). */
+  --brand-solid: #d90429;
+  --brand-solid-100: #ffe0e5;
+  --brand-solid-300: #e5383b;
+  --brand-solid-400: #ef233c;
+  --brand-solid-600: #b80322;
+  --brand-solid-700: #8d0801;
+  --brand-alt: #ef476f;
+  --brand-glow: #ff2d4d;
+  --brand-night: #4a1520;
 
   --ink: #14161f;
   --text: #2b2d42;
@@ -104,6 +115,89 @@
   --shadow-brand: 0 10px 26px rgba(255, 45, 77, 0.25);
   --ring: 0 0 0 3px rgba(255, 45, 77, 0.35);
   color-scheme: dark;
+}
+
+/* ---------------- the app's color (ADR-057) ----------------
+   Crimson, the brand's red, is the default: the values above, unchanged. Each other color (picked in
+   Settings, or with the avatar's) sets its shade for light pages and for dark pages, and the ink that
+   reads on the dark one; every tint, hover and ring comes from those. The "solid" shades are the same
+   on light and dark pages (the logo, the doubt button, the large colored panels), as the red is. */
+
+:root[data-accent="ruby"] {
+  --accent-light: #c9184a;
+  --accent-dark: #f43f5e;
+  --accent-dark-ink: #ffffff;
+}
+
+:root[data-accent="amber"] {
+  --accent-light: #b45309;
+  --accent-dark: #f59e0b;
+  --accent-dark-ink: #1a1206;
+}
+
+:root[data-accent="teal"] {
+  --accent-light: #0f766e;
+  --accent-dark: #14b8a6;
+  --accent-dark-ink: #03201c;
+}
+
+:root[data-accent="indigo"] {
+  --accent-light: #4f46e5;
+  --accent-dark: #6d7cff;
+  --accent-dark-ink: #ffffff;
+}
+
+:root[data-accent="slate"] {
+  --accent-light: #475569;
+  --accent-dark: #94a3b8;
+  --accent-dark-ink: #0f1520;
+}
+
+:root[data-accent="plum"] {
+  --accent-light: #8e24aa;
+  --accent-dark: #d46ef0;
+  --accent-dark-ink: #1d0a24;
+}
+
+:root[data-accent="forest"] {
+  --accent-light: #2d6a4f;
+  --accent-dark: #34c77b;
+  --accent-dark-ink: #052012;
+}
+
+:root[data-accent]:not([data-accent="crimson"]) {
+  --brand: var(--accent-light);
+  --brand-ink: #ffffff;
+  --brand-400: color-mix(in srgb, var(--brand) 82%, white);
+  --brand-600: color-mix(in srgb, var(--brand) 86%, black);
+  --brand-700: color-mix(in srgb, var(--brand) 62%, black);
+  --brand-50: color-mix(in srgb, var(--brand) 7%, white);
+  --brand-100: color-mix(in srgb, var(--brand) 14%, white);
+  --brand-200: color-mix(in srgb, var(--brand) 30%, white);
+  --brand-solid: var(--accent-light);
+  --brand-solid-100: color-mix(in srgb, var(--accent-light) 14%, white);
+  --brand-solid-300: color-mix(in srgb, var(--accent-light) 80%, white);
+  --brand-solid-400: color-mix(in srgb, var(--accent-light) 86%, white);
+  --brand-solid-600: color-mix(in srgb, var(--accent-light) 84%, black);
+  --brand-solid-700: color-mix(in srgb, var(--accent-light) 58%, black);
+  --brand-alt: color-mix(in srgb, var(--accent-light) 68%, white);
+  --brand-glow: var(--accent-dark);
+  --brand-night: color-mix(in srgb, var(--accent-dark) 26%, #161921);
+  --shadow-brand: 0 10px 26px color-mix(in srgb, var(--brand) 28%, transparent);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--brand) 24%, transparent);
+}
+
+:root[data-theme="dark"][data-accent]:not([data-accent="crimson"]) {
+  --brand: var(--accent-dark);
+  --brand-ink: var(--accent-dark-ink);
+  --brand-400: color-mix(in srgb, var(--brand) 82%, white);
+  --brand-600: color-mix(in srgb, var(--brand) 88%, black);
+  --brand-700: color-mix(in srgb, var(--brand) 70%, black);
+  --brand-50: color-mix(in srgb, var(--brand) 12%, transparent);
+  --brand-100: color-mix(in srgb, var(--brand) 20%, transparent);
+  --brand-200: color-mix(in srgb, var(--brand) 35%, transparent);
+  --shadow-brand: 0 10px 26px color-mix(in srgb, var(--brand) 25%, transparent);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--brand) 35%, transparent);
 }
 
 html {
@@ -269,7 +363,8 @@ code {
 :root[data-motion="reduced"] .complete-badge,
 :root[data-motion="reduced"] .lesson-tab,
 :root[data-motion="reduced"] .notes-list li,
-:root[data-motion="reduced"] .signin-nudge {
+:root[data-motion="reduced"] .signin-nudge,
+:root[data-motion="reduced"] .bulk-bar {
   animation: none !important;
 }
 
@@ -322,7 +417,8 @@ code {
   .complete-badge,
   .lesson-tab,
   .notes-list li,
-  .signin-nudge {
+  .signin-nudge,
+  .bulk-bar {
     animation: none !important;
   }
 }

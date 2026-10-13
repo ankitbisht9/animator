@@ -29,7 +29,7 @@ export function Logo({
   return (
     <span className={`brand-logo ${light ? "light" : ""}`}>
       <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-        <rect x="1" y="1" width="38" height="38" rx="11" fill="#d90429" />
+        <rect x="1" y="1" width="38" height="38" rx="11" style={{ fill: "var(--brand-solid)" }} />
         <path
           d="M8 29 C 14 13, 22 11, 32 11"
           stroke="#fff"

@@ -4,9 +4,9 @@
   came from, its checks' score and how many scenes placed it; one drawing whole (its art, checks,
   names and words, and what to watch out for); the harvest's progress; and which drawings a scene
   brief would be offered (to try the matching before approving).
-- Curating (`objects:curate`): approve, reject, retire or restore a drawing; change its names, the
-  words it is used for, its part labels and sizes (never the drawing); import an SVG drawing; harvest
-  finished lessons now; delete a warehouse drawing.
+- Curating (`objects:curate`): approve, reject, retire or restore a drawing; reject many drawings
+  waiting for review at once; change its names, the words it is used for, its part labels and sizes
+  (never the drawing); import an SVG drawing; harvest finished lessons now; delete a warehouse drawing.
 
 A drawing reaches lessons only once approved. Approving one that is not built-in needs context words
 (the words that show a lesson is about the thing) and every required check passed, so a harvested
@@ -30,7 +30,14 @@ from animator.objects.quality import check, to_art, with_anchors
 from animator.objects.service import ObjectLibrary
 from animator.objects.svg import parse_svg
 from animator.platform.deps import ObjectsCurator, ObjectsReader, Plat, client_ip
-from animator.platform.schemas import HarvestIn, ObjectEditIn, ObjectImportIn, ObjectMatchIn, ObjectReviewIn
+from animator.platform.schemas import (
+    HarvestIn,
+    ObjectBulkReviewIn,
+    ObjectEditIn,
+    ObjectImportIn,
+    ObjectMatchIn,
+    ObjectReviewIn,
+)
 
 router = APIRouter(prefix="/api/v1/admin/objects", tags=["admin: saved objects"])
 
@@ -296,6 +303,44 @@ async def review_object(
     await _save(lib, updated)
     await platform.audit(f"objects.{body.decision}", p.user_id, obj_id, client_ip(request), title=obj.title)
     return await get_object(request, obj_id, p)
+
+
+@router.post("/review")
+async def review_many(
+    request: Request, body: ObjectBulkReviewIn, p: ObjectsCurator, platform: Plat
+) -> dict[str, Any]:
+    """Reject many drawings waiting for review at once (the Objects Warehouse's selection). A drawing
+    that is not waiting for review (approved, rejected, retired, or built-in) is skipped with why."""
+    lib = _library(request)
+    now = time.time()
+    changed: list[tuple[str, str]] = []
+    skipped: list[dict[str, str]] = []
+    for obj_id in body.ids:
+        obj = lib.store.get(obj_id)
+        if obj is None:
+            skipped.append({"id": obj_id, "reason": "No saved drawing with this id."})
+            continue
+        if obj.origin == "library":
+            skipped.append({"id": obj_id, "reason": "A built-in drawing is retired, not rejected."})
+            continue
+        if obj.status != "candidate":
+            skipped.append({"id": obj_id, "reason": "It is not waiting for review."})
+            continue
+        updated = obj.model_copy(
+            update={
+                "status": "rejected",
+                "note": body.note or obj.note,
+                "reviewed_at": now,
+                "reviewed_by": p.user_id,
+                "updated_at": now,
+            }
+        )
+        await _save(lib, updated)
+        changed.append((obj_id, obj.title))
+    ip = client_ip(request)
+    for obj_id, title in changed:
+        await platform.audit("objects.reject", p.user_id, obj_id, ip, title=title, bulk=True)
+    return {"decision": body.decision, "changed": [i for i, _ in changed], "skipped": skipped}
 
 
 @router.post("/{obj_id}/reset")

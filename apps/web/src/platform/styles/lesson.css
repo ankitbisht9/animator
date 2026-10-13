@@ -187,7 +187,7 @@
 
 .gen-steps li.on span {
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-ink);
 }
 
 .gen-steps li.done {
@@ -282,7 +282,7 @@
   padding: 16px 26px 16px 20px;
   background: var(--brand);
   font-size: 16px;
-  box-shadow: 0 16px 40px rgba(217, 4, 41, 0.38);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--brand-solid) 38%, transparent);
   opacity: 1;
   animation: fade-in 260ms var(--ease);
 }
@@ -292,7 +292,7 @@
   position: absolute;
   inset: -6px;
   border-radius: inherit;
-  border: 2px solid rgba(217, 4, 41, 0.35);
+  border: 2px solid color-mix(in srgb, var(--brand-solid) 35%, transparent);
   animation: ring 2s var(--ease) infinite;
   pointer-events: none;
 }
@@ -374,7 +374,7 @@
 
 .controls > .icon-btn:first-child {
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-ink);
   border-radius: 50%;
   min-width: 42px;
   height: 42px;
@@ -899,7 +899,7 @@
 
 .notes-time:hover {
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-ink);
 }
 
 .notes-time.static {

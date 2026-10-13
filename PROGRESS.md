@@ -553,3 +553,18 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   written into the instructions, and reasoning is turned off if needed.
 - **The same topics per model from the command line:** `python -m animator.eval --trial-model <model>`.
 - Guide: docs/MODEL_TRIALS.md. The OpenRouter account needs credits before full lessons can be compared.
+
+## Lesson management, tidy lists, Objects Warehouse, the app's color (ADR-057)
+
+- **All lessons, managed from one list:** share (private, link only, public) and feature from each row, act
+  on many chosen lessons at once (publish, feature, unfeature, link only, make private, remove, restore),
+  tabs with counts, search by title, topic, owner or id, filters and order. Only public lessons can be
+  featured, and Explore's Featured shelf shows only featured lessons.
+- **Every admin list tidied:** fixed columns and one row height, column names that stay in view, loading
+  rows, a clearer pager; the audit log's events colored by kind with details opened in place; tabs that show
+  when there are more.
+- **Objects Warehouse** (was Saved drawings): reject several waiting objects at once from their cards.
+- **The app's color:** the brand's red stays the default; changing the avatar color switches buttons, links
+  and highlights to it (Settings → Account), or pick it in Settings → Appearance.
+- **Patterns in the app's color:** dots and rings in the sidebar, a grid band behind page headings that
+  lights up around the pointer, and small touches on cards and buttons. Never on lesson pages.

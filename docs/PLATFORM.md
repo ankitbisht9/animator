@@ -55,17 +55,21 @@ admin can give one person their own monthly credits. Permissions live in one tab
 - **Learning:** dashboard (continue where you left off, weekly goal, streak, recommendations, a getting-started
   checklist), Create lesson, My lessons, the lesson page, Library (saved lessons, notes, doubts), Progress
   (minutes, streaks, a 12-week calendar, achievements), Profile, Notifications, Settings (account, learning,
-  playback, appearance, notifications, security with signed-in devices, privacy with data download and account
-  deletion), Support (tickets with replies).
+  playback, appearance with light or dark and the app's color, notifications, security with signed-in devices,
+  privacy with data download and account deletion), Support (tickets with replies). The app's color is the
+  brand's red unless a person picks another avatar color (ADR-057); lessons keep their own colors.
 - **Administration:**
   - overview (people, lessons, hours learned, spend, charts);
   - People (roles, suspend, sign out everywhere);
-  - All lessons (feature, unpublish, remove, restore);
+  - All lessons: every lesson managed from one list (ADR-057): sharing (private, link only, public) and
+    featuring from each row, actions on many chosen lessons at once, tabs with counts, search by title,
+    topic, owner or id, filters and order. Only public lessons can be featured;
   - Ratings & Explore (ratings by lesson, what Explore lists and why, add or keep out, review flags);
   - Credits & cost (spend today, this week, this month and so far; people and lessons by spend; each
     person's monthly credits; credits given back; the ledger as CSV);
   - Support queue (reply, status, priority);
-  - Audit log;
+  - Audit log (events colored by kind, details opened in place);
+  - Objects Warehouse (the drawings cost-saver lessons place; reject several at once);
   - System (engine workers, services, busiest routes with p50/p95);
   - DSL playground, and each lesson's pipeline view and debug page.
 - **Settings → Credits:** what is left this month and where it went. Create shows the credits left.

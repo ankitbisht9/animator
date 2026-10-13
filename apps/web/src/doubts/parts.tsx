@@ -34,8 +34,8 @@ export function TutorFace({ speaking, thinking }: { speaking: boolean; thinking:
       <svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
         <defs>
           <linearGradient id="tutor-g" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#ef233c" />
-            <stop offset="1" stopColor="#b80322" />
+            <stop offset="0" style={{ stopColor: "var(--brand-solid-400)" }} />
+            <stop offset="1" style={{ stopColor: "var(--brand-solid-600)" }} />
           </linearGradient>
         </defs>
         <circle cx="32" cy="32" r="30" fill="url(#tutor-g)" />

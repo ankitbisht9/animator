@@ -1,5 +1,5 @@
 /** Who can watch a lesson, its link, and (for its owner) whether it is in Explore and why. */
-import { Check, Compass, Copy, Globe, Link2, Lock, Share2 } from "lucide-react";
+import { Check, Compass, Copy, Globe, Link2, Lock, Share2, Star } from "lucide-react";
 import { useState } from "react";
 import { type Lesson, type Visibility, v1 } from "../api";
 import { useAuth } from "../auth";
@@ -21,6 +21,8 @@ export function ShareDialog({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [optOut, setOptOut] = useState(lesson.explore?.opt_out ?? false);
+  // Featured lessons are public ones (ADR-057): sharing it otherwise ends the featuring.
+  const [featured, setFeatured] = useState(lesson.featured);
   const url = `${window.location.origin}/lessons/${lesson.id}`;
   const canPublish = can("lesson:publish") && lesson.status === "complete";
 
@@ -47,13 +49,15 @@ export function ShareDialog({
     setBusy(true);
     try {
       const updated = await v1.patchLesson(lesson.id, { visibility: v });
+      const lost = featured && !updated.featured ? " It is no longer featured." : "";
       setVisibility(updated.visibility);
+      setFeatured(updated.featured);
       onChanged?.(updated);
       toast.success(
         v === "private"
-          ? "Only you can watch it now."
+          ? `Only you can watch it now.${lost}`
           : v === "unlisted"
-            ? "Anyone with the link can watch it."
+            ? `Anyone with the link can watch it.${lost}`
             : "Published to Explore.",
       );
     } catch (e) {
@@ -116,6 +120,11 @@ export function ShareDialog({
           </button>
         ))}
       </fieldset>
+      {featured && visibility === "public" && (
+        <p className="share-featured">
+          <Star size={14} /> Featured on Explore. Sharing it with a link only, or making it private, ends the featuring.
+        </p>
+      )}
       {visibility !== "private" && (
         <div className="share-link">
           <input readOnly value={url} aria-label="Lesson link" onFocus={(e) => e.currentTarget.select()} />

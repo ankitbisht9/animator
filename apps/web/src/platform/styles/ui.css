@@ -124,13 +124,28 @@ a {
 }
 
 .ui-btn-primary {
-  background: var(--brand);
+  background-color: var(--brand);
   color: var(--brand-ink);
-  box-shadow: 0 1px 2px rgba(141, 8, 1, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--brand-700) 25%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  /* A light that sweeps across on hover (ADR-057). */
+  background-image: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.2) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: 100% 0;
+  background-repeat: no-repeat;
+  transition:
+    background-color var(--dur) var(--ease),
+    background-position 700ms var(--ease),
+    color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    transform 120ms var(--ease);
 }
 
 .ui-btn-primary:hover:not(:disabled) {
-  background: var(--brand-600);
+  background-color: var(--brand-600);
+  background-position: 0 0;
   box-shadow: var(--shadow-brand);
 }
 
@@ -178,6 +193,13 @@ a {
 .ui-btn.on-red {
   background: #fff;
   color: var(--brand);
+}
+
+/* On a red band it stays white when hovered (its text is red). */
+.ui-btn.on-red:hover:not(:disabled) {
+  background-color: #fff;
+  color: var(--brand-600);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
 }
 
 .ui-icon-btn {
@@ -379,6 +401,31 @@ a {
   background: var(--brand-50);
   color: var(--brand);
   margin-bottom: 8px;
+}
+
+/* Rings of the app's color around an empty state's icon (ADR-057). */
+.ui-empty-icon {
+  position: relative;
+}
+
+.ui-empty-icon::before {
+  content: "";
+  position: absolute;
+  inset: -34px;
+  z-index: -1;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle,
+    transparent 0 15px,
+    color-mix(in srgb, var(--brand) 14%, transparent) 15px 16px
+  );
+  mask-image: radial-gradient(circle, #000 30%, transparent 72%);
+  pointer-events: none;
+}
+
+.ui-empty {
+  position: relative;
+  isolation: isolate;
 }
 
 .ui-empty h3 {
@@ -764,12 +811,63 @@ a {
 
 /* ---------------- tabs, search ---------------- */
 
+.ui-tabs-wrap {
+  position: relative;
+  min-width: 0;
+}
+
 .ui-tabs {
+  position: relative;
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--line);
   overflow-x: auto;
   scrollbar-width: none;
+}
+
+.ui-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* More tabs than fit: the hidden side fades out, with an arrow to it. */
+.ui-tabs-wrap[data-more-end] .ui-tabs {
+  mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+}
+
+.ui-tabs-wrap[data-more-start] .ui-tabs {
+  mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
+}
+
+.ui-tabs-wrap[data-more-start][data-more-end] .ui-tabs {
+  mask-image: linear-gradient(to right, transparent, #000 56px, #000 calc(100% - 56px), transparent);
+}
+
+.ui-tabs-step {
+  position: absolute;
+  top: 7px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.ui-tabs-step:hover {
+  color: var(--brand);
+  border-color: var(--line-strong);
+}
+
+.ui-tabs-step.start {
+  left: 0;
+}
+
+.ui-tabs-step.end {
+  right: 0;
 }
 
 .ui-tabs button {
@@ -893,6 +991,7 @@ a {
 
 .ui-stat:hover {
   transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--brand) 22%, var(--line));
   box-shadow: var(--shadow);
 }
 
@@ -1370,16 +1469,31 @@ a {
   overflow-x: auto;
 }
 
+/* Long lists keep their column names in view (ADR-057). A box that scrolls would hold a sticky header,
+   so where the table fits the wrapper does not scroll; narrower screens scroll it sideways instead. */
+@media (min-width: 1100px) {
+  .table-wrap.sticky-head {
+    overflow: visible;
+  }
+
+  .table-wrap.sticky-head thead th {
+    position: sticky;
+    top: var(--topbar-h);
+    z-index: 3;
+  }
+}
+
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 14px;
 }
 
 .table th {
   text-align: left;
-  padding: 12px 14px;
-  font-size: 12px;
+  padding: 11px 14px;
+  font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
@@ -1389,18 +1503,39 @@ a {
   white-space: nowrap;
 }
 
+/* The header follows the card's rounded corners. */
+.ui-card > .table-wrap:first-child .table thead tr:first-child th:first-child {
+  border-top-left-radius: calc(var(--radius-lg) - 1px);
+}
+
+.ui-card > .table-wrap:first-child .table thead tr:first-child th:last-child {
+  border-top-right-radius: calc(var(--radius-lg) - 1px);
+}
+
 .table td {
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
 
-.table tbody tr {
+.table tbody tr > td {
   transition: background var(--dur) var(--ease);
 }
 
-.table tbody tr:hover {
+.table tbody tr:hover > td {
   background: var(--surface-2);
+}
+
+.table tbody tr.selected > td {
+  background: var(--brand-50);
+}
+
+.table tbody tr.selected:hover > td {
+  background: color-mix(in srgb, var(--brand) 9%, var(--surface));
+}
+
+.table tbody tr[aria-busy="true"] > td {
+  opacity: 0.72;
 }
 
 .table tbody tr:last-child td {
@@ -1412,14 +1547,92 @@ a {
   padding: 8px 10px;
 }
 
-.table-actions {
+.table .num {
+  padding-left: 8px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table .center {
+  text-align: center;
+}
+
+.table .cell-check {
+  width: 44px;
+  padding-right: 0;
+}
+
+.table-actions,
+.table .cell-actions {
   text-align: right;
   white-space: nowrap;
+}
+
+/* Fixed tables: columns keep their widths, every row has the same height, long text ends in "…". */
+.table.fixed {
+  table-layout: fixed;
+}
+
+.table.fixed td {
+  height: 62px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table.fixed th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-check {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  vertical-align: middle;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.row-actions .ui-icon-btn {
+  width: 34px;
+  height: 34px;
+}
+
+.ui-icon-btn.danger:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.ui-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.skeleton-row td .ui-skeleton {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
 }
 
 .table-title {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   text-decoration: none;
 }
 
@@ -1437,6 +1650,15 @@ a {
   font-size: 12.5px;
 }
 
+.table.fixed .table-title b,
+.table.fixed .table-title small,
+.table.fixed .person b,
+.table.fixed .person small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .table-empty {
   padding: 30px;
   text-align: center;
@@ -1447,15 +1669,118 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
-.person > span {
+/* The name and email beside the avatar (the avatar keeps its own centred layout). */
+.person > span:not(.ui-avatar) {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .person b {
   color: var(--ink);
+}
+
+/* ---------------- choosing rows, and acting on them ---------------- */
+
+.bulk-bar {
+  position: sticky;
+  bottom: 18px;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  margin: 18px auto 0;
+  padding: 8px 8px 8px 18px;
+  border-radius: 16px;
+  background: var(--ink);
+  color: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: pop-in 200ms var(--ease) backwards;
+}
+
+.bulk-count {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.bulk-count b {
+  font-variant-numeric: tabular-nums;
+}
+
+.bulk-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--surface) 22%, transparent);
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.bulk-bar .ui-btn-secondary {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.bulk-bar .ui-btn:disabled {
+  opacity: 0.5;
+}
+
+.bulk-clear {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.bulk-clear:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--surface) 14%, transparent);
+}
+
+/* ---------------- pages of a list ---------------- */
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.pager-range b {
+  color: var(--ink);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.pager-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pager-page {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------------- semantic containers without their default look ---------------- */
@@ -1505,4 +1830,37 @@ ul.subject-strip {
 
 li.subject-chip {
   margin: 0;
+}
+
+/* Stat cards: a corner of dots in the app's color, livelier on hover (ADR-057). */
+.ui-stat {
+  position: relative;
+  overflow: hidden;
+}
+
+.ui-stat > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ui-stat::after {
+  content: "";
+  position: absolute;
+  top: -34px;
+  right: -34px;
+  width: 128px;
+  height: 128px;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--brand) 24%, transparent) 1.2px, transparent 1.9px);
+  background-size: 10px 10px;
+  mask-image: radial-gradient(circle at 68% 32%, #000 8%, transparent 64%);
+  opacity: 0.6;
+  pointer-events: none;
+  transition:
+    opacity var(--dur) var(--ease),
+    transform 600ms var(--ease);
+}
+
+.ui-stat:hover::after {
+  opacity: 1;
+  transform: rotate(10deg) scale(1.08);
 }

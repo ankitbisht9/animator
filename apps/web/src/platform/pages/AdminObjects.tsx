@@ -1,8 +1,8 @@
-/** Saved drawings (ADR-055): the built-in library and the warehouse that cost-saver lessons place
- * drawings from. Review what the harvest collected from finished lessons, approve only what is exactly
- * right (with the words it is used for), import SVG drawings, and try which drawings a scene brief would
- * be offered. A drawing reaches lessons only once approved; each action needs its permission (the API
- * checks). */
+/** The Objects Warehouse (ADR-055; named so in ADR-057): the built-in library and the warehouse that
+ * cost-saver lessons place drawings from. Review what the harvest collected from finished lessons,
+ * approve only what is exactly right (with the words it is used for), reject many at once from the cards,
+ * import SVG drawings, and try which drawings a scene brief would be offered. A drawing reaches lessons
+ * only once approved; each action needs its permission (the API checks). */
 import { EDUCATIONAL_CLEAN, EDUCATIONAL_CLEAN_DARK, isHexColor, resolveColor, type Theme } from "@animator/engine";
 import {
   Archive,
@@ -50,6 +50,7 @@ import {
   TextField,
 } from "../ui/core";
 import { Confirm, Modal, useToast } from "../ui/overlay";
+import { AllCheck, BulkBar, RowCheck, useSelection } from "../ui/table";
 import { Forbidden, Pager } from "./Admin";
 
 const PAGE = 48;
@@ -159,7 +160,7 @@ function pageIsDark(): boolean {
 // ---------------------------------------------------------------------- the page
 
 export function AdminObjects() {
-  useTitle("Saved drawings");
+  useTitle("Objects Warehouse");
   const { can } = useAuth();
   const allowed = can("objects:read");
   const curate = can("objects:curate");
@@ -174,6 +175,9 @@ export function AdminObjects() {
   const [trying, setTrying] = useState(false);
   const [harvest, setHarvest] = useState(false);
   const [harvesting, setHarvesting] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectNote, setRejectNote] = useState("");
+  const [rejectBusy, setRejectBusy] = useState(false);
   const term = useDebounced(q, 250);
   // biome-ignore lint/correctness/useExhaustiveDependencies: back to the first page when these change
   useEffect(() => setOffset(0), [view, term, sort]);
@@ -181,6 +185,11 @@ export function AdminObjects() {
   const list = useResource(allowed ? `admin:objects:list:${view}:${term}:${sort}:${offset}` : null, () =>
     v1.objects({ view, q: term || undefined, sort, offset, limit: PAGE }),
   );
+  // Waiting for review: choose drawings on their cards and reject them together (approving stays one
+  // at a time: each needs its words checked).
+  const choosing = curate && view === "candidate";
+  const items = list.data?.items ?? [];
+  const selection = useSelection(choosing ? items.map((o) => o.id) : []);
   if (!allowed) return <Forbidden />;
   const changed = () => {
     void stats.reload();
@@ -188,6 +197,26 @@ export function AdminObjects() {
   };
   const s = stats.data;
   const counts = list.data?.counts;
+  const rejectChosen = async () => {
+    setRejectBusy(true);
+    try {
+      const r = await v1.rejectObjects(selection.ids, rejectNote.trim());
+      const skipped = r.skipped.length
+        ? ` ${plural(r.skipped.length, "drawing")} skipped: ${[...new Set(r.skipped.map((x) => x.reason))].join(" ")}`
+        : "";
+      const text = `Rejected ${plural(r.changed.length, "drawing")}.${skipped}`;
+      if (skipped) toast.info(text);
+      else toast.success(text);
+      selection.clear();
+      setRejecting(false);
+      setRejectNote("");
+      changed();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setRejectBusy(false);
+    }
+  };
   const runHarvest = async () => {
     setHarvesting(true);
     try {
@@ -210,11 +239,11 @@ export function AdminObjects() {
       <header className="page-head">
         <div>
           <p className="page-kicker">Administration</p>
-          <h1>Saved drawings</h1>
+          <h1>Objects Warehouse</h1>
           <p className="page-sub">
-            Cost-saver lessons place these drawings where a scene shows exactly that thing, and draw everything else
-            themselves. Built-in drawings are ready; drawings collected from finished lessons wait here until you
-            approve them, with the words that show a lesson is about them.
+            Ready-made drawings that cost-saver lessons place where a scene shows exactly that thing (everything else is
+            drawn). Built-in objects are ready; objects collected from finished lessons wait here until you approve
+            them, with the words that show a lesson is about them. Reject several at once by choosing their cards.
           </p>
         </div>
         <div className="page-head-actions">
@@ -303,6 +332,17 @@ export function AdminObjects() {
         </div>
       </div>
 
+      {choosing && items.length > 0 && (
+        <div className="objects-choose">
+          <AllCheck
+            selection={selection}
+            text={selection.all ? "All on this page chosen" : "Choose all on this page"}
+          />
+          <span className="muted small">
+            Choose the drawings that are not right and reject them together; approve the good ones one by one.
+          </span>
+        </div>
+      )}
       {list.error && <Alert tone="danger">{list.error.message}</Alert>}
       {list.loading && !list.data && <Spinner />}
       {list.data && list.data.items.length === 0 && (
@@ -316,31 +356,62 @@ export function AdminObjects() {
           }
         />
       )}
-      <div className={`objects-grid ${dark ? "dark-preview" : ""}`}>
-        {(list.data?.items ?? []).map((o) => (
-          <button key={o.id} type="button" className="object-card" onClick={() => setOpen(o.id)}>
-            <span className="object-card-art">
-              <FigurePreview art={o.art} width={o.aspect > 1 ? 150 / o.aspect : 150} dark={dark} label={o.title} />
-            </span>
-            <span className="object-card-body">
-              <b>{o.title}</b>
-              <small>
-                {o.concept}
-                {o.view ? ` · ${o.view}` : ""}
-              </small>
-              <span className="object-card-tags">
-                <Badge tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Badge>
-                <Badge tone="neutral">{ORIGIN[o.origin]}</Badge>
+      <div className={`objects-grid ${dark ? "dark-preview" : ""} ${choosing ? "choosing" : ""}`}>
+        {items.map((o) => (
+          <div key={o.id} className={`object-card-wrap ${selection.has(o.id) ? "chosen" : ""}`}>
+            {choosing && (
+              <span className="object-pick">
+                <RowCheck selection={selection} id={o.id} label={`Choose ${o.title}`} />
               </span>
-              <small className="muted">
-                {o.score != null ? `checks ${Math.round(o.score * 100)}%` : "not checked"} · {plural(o.parts, "part")} ·{" "}
-                {o.uses ? `placed ${plural(o.uses, "time")}` : "not placed yet"}
-              </small>
-            </span>
-          </button>
+            )}
+            <button type="button" className="object-card" onClick={() => setOpen(o.id)}>
+              <span className="object-card-art">
+                <FigurePreview art={o.art} width={o.aspect > 1 ? 150 / o.aspect : 150} dark={dark} label={o.title} />
+              </span>
+              <span className="object-card-body">
+                <b>{o.title}</b>
+                <small>
+                  {o.concept}
+                  {o.view ? ` · ${o.view}` : ""}
+                </small>
+                <span className="object-card-tags">
+                  <Badge tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Badge>
+                  <Badge tone="neutral">{ORIGIN[o.origin]}</Badge>
+                </span>
+                <small className="muted">
+                  {o.score != null ? `checks ${Math.round(o.score * 100)}%` : "not checked"} · {plural(o.parts, "part")}{" "}
+                  · {o.uses ? `placed ${plural(o.uses, "time")}` : "not placed yet"}
+                </small>
+              </span>
+            </button>
+          </div>
         ))}
       </div>
       <Pager offset={offset} size={PAGE} total={list.data?.total ?? 0} onChange={setOffset} />
+      <BulkBar count={selection.count} noun={["drawing", "drawings"]} onClear={selection.clear}>
+        <Button size="sm" variant="danger" icon={X} onClick={() => setRejecting(true)}>
+          Reject
+        </Button>
+      </BulkBar>
+      <Confirm
+        open={rejecting}
+        onClose={() => setRejecting(false)}
+        onConfirm={() => void rejectChosen()}
+        busy={rejectBusy}
+        danger
+        title={`Reject ${plural(selection.count, "drawing")}?`}
+        text="They are not offered to lessons, and the harvest does not collect them again. You can restore any of them from Rejected."
+        confirmLabel="Reject"
+      >
+        <TextArea
+          label="Review note (optional)"
+          rows={2}
+          maxLength={500}
+          value={rejectNote}
+          onChange={(e) => setRejectNote(e.target.value)}
+          placeholder="e.g. not the real thing, only shapes"
+        />
+      </Confirm>
 
       {open && <ObjectDetail id={open} dark={dark} onClose={() => setOpen(null)} onChanged={changed} curate={curate} />}
       {importing && (
@@ -457,7 +528,7 @@ function ObjectDetail({
   };
 
   return (
-    <Modal open onClose={onClose} title={o ? o.title : "Saved drawing"} size="lg" description={o ? o.ref : undefined}>
+    <Modal open onClose={onClose} title={o ? o.title : "Object"} size="lg" description={o ? o.ref : undefined}>
       {!o ? (
         res.error ? (
           <Alert tone="danger">{res.error.message}</Alert>

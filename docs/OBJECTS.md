@@ -79,7 +79,9 @@ A reply that names a drawing the scene was not offered is never accepted with a 
 to the scene writer as an error (use an offered one, or draw it). Correction rounds see the scene as the
 writer wrote it (the short reference, not the drawing).
 
-## Reviewing drawings (Administration → Saved drawings)
+## Reviewing drawings (Administration → Objects Warehouse)
+
+The page was called Saved drawings until ADR-057 renamed it.
 
 Admins (permissions `objects:read` and `objects:curate`) see every drawing with its checks, where it came
 from and how many scenes placed it.
@@ -91,6 +93,9 @@ from and how many scenes placed it.
     appears. Every required check must pass.
   - Give it the **names** scene briefs use for it, **never-for phrases**, part labels and sizes.
   - **Reject** what is wrong or not worth keeping (a love-heart drawn as an organ, a chart).
+  - **Reject several at once**: each card has a checkbox here (shift-click chooses a range, or choose
+    all on the page), then **Reject** in the bar that appears, with an optional review note. Approving
+    stays one at a time: each drawing needs its words checked.
 - **In use** and **Built-in**: change their words, **Retire** one (no longer offered), **Restore** it;
   built-in drawings can be **reset** to how they ship, never deleted.
 - **Try a scene**: paste a scene brief ("heart: the human heart, big in the centre" lines are its

@@ -27,7 +27,7 @@
 }
 
 :root[data-theme="dark"] .hero {
-  background: radial-gradient(1100px 520px at 85% -10%, rgba(255, 45, 77, 0.1), transparent 60%);
+  background: radial-gradient(1100px 520px at 85% -10%, color-mix(in srgb, var(--brand-glow) 10%, transparent), transparent 60%);
 }
 
 .hero-inner {
@@ -371,7 +371,7 @@
   height: 40px;
   border-radius: 50%;
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-ink);
   font-family: var(--font-serif);
   font-weight: 700;
   font-size: 18px;
@@ -518,8 +518,8 @@
   color: #fff;
   background:
     radial-gradient(circle at 90% 10%, rgba(255, 255, 255, 0.16), transparent 40%),
-    linear-gradient(135deg, #e5383b, #d90429 50%, #8d0801);
-  box-shadow: 0 30px 70px rgba(217, 4, 41, 0.28);
+    linear-gradient(135deg, var(--brand-solid-300), var(--brand-solid) 50%, var(--brand-solid-700));
+  box-shadow: 0 30px 70px color-mix(in srgb, var(--brand-solid) 28%, transparent);
 }
 
 .cta-band h2 {
@@ -832,7 +832,7 @@
   margin-bottom: 20px;
 }
 
-.toolbar .ui-tabs {
+.toolbar .ui-tabs-wrap {
   flex: 1;
   min-width: 260px;
 }
@@ -870,8 +870,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-.load-more,
-.pager {
+.load-more {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1007,7 +1006,7 @@
 
 .week-dots li.on {
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-ink);
   box-shadow: var(--shadow-brand);
 }
 
@@ -1139,7 +1138,7 @@
   flex: none;
   border-radius: 14px;
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-ink);
   box-shadow: var(--shadow-brand);
 }
 
@@ -1575,7 +1574,7 @@
 .onboard-steps li.on span,
 .onboard-steps li.done span {
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-ink);
 }
 
 .onboard-steps li.done {
@@ -1799,7 +1798,7 @@
   border-radius: 50%;
   flex: none;
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-ink);
   box-shadow: var(--shadow-brand);
 }
 
@@ -2240,7 +2239,7 @@
 
 .theme-preview span:first-child {
   grid-row: span 2;
-  background: #ffe0e5;
+  background: var(--brand-solid-100);
 }
 
 .theme-card.dark .theme-preview {
@@ -2252,7 +2251,7 @@
 }
 
 .theme-card.dark .theme-preview span:first-child {
-  background: #4a1520;
+  background: var(--brand-night);
 }
 
 .theme-card.system .theme-preview {
@@ -2544,7 +2543,7 @@
 
 .thread li.staff .thread-avatar {
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-ink);
 }
 
 .thread-bubble {
@@ -2740,6 +2739,34 @@
 
 .queue-main small {
   color: var(--muted);
+}
+
+/* One line each (ADR-057): a long subject ends in "…" instead of making its row taller. */
+.queue-main b,
+.queue-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue a {
+  min-height: 66px;
+}
+
+.queue a > .ui-badge {
+  flex: none;
+}
+
+.ui-card > .queue > li:first-child > a {
+  border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+}
+
+.ui-card > .queue > li:last-child > a {
+  border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
+}
+
+.ui-card > .queue > li:only-child > a {
+  border-radius: calc(var(--radius-lg) - 1px);
 }
 
 .prio {
@@ -3916,4 +3943,641 @@ a.quota:hover {
 
 .trial-pick .small svg {
   vertical-align: -2px;
+}
+
+/* ================= administration: lists (ADR-057) ================= */
+
+/* Admin lists are wide: more room for their columns than reading pages need. */
+.shell-content .page.admin {
+  max-width: 1400px;
+}
+
+.admin-lessons-table {
+  min-width: 1040px;
+}
+
+.admin-lessons-table col.w-check {
+  width: 44px;
+}
+
+.admin-lessons-table col.w-owner {
+  width: 150px;
+}
+
+.admin-lessons-table col.w-status {
+  width: 108px;
+}
+
+.admin-lessons-table col.w-share {
+  width: 140px;
+}
+
+.admin-lessons-table col.w-star {
+  width: 96px;
+}
+
+.admin-lessons-table col.w-views {
+  width: 66px;
+}
+
+.admin-lessons-table col.w-cost {
+  width: 84px;
+}
+
+.admin-lessons-table col.w-actions {
+  width: 132px;
+}
+
+.admin-lessons-table .cell-actions {
+  padding-left: 4px;
+  padding-right: 10px;
+  text-overflow: clip;
+}
+
+.admin-lessons-table th.center {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.admin-lessons-table .cell-share {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.lesson-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lesson-tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.lesson-cell-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lesson-cell-title {
+  line-height: 22px;
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lesson-cell-title:hover {
+  color: var(--brand);
+}
+
+.lesson-cell-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 18px;
+  line-height: 18px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* A trial lesson's badge fits the line: rows keep one height. */
+.lesson-cell-meta .trial-badge {
+  flex: none;
+  margin: 0;
+}
+
+.lesson-cell-meta .trial-badge .ui-badge {
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 16px;
+  font-size: 11px;
+}
+
+.owner-cell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: var(--text);
+}
+
+/* A lesson's sharing, changed from its row. */
+.share-pick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 124px;
+  max-width: 100%;
+  height: 32px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  transition:
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+.share-pick > svg:first-child {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+}
+
+.share-pick select {
+  appearance: none;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  padding: 0 26px 0 29px;
+  border: none;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.share-pick select:focus-visible {
+  outline: none;
+}
+
+.share-pick:focus-within {
+  border-color: var(--brand);
+  box-shadow: var(--ring);
+}
+
+.share-pick:hover {
+  border-color: var(--line-strong);
+}
+
+.share-pick select:disabled {
+  cursor: progress;
+}
+
+.share-pick select option {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.share-pick .share-chevron {
+  position: absolute;
+  right: 9px;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.share-pick.vis-public {
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: color-mix(in srgb, var(--success) 32%, transparent);
+}
+
+.share-pick.vis-unlisted {
+  color: var(--info);
+  background: var(--info-bg);
+  border-color: color-mix(in srgb, var(--info) 28%, transparent);
+}
+
+.share-static {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Featured on Explore: a star (gold whatever the app's color: it means "featured" everywhere). */
+.star-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--subtle);
+  cursor: pointer;
+  transition:
+    color var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    transform 120ms var(--ease);
+}
+
+.star-toggle:hover:not(:disabled) {
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.star-toggle:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.star-toggle.on {
+  color: #d97706;
+}
+
+.star-toggle.on svg {
+  fill: #f59e0b;
+}
+
+.star-toggle:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+:root[data-theme="dark"] .star-toggle.on,
+:root[data-theme="dark"] .star-toggle:hover:not(:disabled) {
+  color: #fbbf24;
+}
+
+:root[data-theme="dark"] .star-toggle.on svg {
+  fill: #fbbf24;
+}
+
+/* People */
+.people-table {
+  min-width: 940px;
+}
+
+.people-table col.w-role {
+  width: 150px;
+}
+
+.people-table col.w-status {
+  width: 118px;
+}
+
+.people-table col.w-count {
+  width: 92px;
+}
+
+.people-table col.w-date {
+  width: 112px;
+}
+
+.people-table col.w-seen {
+  width: 128px;
+}
+
+.people-table col.w-actions {
+  width: 172px;
+}
+
+.person-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.person-name .ui-badge {
+  flex: none;
+}
+
+.ui-btn.danger-ghost:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+/* The audit log: denser rows, an event's kind by its color, details opened in place. */
+.audit-table {
+  min-width: 980px;
+}
+
+.table.fixed.audit-table td {
+  height: 52px;
+}
+
+.audit-table col.w-when {
+  width: 112px;
+}
+
+.audit-table col.w-event {
+  width: 204px;
+}
+
+.audit-table col.w-by {
+  width: 210px;
+}
+
+.audit-table col.w-target {
+  width: 168px;
+}
+
+.audit-table col.w-ip {
+  width: 150px;
+}
+
+.audit-event {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.audit-event.tone-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.audit-event.tone-info {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.audit-event.tone-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.audit-event.tone-lesson {
+  background: #f1ebff;
+  color: #6d28d9;
+}
+
+:root[data-theme="dark"] .audit-event.tone-lesson {
+  background: rgba(167, 139, 250, 0.14);
+  color: #c4b5fd;
+}
+
+.audit-event.tone-success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.audit-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: calc(100% + 6px);
+  margin-left: -6px;
+  padding: 5px 6px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.audit-detail:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+.audit-chevron {
+  flex: none;
+  transition: transform var(--dur) var(--ease);
+}
+
+.audit-detail[aria-expanded="true"] .audit-chevron {
+  transform: rotate(90deg);
+}
+
+.table tbody tr.expanded > td {
+  background: var(--surface-2);
+  border-bottom-color: transparent;
+}
+
+.table.fixed tr.detail-row > td {
+  height: auto;
+  padding: 0 14px 14px;
+  white-space: normal;
+  overflow: visible;
+  background: var(--surface-2);
+}
+
+.detail-row pre {
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Credits & cost: the people and lessons tables */
+.usage-people-table {
+  min-width: 1000px;
+}
+
+.usage-people-table col.w-credits {
+  width: 176px;
+}
+
+.usage-people-table col.w-money2 {
+  width: 150px;
+}
+
+.usage-people-table col.w-money {
+  width: 96px;
+}
+
+.usage-people-table col.w-activity {
+  width: 120px;
+}
+
+.usage-people-table col.w-seen {
+  width: 116px;
+}
+
+.usage-people-table col.w-open {
+  width: 64px;
+}
+
+.usage-lessons-table {
+  min-width: 960px;
+}
+
+.usage-lessons-table col.w-owner {
+  width: 160px;
+}
+
+.usage-lessons-table col.w-money {
+  width: 100px;
+}
+
+.usage-lessons-table col.w-money2 {
+  width: 116px;
+}
+
+.usage-lessons-table col.w-credits2 {
+  width: 92px;
+}
+
+.usage-lessons-table col.w-seen {
+  width: 116px;
+}
+
+.table .num .num-pair {
+  align-items: flex-end;
+}
+
+.table.fixed .credit-meter {
+  min-width: 0;
+}
+
+.title-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.title-meta .trial-badge {
+  flex: none;
+  margin: 0;
+}
+
+.title-meta .trial-badge .ui-badge {
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 16px;
+  font-size: 11px;
+}
+
+/* Objects Warehouse: choosing drawings on their cards to reject them together (ADR-057). */
+.objects-choose {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 2px 0 0;
+}
+
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.object-card-wrap {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.object-card-wrap > .object-card {
+  flex: 1;
+  min-width: 0;
+}
+
+.object-pick {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.object-pick .row-check {
+  width: 18px;
+  height: 18px;
+}
+
+.object-card-wrap.chosen > .object-card {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand), var(--shadow-sm);
+}
+
+.object-card-wrap.chosen .object-card-art {
+  background: color-mix(in srgb, var(--brand) 8%, #f4f7fc);
+}
+
+.dark-preview .object-card-wrap.chosen .object-card-art {
+  background: color-mix(in srgb, var(--brand) 14%, #0f1729);
+}
+
+/* Settings: the app's color (ADR-057) */
+.accent-section {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.settings-sub {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.accent-section .muted.small {
+  margin: 0;
+}
+
+.accent-pick .swatch {
+  width: 34px;
+  height: 34px;
+}
+
+.swatch-note {
+  margin: 8px 0 0;
+}
+
+.accent-section .field-note,
+.swatch-note {
+  font-size: 13px;
+}
+
+/* The share dialog: a featured lesson says what unsharing it ends (ADR-057). */
+.share-featured {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.share-featured svg {
+  flex: none;
+  color: #d97706;
+  fill: #f59e0b;
 }
