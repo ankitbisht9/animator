@@ -571,3 +571,5 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - **The sidebar's art (ADR-058):** an aurora with dots and neon beams at the top, layered waves with a
   glowing crest at the foot, a neon edge that brightens on hover, a glass account card; all in shades of
   the app's color, painted once by CSS (no measurable cost), never on lesson pages.
+- **The sidebar's bubbles (ADR-059):** ADR-058's art was too colorful for a learning platform and is gone;
+  the sidebar is white with a few soft bubbles of the app's color in its top and bottom corners.

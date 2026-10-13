@@ -2731,3 +2731,22 @@ own (the edge's one transition is on hover), and none of it on pages that play l
 scroll and pointer steps on the lessons list: 352 ms of work with the art, 363 ms without (noise).
 
 **Rollback:** the tag `backup/before-sidebar-art`.
+
+## ADR-059 The sidebar's bubbles, calm (2026-10-13)
+
+**Asked.** ADR-058's sidebar was too colorful for a professional learning platform. Revert it and follow the
+user's reference: a white sidebar with a few soft bubbles in its corners.
+
+**Backup first:** tag `backup/before-sidebar-bubbles` (= v2.6).
+
+**Decision.** ADR-058's art is gone (aurora, beams, waves, neon edge, the lines, the glass card, the neon
+marker), and so are ADR-057's dots and rings; the page you are on is marked as it was before ADR-057 (a
+light tint). Instead, five bubbles of the app's color (`layout/SidebarArt.tsx`, `layout.css`):
+- top corner: a large one half outside the sidebar, above the line under the logo, and a small one below;
+- bottom corner: a large one behind the account's corner, below the line over it, a middle and a tiny one
+  above;
+- soft pastel fills (the app's color mixed into the surface) with a light shine; muted on dark pages;
+- folded to icons: only the bottom bubble, smaller; none on pages that play lessons;
+- clear of the menu's words; painted once by CSS, no measurable cost.
+
+**Rollback:** the tag `backup/before-sidebar-bubbles` (ADR-058's art) or `backup/before-sidebar-art` (ADR-057's).
