@@ -1125,10 +1125,15 @@
 }
 
 /* ---------------- decoration, in the app's color (ADR-057) ----------------
-   Patterns drawn by CSS from the app's color, so they follow it: a grid of dots behind the logo and
-   rings (an orbit, the brand's mark) behind the account in the sidebar; a band behind each page's
-   heading; a glow under the top bar. Nothing here moves on its own; none of it on lesson pages, which
-   stay as light as they are (ADR-052). */
+   Patterns drawn by CSS from the app's color, so they follow it: the sidebar's art (below, ADR-058), a
+   band behind each page's heading, a glow under the top bar. Nothing here moves on its own; none of it on
+   pages that play lessons, which stay as light as they are (ADR-052). */
+
+/* ---------------- the sidebar's art (ADR-058) ----------------
+   Shades of the app's color, with neon lines: an aurora with a grid of dots and two beams of light behind
+   the logo; three waves with a glowing crest at the foot, under a glass card for the account; a neon edge
+   that brightens while the pointer is over the sidebar. All of it is painted once by CSS (gradients and
+   small SVG masks): no blur, no filters, nothing that moves on its own. Not on pages that play lessons. */
 
 .sidebar {
   overflow: hidden;
@@ -1139,44 +1144,289 @@
   z-index: 1;
 }
 
-.sidebar::before,
-.sidebar::after {
-  content: "";
+.sidebar > .sidebar-art {
   position: absolute;
+  inset: 0;
   z-index: 0;
+  overflow: hidden;
   pointer-events: none;
-}
-
-.sidebar::before {
-  inset: 0 0 auto 0;
-  height: 210px;
-  background-image: radial-gradient(circle, color-mix(in srgb, var(--brand) 30%, transparent) 1px, transparent 1.6px);
-  background-size: 14px 14px;
-  background-position: 7px 7px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent 88%);
-}
-
-.sidebar::after {
-  left: -118px;
-  bottom: -138px;
-  width: 330px;
-  height: 330px;
-  border-radius: 50%;
-  background: repeating-radial-gradient(
-    circle,
-    transparent 0 22px,
-    color-mix(in srgb, var(--brand) 17%, transparent) 22px 23.5px
+  --au1: 20%;
+  --au2: 24%;
+  --au3: 12%;
+  --dots: 32%;
+  --w1: 12%;
+  --w2: 15%;
+  --w3: 20%;
+  --glow: 30%;
+  --crest: 85%;
+  --edge: 0.5;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand) 5%, transparent),
+    transparent 42%,
+    transparent 62%,
+    color-mix(in srgb, var(--brand) 6%, transparent)
   );
-  mask-image: radial-gradient(circle, #000 22%, transparent 68%);
 }
 
-.shell.plain .sidebar::before,
-.shell.plain .sidebar::after {
+:root[data-theme="dark"] .sidebar > .sidebar-art {
+  --au1: 30%;
+  --au2: 34%;
+  --au3: 24%;
+  --dots: 42%;
+  --w1: 18%;
+  --w2: 23%;
+  --w3: 30%;
+  --glow: 45%;
+  --crest: 100%;
+  --edge: 0.65;
+}
+
+.shell.plain .sidebar > .sidebar-art {
   display: none;
 }
 
+.sidebar-art > span,
+.sidebar-art i {
+  position: absolute;
+  display: block;
+}
+
+/* The aurora: three shades of the app's color, a grid of dots over it. */
+.art-aurora {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 300px;
+  background:
+    radial-gradient(150px 110px at 16% 14%, color-mix(in srgb, var(--brand) var(--au1), transparent), transparent 72%),
+    radial-gradient(190px 130px at 96% 4%, color-mix(in srgb, var(--brand-400) var(--au2), transparent), transparent 72%),
+    radial-gradient(230px 150px at 62% 60%, color-mix(in srgb, var(--brand-700) var(--au3), transparent), transparent 74%);
+  mask-image: linear-gradient(to bottom, #000 35%, transparent);
+}
+
+.art-aurora::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--brand) var(--dots), transparent) 1.1px,
+    transparent 1.7px
+  );
+  background-size: 13px 13px;
+  background-position: 6px 6px;
+  mask-image: radial-gradient(120% 85% at 50% 0%, #000 25%, transparent 75%);
+}
+
+/* Two beams of neon light across the top. */
+.art-beams {
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 160px;
+}
+
+.art-beams::before,
+.art-beams::after {
+  content: "";
+  position: absolute;
+  height: 2px;
+  border-radius: 2px;
+  transform: rotate(-28deg);
+  transform-origin: right center;
+  background: linear-gradient(90deg, transparent, var(--brand-400) 45%, var(--brand) 80%, transparent);
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--brand) 60%, transparent),
+    0 0 14px color-mix(in srgb, var(--brand-400) 30%, transparent);
+  opacity: 0.85;
+}
+
+.art-beams::before {
+  top: 34px;
+  right: -14px;
+  width: 190px;
+}
+
+.art-beams::after {
+  top: 62px;
+  right: -26px;
+  width: 120px;
+  height: 1.5px;
+  opacity: 0.6;
+}
+
+/* The waves at the foot: three shades, and a neon crest on the middle one. */
+.art-waves {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 210px;
+}
+
+.art-waves i {
+  inset: 0;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  mask-position: center bottom;
+}
+
+.art-waves .w1 {
+  background: color-mix(in srgb, var(--brand-400) var(--w1), transparent);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 160' preserveAspectRatio='none'%3E%3Cpath d='M0 64 C46 36 98 38 150 58 C204 79 252 86 300 54 L300 160 L0 160 Z' fill='black'/%3E%3C/svg%3E");
+}
+
+.art-waves .w2 {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--brand) var(--w2), transparent),
+    color-mix(in srgb, var(--brand-400) var(--w2), transparent)
+  );
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 160' preserveAspectRatio='none'%3E%3Cpath d='M0 98 C54 72 108 80 158 98 C212 117 256 116 300 90 L300 160 L0 160 Z' fill='black'/%3E%3C/svg%3E");
+}
+
+.art-waves .w3 {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--brand-600) var(--w3), transparent),
+    color-mix(in srgb, var(--brand) var(--w3), transparent)
+  );
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 160' preserveAspectRatio='none'%3E%3Cpath d='M0 128 C52 112 118 114 168 128 C220 142 262 138 300 120 L300 160 L0 160 Z' fill='black'/%3E%3C/svg%3E");
+}
+
+.art-waves .glow {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--brand) var(--glow), transparent) 30%,
+    color-mix(in srgb, var(--brand-400) var(--glow), transparent) 70%,
+    transparent
+  );
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 160' preserveAspectRatio='none'%3E%3Cpath d='M0 98 C54 72 108 80 158 98 C212 117 256 116 300 90' fill='none' stroke='black' stroke-width='7' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+}
+
+.art-waves .crest {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--brand-400) var(--crest), transparent) 22%,
+    color-mix(in srgb, var(--brand) var(--crest), transparent) 62%,
+    transparent
+  );
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 160' preserveAspectRatio='none'%3E%3Cpath d='M0 98 C54 72 108 80 158 98 C212 117 256 116 300 90' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+}
+
+/* A neon edge, brighter while the pointer is over the sidebar. */
+.art-edge {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    transparent 2%,
+    var(--brand-400) 20%,
+    var(--brand) 50%,
+    var(--brand-600) 78%,
+    transparent 98%
+  );
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--brand) 55%, transparent),
+    0 0 20px color-mix(in srgb, var(--brand) 22%, transparent);
+  opacity: var(--edge);
+  transition: opacity 420ms var(--ease);
+}
+
+.sidebar:hover .art-edge {
+  opacity: 1;
+}
+
+/* Lines that fade out in the app's color under the logo and over the account. */
+.sidebar-head::after,
+.sidebar-foot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--brand-400) 60%, transparent) 50%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+.sidebar-head::after {
+  bottom: -1px;
+}
+
+.sidebar-foot::before {
+  top: -1px;
+}
+
+.shell.plain .sidebar-head::after,
+.shell.plain .sidebar-foot::before {
+  display: none;
+}
+
+/* Section names end in a line of the app's color. */
+.side-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.side-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--brand) 32%, transparent), transparent);
+}
+
+/* The page you are on: a neon marker. */
 .side-link.active {
   background: linear-gradient(90deg, var(--brand-50), color-mix(in srgb, var(--brand-50) 30%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 10%, transparent);
+}
+
+.side-link.active::before {
+  background: linear-gradient(180deg, var(--brand-400), var(--brand));
+  box-shadow:
+    0 0 9px color-mix(in srgb, var(--brand) 65%, transparent),
+    0 0 2px var(--brand);
+}
+
+.side-link:hover svg {
+  color: var(--brand);
+}
+
+/* The account: a glass card over the waves, its avatar ringed with neon. */
+.sidebar-user {
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  box-shadow: 0 8px 20px -14px color-mix(in srgb, var(--brand) 60%, transparent);
+  transition:
+    background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+.sidebar-user:hover {
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
+}
+
+.sidebar-user .ui-avatar {
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 0 0 2px var(--surface),
+    0 0 0 3.5px color-mix(in srgb, var(--brand) 60%, transparent),
+    0 0 14px color-mix(in srgb, var(--brand) 40%, transparent);
+}
+
+.shell.collapsed .sidebar-user {
+  padding: 4px;
 }
 
 /* A thin glow of the app's color along the foot of the top bar. */

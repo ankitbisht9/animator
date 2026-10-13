@@ -46,6 +46,7 @@ import { Avatar, Badge, Button } from "../ui/core";
 import { useToast } from "../ui/overlay";
 import { GlobalSearch } from "./GlobalSearch";
 import { PageDeco } from "./PageDeco";
+import { SidebarArt } from "./SidebarArt";
 
 interface NavItem {
   href: string;
@@ -140,6 +141,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className={`shell ${folded ? "collapsed" : ""} ${drawer ? "drawer-open" : ""} ${plain ? "plain" : ""}`}>
       <aside className="sidebar" aria-label="Main">
+        <SidebarArt />
         <div className="sidebar-head">
           <Link href="/dashboard" className="sidebar-brand" aria-label="Animator home">
             <Logo size={30} withName={!folded} />

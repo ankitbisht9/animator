@@ -568,3 +568,6 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   and highlights to it (Settings → Account), or pick it in Settings → Appearance.
 - **Patterns in the app's color:** dots and rings in the sidebar, a grid band behind page headings that
   lights up around the pointer, and small touches on cards and buttons. Never on lesson pages.
+- **The sidebar's art (ADR-058):** an aurora with dots and neon beams at the top, layered waves with a
+  glowing crest at the foot, a neon edge that brightens on hover, a glass account card; all in shades of
+  the app's color, painted once by CSS (no measurable cost), never on lesson pages.

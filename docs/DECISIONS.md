@@ -2706,3 +2706,28 @@ voice, the player, the default red.
 
 **Rollback:** the tag `backup/before-ui-enhancements` (no database change; `preferences.accent` is ignored
 by older code).
+
+## ADR-058 The sidebar's art (2026-10-13)
+
+**Asked.** The sidebar patterns of ADR-057 hardly showed. Make them attractive and creative: at the top and
+the foot, on the border, several shades of the primary color with neon light; nothing heavy.
+
+**Backup first:** tag `backup/before-sidebar-art` (= v2.5).
+
+**Decision: art painted once by CSS, in shades of the app's color** (`layout/SidebarArt.tsx`, empty
+elements; `layout.css`). It replaces ADR-057's dots and rings in the sidebar.
+- Top: an aurora of three shades (the color, its light and deep shades), a grid of dots, and two neon
+  beams of light.
+- Foot: three waves in three shades with a glowing neon crest on the middle one (small SVG shapes used as
+  masks, filled by CSS), under the account shown as a glass card with a neon ring around the avatar.
+- Edge: a neon line down the sidebar's edge, brighter while the pointer is over the sidebar.
+- Lines in the app's color under the logo, over the account and after each section's name; a neon marker
+  for the page you are on.
+- Light and dark pages have their own strengths; the collapsed sidebar and the phone drawer get the same
+  art; every app color (ADR-057) colors it.
+
+**Light by design:** gradients and masks only (no blur, no filters, no backdrop), nothing that moves on its
+own (the edge's one transition is on hover), and none of it on pages that play lessons. Measured over 30
+scroll and pointer steps on the lessons list: 352 ms of work with the art, 363 ms without (noise).
+
+**Rollback:** the tag `backup/before-sidebar-art`.
