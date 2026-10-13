@@ -18,6 +18,7 @@ import {
 import { useAuth } from "../auth";
 import { ago, credits, date, plural, usd } from "../format";
 import { invalidate, useDebounced, useResource, useTitle } from "../hooks";
+import { TrialBadge } from "../lesson/TrialBadge";
 import { Link } from "../nav";
 import { subject } from "../ui/brand";
 import { Donut } from "../ui/charts";
@@ -624,6 +625,7 @@ function LessonsTable({ period }: { period: UsagePeriod }) {
                   </td>
                   <td>
                     <b>{usd(l.cost_usd)}</b>
+                    <TrialBadge model={l.trial_model} />
                   </td>
                   <td>{credits(l.credits)}</td>
                   <td>{ago(l.last_at)}</td>

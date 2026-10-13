@@ -22,6 +22,7 @@ import { type AdminUser, type Lesson, type Role, v1 } from "../api";
 import { useAuth } from "../auth";
 import { ago, date, money, plural } from "../format";
 import { useDebounced, useResource, useTitle } from "../hooks";
+import { TrialBadge } from "../lesson/TrialBadge";
 import { Link, navigate } from "../nav";
 import { StatusBadge, subject } from "../ui/brand";
 import { BarChart, Donut } from "../ui/charts";
@@ -525,7 +526,10 @@ export function AdminLessons() {
                     )}
                   </td>
                   <td>{l.views}</td>
-                  <td>{money(l.cost_usd)}</td>
+                  <td>
+                    {money(l.cost_usd)}
+                    <TrialBadge model={l.trial_model} />
+                  </td>
                   <td>{date(l.created_at)}</td>
                   <td className="table-actions">
                     <Button

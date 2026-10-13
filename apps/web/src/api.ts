@@ -87,6 +87,8 @@ export interface ApiConfig {
   storage: string;
   /** How teaching lessons are laid out unless a lesson asks otherwise (ADR-047). */
   layout_mode?: LayoutMode;
+  /** Model trials (ADR-056): OpenRouter models an admin may make a lesson with. */
+  trial_models?: string[];
   tts?: {
     enabled: boolean;
     provider: string | null;

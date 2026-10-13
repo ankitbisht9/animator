@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from animator.llm.trials import TrialLog
 from animator.pipeline.models import GenerationRequest
 from animator.platform import curation, usage
 from animator.platform.catalog import SUBJECTS, new_row
@@ -47,6 +48,15 @@ router = APIRouter(prefix="/api/v1", tags=["lessons"])
 DONE_AT = 0.95  # watched this share of a lesson: complete
 # Explore: the stored decision (curation.decide), with its plain conditions again as a safety net.
 IN_EXPLORE = (Lesson.explore_listed.is_(True), Lesson.deleted_at.is_(None), Lesson.status == "complete")
+
+
+# Model trials (ADR-056): which lessons were made with a trial model (set when the platform starts).
+TRIAL_LOG: TrialLog | None = None
+
+
+def trial_model_of(lesson_id: str) -> str | None:
+    """The trial model a lesson was made with (ADR-056); None: the normal setup."""
+    return TRIAL_LOG.models().get(lesson_id) if TRIAL_LOG is not None else None
 
 
 def lesson_out(
@@ -94,6 +104,7 @@ def lesson_out(
             else None
         ),
         "cost_usd": row.cost_usd if (mine or staff) else None,
+        "trial_model": trial_model_of(row.id) if (mine or staff) else None,
         "progress": (
             {
                 "position_s": progress.position_s,
@@ -165,6 +176,14 @@ async def create_lesson(
         raise HTTPException(
             403, "Only educators can publish lessons to Explore. Share it with a link instead."
         )
+    if body.trial_model:
+        if not p.can(Perm.MODELS_TRIAL):
+            raise HTTPException(403, "Only admins can make a lesson with a trial model.")
+        allowed = platform.app_settings.trial_models if platform.app_settings else []
+        if body.trial_model not in allowed:
+            raise HTTPException(
+                422, f"'{body.trial_model}' is not one of the trial models (ANIMATOR_TRIAL_MODELS)."
+            )
     longest = ps.max_minutes(p.role)
     if body.duration_min > longest:
         raise HTTPException(422, f"Lessons can be at most {longest:g} minutes long on your plan.")
@@ -196,6 +215,7 @@ async def create_lesson(
         language=body.language,
         paced=body.paced,
         layout=body.layout,
+        trial_model=body.trial_model or None,
     )
     gen = await runner.start(request_)
     row = new_row(gen, p.user_id)

@@ -540,3 +540,16 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
 - **Measured:** about a quarter less AI cost on three topics (see ADR-055), with consistent drawings across
   scenes.
 - Guide: docs/OBJECTS.md.
+
+## Model trials (ADR-056)
+
+- **Compare other AI models with the normal one, lesson by lesson** (admins): Create → Advanced options →
+  AI model (testing). The models on offer come from `ANIMATOR_TRIAL_MODELS`, through OpenRouter
+  (`OPENROUTER_API_KEY`); set up with Qwen3.5-Flash, DeepSeek V4 Pro and Qwen3.5-9B. Lessons that pick none
+  are made exactly as before.
+- **A trial lesson** is made by that model at every step (pictures stay on the normal model if it cannot
+  read them). It carries a badge with the model's name, and its AI cost is what OpenRouter charged.
+- **Providers that ignore the answer format** (Qwen3.5-Flash's) are handled automatically: the format is
+  written into the instructions, and reasoning is turned off if needed.
+- **The same topics per model from the command line:** `python -m animator.eval --trial-model <model>`.
+- Guide: docs/MODEL_TRIALS.md. The OpenRouter account needs credits before full lessons can be compared.

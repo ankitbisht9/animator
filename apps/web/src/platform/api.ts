@@ -96,6 +96,8 @@ export interface Lesson {
   mine: boolean;
   can_edit: boolean;
   cost_usd: number | null;
+  /** Model trials (ADR-056): the model it was made with instead of the normal one (owner and staff). */
+  trial_model?: string | null;
   progress: LessonProgress | null;
   saved: boolean;
   my_rating?: { stars: number; comment: string } | null;
@@ -370,6 +372,7 @@ export interface UsageLesson extends Money {
   learn_usd: number;
   answers: number;
   last_at: number;
+  trial_model?: string | null;
 }
 
 // ---------------------------------------------------------------------- ratings and Explore (admin)
@@ -450,6 +453,8 @@ export interface CreateLesson {
   layout?: LessonLayout | null;
   visibility: Visibility;
   subject?: string | null;
+  /** Model trials (ADR-056, admins): one of /api/config's trial_models; null: the normal models. */
+  trial_model?: string | null;
 }
 
 // ---------------------------------------------------------------------- saved drawings (ADR-055)

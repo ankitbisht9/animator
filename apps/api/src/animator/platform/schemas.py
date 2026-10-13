@@ -104,6 +104,8 @@ class LessonCreateIn(_In):
     language: str = Field(default="English", max_length=40)
     paced: bool = False
     layout: Literal["classic", "planned", "costsaver"] | None = None
+    # Model trials (ADR-056): an admin's lesson made with one of ANIMATOR_TRIAL_MODELS (OpenRouter).
+    trial_model: str | None = Field(default=None, max_length=120)
     visibility: Visibility = "private"
     subject: str | None = Field(default=None, max_length=32)
 

@@ -87,6 +87,16 @@ class Settings(BaseSettings):
     animator_llm_provider: Literal["openai", "record", "replay"] = "openai"
     animator_llm_fixtures_dir: Path = Path("fixtures/llm/latest")
 
+    # --- Model trials (ADR-056): an admin makes a lesson with another model, through OpenRouter, to
+    # compare it with the normal setup above. Testing only: lessons that pick no trial model are made
+    # exactly as before. Empty ANIMATOR_TRIAL_MODELS (or no key): no trials anywhere. ---
+    openrouter_api_key: SecretStr | None = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    # Reasoning models on shared providers can take longer than OpenAI's.
+    openrouter_timeout_s: float = 240.0
+    # OpenRouter model ids an admin may pick per lesson (Create → Advanced → AI model), comma separated.
+    animator_trial_models: str = ""
+
     # --- Pipeline (used from Phase 8) ---
     # teaching (ADR-044): a teacher writes the whole explanation, a reviewer checks and improves it, a
     # visual director plans every scene's picture, then the scenes are drawn (about 1-2 minutes).
@@ -290,6 +300,23 @@ class Settings(BaseSettings):
     @property
     def has_openai_key(self) -> bool:
         return self.openai_api_key is not None and bool(self.openai_api_key.get_secret_value().strip())
+
+    @property
+    def has_openrouter_key(self) -> bool:
+        key = self.openrouter_api_key
+        return key is not None and bool(key.get_secret_value().strip())
+
+    @property
+    def trial_models(self) -> list[str]:
+        """The models an admin may make a trial lesson with (none without an OpenRouter key)."""
+        if not self.has_openrouter_key:
+            return []
+        out: list[str] = []
+        for m in self.animator_trial_models.split(","):
+            m = m.strip()
+            if m and m not in out:
+                out.append(m)
+        return out
 
 
 @lru_cache(maxsize=1)

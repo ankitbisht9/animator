@@ -2493,3 +2493,110 @@ circuit), made as planned lessons and twice as cost-saver lessons:
 
 **Not changed:** classic and planned lessons, the fast pipeline, doubts, voice, export, the platform's
 other parts.
+
+## ADR-056 Model trials through OpenRouter (2026-10-13)
+
+**Asked.**
+- Test three cheaper models against gpt-6-luna ("Luna"), through OpenRouter: `qwen/qwen3.5-flash-02-23`,
+  DeepSeek V4 Pro and Qwen3.5-9B. Switch by hand, one model at a time, make the same lesson with each and
+  compare quality and price. Keep the project as it is: Luna stays unless the user decides otherwise.
+- Confirm what Credits & cost counts for a lesson, compared with All lessons (e.g. $0.12 there and
+  $0.56–0.66 in Credits & cost for the same lesson).
+
+**Backups first:** tag `backup/before-model-trials` (1be5e74, = v2.3) and `.env.backup-before-model-trials`.
+
+**Pricing, confirmed.**
+- All lessons → *AI cost* is `lessons.cost_usd`: the AI model calls that made the lesson, nothing else.
+- Credits & cost → *Total* adds up the usage ledger for that lesson in the period shown:
+  - *Making* = `lesson_ai` + `lesson_voice`;
+  - *Doubts* = `doubt_ai` + `doubt_voice` + `transcription`.
+- Voice is estimated from the characters spoken, at $200 per 1M characters for ElevenLabs by default
+  (`PLATFORM_VOICE_PRICES`); ADR-053 found voice to be about half of what lessons cost. The difference
+  between the two pages is the voice, plus any doubts.
+
+**Decision: a per-lesson choice, for admins, without a restart to switch.**
+- `ANIMATOR_TRIAL_MODELS` lists the OpenRouter models on offer (with `OPENROUTER_API_KEY`). Empty, or no
+  key: there is no trial anywhere, and `build_llm()` returns exactly the client it returned before.
+- Create → Advanced options → **AI model (testing)**: "Normal (gpt-6-luna)" or a trial model. The new
+  permission `models:trial` (admins) is checked on the server; a model must be on the list (else 403 /
+  422). The raw pipeline API checks the list too.
+- `GenerationRequest.trial_model` records the choice. The runner assigns the lesson to that model when it
+  starts or resumes, and records it in `var/model_trials.json` (no database change). Owners and staff see
+  the model as a badge on the lesson page, My lessons, All lessons and Credits & cost.
+- `TrialRouter` wraps the normal client:
+  - every call of a trial lesson goes to OpenRouter with that model: teacher, reviewer, director, scenes,
+    corrections, critics, the voice's script, and the doubts asked on it later (after a restart too, from
+    the trial log);
+  - a call that sends images stays on the normal client when the model cannot read images (the visual
+    critic, for DeepSeek V4 Pro);
+  - every other call goes to the normal client untouched.
+- The eval harness takes `--trial-model`, to run the same topics per model with a report.
+
+**Decision: an OpenRouter client beside the OpenAI one** (`llm/openrouter_client.py`).
+- Chat Completions through the `openai` SDK, with the stage's schema as a strict `json_schema` response
+  format, `provider.require_parameters` (only providers that support it), the stage's effort as
+  `reasoning.effort`, and the model's output limit.
+- Cost is OpenRouter's `usage.cost` for each call (the price of the provider that served it); without it,
+  the price table, then the model's listed price.
+- Streaming with usage, retries with Retry-After, 402 "credits used up" (not retried; the lesson pauses and
+  can be resumed), provider failures inside a 200 or mid-stream (retried).
+- The key is never logged or sent anywhere but OpenRouter.
+
+**Found while testing, and what the client does about it.** OpenRouter, 2026-10-13:
+
+| Model | Providers | Price per 1M (in / out) | Images | Schema |
+|---|---|---|---|---|
+| gpt-6-luna (normal, OpenAI) | OpenAI | $0.10 (cached $0.01) / $0.50 | yes | applied |
+| qwen/qwen3.5-flash-02-23 | Alibaba only | $0.065 / $0.26, no cache price | yes | not applied |
+| deepseek/deepseek-v4-pro | 15 (10 with structured outputs) | $0.45–1.69 / $1.91–3.48 | no | applied |
+| qwen/qwen3.5-9b | 6 | $0.08–0.17 / $0.13–0.25 | yes | applied |
+
+- **Alibaba accepts a schema and ignores it.** Qwen3.5-Flash answered JSON of its own (`{"question":
+  ...}`, `{"reasoning": [...]}`). While reasoning, it could not keep to JSON at all: answers like `false`
+  or `-1.059e+308`, prose ("Thinking Process: ..."), or Alibaba aborting ("Model output became abnormal
+  while generating a JSON response").
+- Tried six request shapes, three times each, on a small schema and on the director's:
+
+  | Request shape | Small schema | Director's schema |
+  |---|---|---|
+  | schema with reasoning, or without, but not in the prompt | 0/3 | 0/3 |
+  | schema in the prompt, no reasoning | 3/3 | 3/3 |
+  | schema in the prompt, with reasoning | 0/3 | 2/3 |
+  | no response format at all | 0/3 | 0/3 |
+
+- **So the client steps such a model up**, once per process and only when it happens. An answer without
+  the schema's top-level shape, unreadable JSON, or a provider's "JSON" failure is asked again: first
+  with the schema written into the instructions (after them, so the cached prefix stays the same), then
+  also without reasoning. The model keeps that level; it is logged, and each step-up costs one call.
+  The schema goes into the prompt only where needed: a scene's schema is about 30k tokens.
+- DeepSeek V4 Pro and Qwen3.5-9B answered in the schema, plain and streamed, from the first call. Both
+  reason a lot: Qwen3.5-9B used about 2.7k reasoning tokens for a two-line answer at low effort, and took
+  20 s.
+- **A live lesson with Qwen3.5-Flash** (the heart, one minute, voice off): 16 calls, all on the trial
+  model, after the two step-ups. Every stage answered. Its scenes failed the engine's checks more often
+  than Luna's (an invalid easing, an unknown field, ids not in snake case), because nothing constrains
+  its output, so they took correction rounds. Most of its $0.044 was scene input: about 57k tokens a
+  call (instructions plus the schema), with no cache discount at Alibaba.
+- **The account has no credits.** The key is on OpenRouter's free tier with $0 bought. Small calls went
+  through; the lesson's long calls were refused ("would exceed your available credits given your current
+  in-flight requests"), so the lesson paused. Full lessons with all three models wait for credits; about
+  $5 is enough.
+
+**Tests:** 22 new (`test_model_trials.py`): the client against a scripted OpenRouter (request shape, cost,
+listed price, streaming, retries, 402/404/401, a failure inside a 200 or mid-stream, step-ups, parsing);
+the router (only assigned lessons, images, the log after a restart); the pipeline API and the platform
+(admins only, the list, the badge data, costs). Browser check on test ports: the picker for admins only,
+the badge on each page.
+
+**Isolation.**
+- Lessons that pick no trial model send exactly the same requests to the same client.
+- Without trial models configured, there is no router at all.
+- No database migration; the platform's other parts, prompts, schemas and the engine are unchanged.
+
+**Rollback.**
+- Ending the trial is emptying `ANIMATOR_TRIAL_MODELS` and restarting; trial lessons stay playable.
+- Going back to v2.3 is the tag `backup/before-model-trials`. v2.3 cannot open trial lessons made in
+  between (their request has `trial_model`); delete them first.
+
+**Not changed:** the normal models and how they are called, prompts, the engine, voice, doubts for other
+lessons, credits and costs for lessons that are not trials.

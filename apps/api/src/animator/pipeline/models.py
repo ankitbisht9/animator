@@ -269,6 +269,9 @@ class GenerationRequest(_Strict):
     # How the scenes are laid out (ADR-047): classic or planned, or costsaver (ADR-055: planned, with
     # saved drawings placed where they fit exactly); None: the server's default (ANIMATOR_LAYOUT_MODE).
     layout: Literal["classic", "planned", "costsaver"] | None = None
+    # Model trials (ADR-056): an OpenRouter model (one of ANIMATOR_TRIAL_MODELS) this lesson is made
+    # with instead of the configured ones, to compare it; None: the normal setup.
+    trial_model: str | None = Field(default=None, max_length=120, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/~-]*$")
 
 
 class Attempt(BaseModel):

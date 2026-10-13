@@ -56,6 +56,8 @@ def _playable(gen: Generation, speaks: bool) -> list[dict[str, Any]]:
 
 @router.post("", status_code=201)
 async def create(body: GenerationRequest, request: Request) -> dict[str, Any]:
+    if body.trial_model is not None and body.trial_model not in request.app.state.settings.trial_models:
+        raise HTTPException(422, f"'{body.trial_model}' is not a trial model (ANIMATOR_TRIAL_MODELS).")
     gen = await _runner(request).start(body)
     return gen.summary()
 

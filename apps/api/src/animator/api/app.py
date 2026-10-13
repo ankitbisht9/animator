@@ -167,6 +167,8 @@ def create_app(
             "storage": st.animator_storage_backend,
             # How teaching lessons are laid out unless a lesson asks otherwise (ADR-047).
             "layout_mode": st.animator_layout_mode,
+            # Model trials (ADR-056): the OpenRouter models an admin may make a lesson with.
+            "trial_models": st.trial_models,
             "tts": {
                 "enabled": speech is not None,
                 "provider": st.animator_tts_provider if st.animator_tts_enabled else None,

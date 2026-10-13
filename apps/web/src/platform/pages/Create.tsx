@@ -2,6 +2,7 @@
 import {
   ArrowRight,
   Clock,
+  FlaskConical,
   Globe,
   Info,
   Languages,
@@ -19,9 +20,10 @@ import { credits, date } from "../format";
 import { useResource, useTitle } from "../hooks";
 import { HttpError } from "../http";
 import { refreshLessonLists } from "../lesson/actions";
+import { TrialBadge } from "../lesson/TrialBadge";
 import { Link, navigate, useLocation } from "../nav";
 import { AUDIENCES, SUBJECTS } from "../ui/brand";
-import { Alert, Button, Card, Checkbox, Segmented, TextArea, TextField } from "../ui/core";
+import { Alert, Button, Card, Checkbox, Segmented, SelectField, TextArea, TextField } from "../ui/core";
 
 const LENGTHS = [1, 2, 3, 5, 8, 10, 15, 20];
 const EXAMPLES: Record<string, string[]> = {
@@ -75,6 +77,8 @@ export function CreatePage() {
   const [layout, setLayout] = useState<LessonLayout | null>(prefs.layout);
   const info = useResource("public-info", v1.info, 300_000);
   const [paced, setPaced] = useState(false);
+  // Model trials (ADR-056): "" is the normal setup; otherwise an OpenRouter model to compare.
+  const [trialModel, setTrialModel] = useState("");
   const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +98,11 @@ export function CreatePage() {
   const lengths = LENGTHS.filter((l) => l <= user.limits.max_minutes);
   const scenes = useMemo(() => Math.max(2, Math.round((minutes * 60) / 22)), [minutes]);
   const notReady = config.data && !config.data.openai_key_configured;
+  const trialModels = can("models:trial") ? (config.data?.trial_models ?? []) : [];
+  const normalModels = useMemo(
+    () => [...new Set(Object.values(config.data?.stages ?? {}).map((st) => st.models[0] ?? ""))].filter(Boolean),
+    [config.data],
+  );
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -113,6 +122,7 @@ export function CreatePage() {
         paced,
         layout: layout ?? config.data?.layout_mode ?? null,
         visibility,
+        trial_model: trialModels.includes(trialModel) ? trialModel : null,
       });
       refreshLessonLists();
       void reload();
@@ -361,6 +371,24 @@ export function CreatePage() {
                 <Checkbox checked={paced} onChange={setPaced}>
                   Save cost: make scenes just ahead of where I am watching
                 </Checkbox>
+                {trialModels.length > 0 && (
+                  <div className="trial-pick">
+                    <SelectField
+                      label="AI model (testing)"
+                      value={trialModel}
+                      onChange={(e) => setTrialModel(e.target.value)}
+                      options={[
+                        { value: "", label: `Normal (${normalModels.join(", ") || "configured models"})` },
+                        ...trialModels.map((m) => ({ value: m, label: `${m} (OpenRouter)` })),
+                      ]}
+                    />
+                    <p className="small muted">
+                      <FlaskConical size={13} /> Admins only, to compare models. Every step of this lesson uses the
+                      chosen model through OpenRouter, except looking at the drawn scenes when the model cannot read
+                      images (that stays on the normal model). Its cost is what OpenRouter charges, shown as usual.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </Card>
@@ -390,6 +418,14 @@ export function CreatePage() {
                 <dt>Narration</dt>
                 <dd>{language}</dd>
               </div>
+              {trialModels.includes(trialModel) && (
+                <div>
+                  <dt>AI model</dt>
+                  <dd>
+                    <TrialBadge model={trialModel} />
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt>Sharing</dt>
                 <dd>

@@ -5,6 +5,7 @@ import { minutes } from "../format";
 import { Link } from "../nav";
 import { audienceLabel, LessonCover, StatusBadge, subject } from "../ui/brand";
 import { ProgressBar } from "../ui/core";
+import { TrialBadge } from "./TrialBadge";
 
 export function lessonLength(l: Lesson): string {
   return minutes(l.length_s > 0 ? l.length_s : l.duration_min * 60);
@@ -44,6 +45,7 @@ export function LessonCard({
             <s.icon size={13} />
             {s.label}
           </span>
+          <TrialBadge model={lesson.trial_model} />
           {lesson.visibility !== "private" && lesson.mine && (
             <span
               className="lesson-card-shared"

@@ -19,6 +19,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import case, func, select
 
 from animator.platform import usage
+from animator.platform.api.lessons import trial_model_of
 from animator.platform.deps import DB, CreditManager, Plat, UsageReader, client_ip
 from animator.platform.models import DoubtLog, Lesson, UsageEntry, User
 from animator.platform.schemas import AdjustmentIn, CreditsIn
@@ -468,6 +469,8 @@ async def lessons(
                 "learn_usd": usage.usd(int(r.learn_cost or 0)),
                 "answers": int(r.answers or 0),
                 "last_at": r.last,
+                # Model trials (ADR-056): the model it was made with, when not the normal one.
+                "trial_model": trial_model_of(r.lid),
             }
             for r in rows
         ],

@@ -39,6 +39,7 @@ class Perm(StrEnum):
     REVIEW_MANAGE = "review:manage"  # flag a lesson for the team to improve
     OBJECTS_READ = "objects:read"  # the saved drawings, the warehouse and its harvest (ADR-055)
     OBJECTS_CURATE = "objects:curate"  # approve, reject, edit or import a saved drawing
+    MODELS_TRIAL = "models:trial"  # make a lesson with a trial model, to compare models (ADR-056)
 
 
 ROLE_PERMS: dict[Role, frozenset[Perm]] = {

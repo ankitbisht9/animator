@@ -47,6 +47,7 @@ import {
 } from "../lesson/Extras";
 import { type NotesHandle, NotesPanel } from "../lesson/NotesPanel";
 import { ShareDialog } from "../lesson/ShareDialog";
+import { TrialBadge } from "../lesson/TrialBadge";
 import { Link, navigate } from "../nav";
 import { audienceLabel, StatusBadge, subject } from "../ui/brand";
 import { Alert, Avatar, Badge, Button, EmptyState, Spinner, Tabs } from "../ui/core";
@@ -221,6 +222,7 @@ function LessonBody({ id }: { id: string }) {
             </span>
             {summary && summary.status !== "complete" && <StatusBadge status={summary.status} />}
             {info?.featured && <Badge tone="brand">Featured</Badge>}
+            <TrialBadge model={info?.trial_model} />
             {info?.mine && info.visibility !== "private" && (
               <Badge tone="info">{info.visibility === "public" ? "Public" : "Shared by link"}</Badge>
             )}

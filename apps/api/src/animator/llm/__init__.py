@@ -55,7 +55,9 @@ __all__ = [
 
 
 def build_llm() -> LLMClient:
-    """The client selected by ANIMATOR_LLM_PROVIDER: live OpenAI, live with recording, or replay."""
+    """The client selected by ANIMATOR_LLM_PROVIDER: live OpenAI, live with recording, or replay.
+    With trial models configured (ADR-056), lessons made with one go to OpenRouter; every other call
+    is exactly as before."""
     from animator.config import get_settings
     from animator.llm.openai_client import OpenAILLM
 
@@ -63,9 +65,13 @@ def build_llm() -> LLMClient:
     fixtures = s.resolve(s.animator_llm_fixtures_dir)
     if s.animator_llm_provider == "replay":
         return ReplayLLM(fixtures)
-    live = OpenAILLM(
-        s,
-        PriceTable.load(s.resolve(s.animator_pricing_file)),
-        ModelCatalog.load(s.resolve(s.animator_models_file)),
-    )
-    return RecordingLLM(live, fixtures) if s.animator_llm_provider == "record" else live
+    prices = PriceTable.load(s.resolve(s.animator_pricing_file))
+    live = OpenAILLM(s, prices, ModelCatalog.load(s.resolve(s.animator_models_file)))
+    client: LLMClient = RecordingLLM(live, fixtures) if s.animator_llm_provider == "record" else live
+    if s.trial_models:
+        from animator.llm.openrouter_client import OpenRouterLLM
+        from animator.llm.trials import TrialRouter, trial_log
+
+        log = trial_log(s.resolve(s.animator_data_dir))
+        client = TrialRouter(client, OpenRouterLLM(s, prices), s.trial_models, log)
+    return client

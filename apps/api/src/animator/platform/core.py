@@ -97,10 +97,14 @@ class Platform:
     async def start(
         self, runner: GenerationRunner, app_settings: Settings, doubts: DoubtService | None, engine: Any
     ) -> None:
+        from animator.llm.trials import trial_log
+        from animator.platform.api import lessons as lessons_api
         from animator.platform.catalog import Catalog
 
         self.runner = runner
         self.app_settings = app_settings
+        # Model trials (ADR-056): the lesson pages show which lessons were made with a trial model.
+        lessons_api.TRIAL_LOG = trial_log(app_settings.resolve(app_settings.animator_data_dir))
         self.doubts = doubts
         self.engine = engine
         await self.db.migrate()

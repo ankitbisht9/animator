@@ -33,6 +33,7 @@ from animator.llm import (
     LLMIncomplete,
     LLMRefusal,
 )
+from animator.llm.trials import trial_log
 from animator.pipeline.generator import Pipeline, chapter_outline, scene_record, scene_records
 from animator.pipeline.models import (
     TERMINAL,
@@ -113,9 +114,15 @@ class GenerationRunner:
     # ------------------------------------------------------------------ control
 
     async def start(self, request: GenerationRequest) -> Generation:
+        if request.trial_model is not None and request.trial_model not in self.settings.trial_models:
+            # Model trials (ADR-056): only a configured trial model; anything else is the normal setup.
+            request = request.model_copy(update={"trial_model": None})
         gen = Generation(request=request)
-        gen.models = {s: self._models_of(s) for s in STAGES}
+        trial = request.trial_model
+        gen.models = {s: [trial] if trial else self._models_of(s) for s in STAGES}
         await self._save(gen)
+        if trial:
+            trial_log(self.settings.resolve(self.settings.animator_data_dir)).record(gen.id, trial)
         self._spawn(gen)
         return gen
 
@@ -192,6 +199,10 @@ class GenerationRunner:
     # ------------------------------------------------------------------ internals
 
     def _spawn(self, gen: Generation) -> None:
+        # Model trials (ADR-056): a lesson made with a trial model has its calls sent to that model.
+        assign = getattr(self.pipeline.llm, "assign", None)
+        if callable(assign):
+            assign(gen.id, gen.request.trial_model)
         self._live[gen.id] = gen
         self._tasks[gen.id] = asyncio.create_task(self._run(gen), name=f"generation-{gen.id}")
 

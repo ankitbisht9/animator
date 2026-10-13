@@ -3897,3 +3897,23 @@ a.quota:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* Model trials (ADR-056): the model a trial lesson was made with. */
+.trial-badge {
+  display: inline-flex;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.lesson-tags .trial-badge {
+  margin-left: 0;
+}
+
+.lesson-card-top .trial-badge {
+  margin-left: auto;
+  margin-right: 6px;
+}
+
+.trial-pick .small svg {
+  vertical-align: -2px;
+}

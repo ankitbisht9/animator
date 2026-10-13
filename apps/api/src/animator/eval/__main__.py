@@ -3,10 +3,13 @@
     uv run python -m animator.eval                                   # every topic
     uv run python -m animator.eval --only archimedes,photosynthesis --duration-min 1
     uv run python -m animator.eval --name astra --set ANIMATOR_MODEL_ANIMATION_PLANNER=gpt-6-astra
+    uv run python -m animator.eval --name flash --trial-model qwen/qwen3.5-flash-02-23   # ADR-056
 
 Reports go to var/eval/<name>/report.md and report.json; each generation is stored there too and
 can be opened with the API's FileStore (and the debug page) by pointing ANIMATOR_DATA_DIR at it.
-For a model bake-off, run once per configuration with --set and compare the reports.
+For a model bake-off, run once per configuration with --set and compare the reports. With
+--trial-model (one of ANIMATOR_TRIAL_MODELS) the lessons are made with that OpenRouter model, as an
+admin's trial lesson would be (ADR-056).
 """
 
 from __future__ import annotations
@@ -24,8 +27,10 @@ from animator.engine_client import EngineClient, pool_from_settings
 from animator.eval import generation_metrics, summarize
 from animator.jobs.runner import GenerationRunner
 from animator.jobs.store import FileStore
-from animator.llm import ModelCatalog, PriceTable
+from animator.llm import LLMClient, ModelCatalog, PriceTable
 from animator.llm.openai_client import OpenAILLM
+from animator.llm.openrouter_client import OpenRouterLLM
+from animator.llm.trials import TrialRouter
 from animator.objects.service import ObjectLibrary
 from animator.pipeline.generator import Pipeline
 from animator.pipeline.models import GenerationRequest
@@ -41,15 +46,26 @@ def parse_sets(items: list[str]) -> dict[str, Any]:
     return out
 
 
-def report_md(name: str, settings: Settings, rows: list[dict[str, Any]], total: dict[str, Any]) -> str:
+def report_md(
+    name: str,
+    settings: Settings,
+    rows: list[dict[str, Any]],
+    total: dict[str, Any],
+    trial_model: str | None = None,
+) -> str:
     models = {
         s: ", ".join(settings.stage_model(s)[0])
         for s in ("educational_planner", "storyboard", "animation_planner", "correction", "correction_final")
     }
+    used = (
+        f"Trial model (OpenRouter): {trial_model}; the normal models only where it cannot read images"
+        if trial_model
+        else "Models: " + "; ".join(f"{k} = {v}" for k, v in models.items())
+    )
     lines = [
         f"# Eval run `{name}`",
         "",
-        "Models: " + "; ".join(f"{k} = {v}" for k, v in models.items()),
+        used,
         "",
         "| Metric | Value |",
         "|---|---|",
@@ -84,18 +100,26 @@ async def run(args: argparse.Namespace) -> int:
         topics = [t for t in topics if t["id"] in wanted]
     if args.limit:
         topics = topics[: args.limit]
+    if args.trial_model and args.trial_model not in settings.trial_models:
+        listed = ", ".join(settings.trial_models) or "none (set OPENROUTER_API_KEY and ANIMATOR_TRIAL_MODELS)"
+        print(f"--trial-model must be one of ANIMATOR_TRIAL_MODELS: {listed}", file=sys.stderr)
+        return 1
     name = args.name or time.strftime("run-%Y%m%d-%H%M%S")
     out = settings.resolve(Path("var/eval")) / name
     out.mkdir(parents=True, exist_ok=True)
+    if args.trial_model:
+        # The trial log goes with these lessons (ANIMATOR_DATA_DIR pointed here shows them as trials).
+        settings = settings.model_copy(update={"animator_data_dir": out})
 
     pool = pool_from_settings(settings)
     await pool.start()
     try:
-        llm = OpenAILLM(
-            settings,
-            PriceTable.load(settings.resolve(settings.animator_pricing_file)),
-            ModelCatalog.load(settings.resolve(settings.animator_models_file)),
+        prices = PriceTable.load(settings.resolve(settings.animator_pricing_file))
+        llm: LLMClient = OpenAILLM(
+            settings, prices, ModelCatalog.load(settings.resolve(settings.animator_models_file))
         )
+        if args.trial_model:
+            llm = TrialRouter(llm, OpenRouterLLM(settings, prices), settings.trial_models)
         # Saved drawings are read as lessons would; evaluation lessons record no uses (ADR-055).
         objects = ObjectLibrary(settings, record=False) if settings.animator_objects_enabled else None
         pipeline = Pipeline(EngineClient(pool), llm, settings, objects=objects)
@@ -106,6 +130,7 @@ async def run(args: argparse.Namespace) -> int:
                 topic=t["topic"],
                 audience=t.get("audience", "high-school student"),
                 duration_min=args.duration_min or t.get("duration_min", 2),
+                trial_model=args.trial_model or None,
             )
             print(f"[eval] {t['id']}: {req.topic} ({req.duration_min} min)", flush=True)
             gen = await runner.start(req)
@@ -126,7 +151,9 @@ async def run(args: argparse.Namespace) -> int:
         (out / "report.json").write_text(
             json.dumps({"name": name, "summary": total, "topics": rows}, indent=2), encoding="utf-8"
         )
-        (out / "report.md").write_text(report_md(name, settings, rows, total), encoding="utf-8")
+        (out / "report.md").write_text(
+            report_md(name, settings, rows, total, args.trial_model), encoding="utf-8"
+        )
         print(f"[eval] report: {out / 'report.md'}")
         return 0
     finally:
@@ -143,6 +170,7 @@ def main() -> int:
     ap.add_argument(
         "--set", action="append", default=[], help="setting override, e.g. ANIMATOR_MODEL_STORYBOARD=gpt-5"
     )
+    ap.add_argument("--trial-model", help="make the lessons with this OpenRouter model (ADR-056)")
     return asyncio.run(run(ap.parse_args()))
 
 
