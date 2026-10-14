@@ -2750,3 +2750,88 @@ light tint). Instead, five bubbles of the app's color (`layout/SidebarArt.tsx`, 
 - clear of the menu's words; painted once by CSS, no measurable cost.
 
 **Rollback:** the tag `backup/before-sidebar-bubbles` (ADR-058's art) or `backup/before-sidebar-art` (ADR-057's).
+
+## ADR-060 Objects that join objects: arrows and lanes land where they point (2026-10-14)
+
+**Asked.** In lessons on "Git Integration Options" arrows were drawn away from the nodes they join (nodes in
+one place, arrows in another), commits were piled on each other with doubled labels and arrows ran through
+nodes, and a branch line missed its commits. Re-evaluate the whole pipeline (the model's DSL and the engine)
+on such lessons, find the real causes, fix what can be fixed for sure now, and plan the rest (alternatives,
+cost) for review before anything model-facing or pipeline-replacing is built.
+
+**Backup first:** tag `backup/before-placement-fixes` (= v2.7), `.env.backup-before-placement-fixes`, and a
+snapshot in `D:\animation-backups\v2.7-before-placement-fixes` (all git refs as a bundle, a consistent copy
+of the database, the lesson store, saved drawings, the voice cache).
+
+**Found** (the user's three Git lessons, two fresh ones made before the change and two after, and all 847
+stored scenes drawn by the old and the new engine):
+1. *An engine bug: arrows in a group drawn twice transformed.* An object drawn from its endpoints (arrow,
+   line, vector, dimension, bracket, marker, rope, spring, flow) draws in its group's frame, but what it
+   names (`shared_a.bottom`) is found on the canvas, so the group's position and scale were applied on top:
+   the Git lesson's commit-graph arrows sat ~660 px right of their nodes, as stray arrowheads. 22 scenes.
+   Raw points of such an object are meant in the group's frame (parts of a figure by offsets: lane marks of
+   a junction, a thought bubble's lines; the planner and `repair.py` rely on it), so only references change.
+2. *Arrows aimed at objects ran into them or stopped in the air:* an end at an object's centre ran into it
+   unless the model widened the gap (it did in 41 of 64 measured ends); an end at a box corner of a circle
+   or a turned leaf (`leaf.top_right`) ended beside the shape. 41 arrows.
+3. *Paths written from their place, drawn centred on it:* models write a lane `M 0 0 L 180 0 L 360 0`
+   placed at its first commit (its 0,0 meant there); the engine centres the drawing on the place, so the
+   lane runs one commit early and misses the last (the user's screenshot 1, and a fresh lesson: `M 0 0
+   L 145 50 L 290 50` exactly through three commits, drawn 147 px off). Half the paths in the store are
+   written this way, the other half centred, so the reading cannot change for all.
+4. *A detection hole:* the overlap check skipped objects sharing an id prefix or a group (parts of one
+   drawing), so `commit_d_prime` drawn right on `commit_d` (and four call-stack cards on one spot) was never
+   reported; the critic saw it, the revision did not fix it, and nothing told the pipeline it was worse.
+5. *The model's composition* (not an engine matter): one line drawn from the first commit to the last
+   through the middle ones, two commits given the same coordinates, labels doubled.
+
+**Decision** (no model or prompt change, no extra model call):
+- *Engine, group frames* (`evaluate/evaluate.ts`): an endpoint-drawn object in a group (static `parent` or
+  the `group` action) brings what it references (anchors; a marker's or a flow's object box) into the
+  group's frame, so it lands exactly there and follows the group's moves without doubling them. Raw points
+  stay in the group's frame.
+- *Engine, arrows meet outlines* (`evaluate/binding.ts`): an arrow end at an object's centre stops on the
+  object's outline when its gap leaves the head inside (a gap the model widened is kept); the `to` end
+  whenever the arrow comes from outside, the `from` end only between two objects (an arrow from a body's
+  centre to a free point is a force). An end at a box corner of a circle, ellipse, ball or badged icon is on
+  the round outline. Exact outlines only (round shapes, polygons, box components), not larger than a node
+  (half side <= 140 px), never between objects drawn into each other. The widened gap lives in evaluated
+  params only (`__startGap`/`__endGap`), never in a scene's end state.
+- *Engine checks* (`validation/layout.ts`):
+  - `NODE_OVERLAP`: peer nodes (the same kind and size within 1.3x, each joined by a connector or labelled on
+    its own) covering half of each other, even within one drawing; when one all but hides the other (85%),
+    the sure fix moves it clear (with its card, when each is part of another group). Berries of a bunch, a
+    door's handle, a light touch: not flagged.
+  - `PATH_OFF_ITS_POINTS`: a path or polygon placed at a point, outside groups, that does not move: when its
+    corners read from the place (or on the canvas) land exactly (2.5 px) on other objects' centres, sides'
+    middles or connector ends, more of them than now, at least two besides its own 0,0 and 40% of all, the
+    sure fix moves it there. Checked against everything in the scene, shown yet or not.
+  - The connector reroute hint (`bendFix`) tries new anchors in the arrow's own frame.
+- *Pipeline* (`generator.py`): both codes count as glitches and as untidy, so the polish applies their
+  fixes before a lesson is accepted, a fix that adds one is refused, and a revision that piles nodes up
+  loses to the draft the critic saw.
+- *Player* (`lesson/lesson.ts`): a stored scene that compiles plays even where a newer engine's layout
+  checks find fault (it was checked when it was made). One stored scene needs it: its radius arrows now sit
+  on the wheels, so a label placed beside one pokes out of the frame.
+
+**Verified:**
+- New engine tests (24), a web test, Python tests (glitch, polish, autofix).
+- Every suite green: engine 183, worker 13, components 49, web 12, Python 360, browser end-to-end 10 (1 skipped).
+- Old and new engine drawing every stored scene: 41 of 847 change, every changed object explained by the
+  fixes (41 bound arrows, 39 grouped endpoint objects, 7 labels following them), none otherwise.
+- Pictures checked by eye: the Git lesson's arrows now join their commits; graph edges, supply-chain arrows,
+  a leaf's sunbeam and water arrows reach what they point at.
+- The path fix on the 18 stored paths it would move: right on 12 (both lanes of the screenshot-1 lesson, a
+  hill under its ball, pie slices, half-lit moons, a pyramid layer, a circuit wire), a few px on 4, half
+  right on 1 (one of a compass needle's two halves), wrong on none. Stored lessons keep their DSL: the
+  polish applies it to new lessons.
+- Two fresh Git lessons per layout, before and after: no regressions; the model happened to use references
+  and no groups, and its lanes drawn as arrows now meet their commits.
+
+**Proposed, awaiting approval** (model-facing or new building blocks): a `diagram` component (nodes, edges,
+lanes, laid out by the engine with dagre; edges bound to nodes and routed around them) so the model writes
+structure, not coordinates; prompt guidance (join by anchor references, never a line through nodes); an
+optional re-review after a critic-driven revision; repolishing stored lessons. Not recommended: replacing the
+engine (Manim, Motion Canvas, Remotion, Mermaid/D2 renderers, Penrose). See the plan delivered with this ADR.
+
+**Rollback:** the tag `backup/before-placement-fixes`.

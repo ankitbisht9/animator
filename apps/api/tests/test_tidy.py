@@ -472,6 +472,36 @@ def test_a_covering_drawing_moves_as_one_piece() -> None:
     assert xs == {"magnet1_north": 600, "magnet1_south": 680, "magnet2_north": 760.0, "magnet2_south": 840.0}
 
 
+def test_a_node_drawn_on_another_moves_on_its_own_or_with_its_card() -> None:
+    """ADR-060: commit D' right on commit D moves clear by itself (its arrows and label follow it); the
+    rest of the drawing (the other commit_* nodes) stays. A card of a call stack moves as one group."""
+
+    def node(oid: str, x: float) -> dict[str, Any]:
+        return {"id": oid, "type": "circle", "params": {"radius": 34}, "place": {"x": x, "y": 400.0}}
+
+    dsl = {"objects": [node("commit_c", 630), node("commit_d", 737), node("commit_d_prime", 737)]}
+    pile = {"code": "NODE_OVERLAP", "path": "/objects/commit_d_prime", "fix": {"dx": 0.0, "dy": 77.0}}
+    out = autofix(dsl, [pile])
+    assert out is not None
+    places = {o["id"]: (o["place"]["x"], o["place"]["y"]) for o in out["objects"]}
+    assert places == {"commit_c": (630, 400.0), "commit_d": (737, 400.0), "commit_d_prime": (737, 477.0)}
+    card = {"id": "card_2", "type": "group", "params": {}, "place": {"x": 518.0, "y": 426.0}}
+    body = {
+        "id": "card_2_body",
+        "type": "rectangle",
+        "params": {},
+        "place": {"x": 518.0, "y": 426.0},
+        "parent": "card_2",
+    }
+    moved = autofix(
+        {"objects": [card, body]},
+        [{"code": "NODE_OVERLAP", "path": "/objects/card_2", "fix": {"dx": 0.0, "dy": 104.0}}],
+    )
+    assert moved is not None
+    assert moved["objects"][0]["place"] == {"x": 518.0, "y": 530.0}
+    assert moved["objects"][1]["place"] == {"x": 518.0, "y": 426.0}
+
+
 def test_a_path_drawn_in_frame_coordinates_goes_where_its_points_say() -> None:
     frame = {
         "id": "bike_frame",

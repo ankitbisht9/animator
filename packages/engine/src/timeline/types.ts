@@ -182,6 +182,8 @@ export interface CompiledObject {
   placedOn?: string;
   /** Placement that tracks another object every frame (place.follow: true). */
   followPlace?: FollowPlace;
+  /** Placed by raw coordinates, its centre on them, outside any group (a path may mean its 0,0 there). */
+  pointPlaced?: boolean;
   /** Terms (equation parts) that are revealed by write actions (start hidden). */
   hiddenTerms: string[];
   /** Lifecycle at scene end. */

@@ -181,8 +181,9 @@ export function arrowLayout(p: Params): ArrowLayout {
   const a = pVec(p, "from");
   const b = pVec(p, "to");
   const u = normalize(sub(b, a));
-  const start = add(a, mul(u, pNum(p, "startGap", 0)));
-  const end = sub(b, mul(u, pNum(p, "endGap", 0)));
+  // A gap widened to stop at an object's outline (evaluate/binding.ts) wins over the declared one.
+  const start = add(a, mul(u, pNum(p, "__startGap", pNum(p, "startGap", 0))));
+  const end = sub(b, mul(u, pNum(p, "__endGap", pNum(p, "endGap", 0))));
   const curve = pNum(p, "curve", 0);
   const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
   const control = curve ? add(mid, mul({ x: -u.y, y: u.x }, curve)) : null;

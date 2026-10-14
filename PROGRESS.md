@@ -573,3 +573,20 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   the app's color, painted once by CSS (no measurable cost), never on lesson pages.
 - **The sidebar's bubbles (ADR-059):** ADR-058's art was too colorful for a learning platform and is gone;
   the sidebar is white with a few soft bubbles of the app's color in its top and bottom corners.
+
+## Objects that join objects (ADR-060)
+
+- **Arrows in a group land on what they name:** a group's position and scale were applied twice to arrows,
+  lines and markers that name other objects, so a commit graph's arrows sat far from its commits. Fixed in
+  the engine, for every lesson, stored ones included.
+- **Arrows meet the outlines of what they join:** an arrow aimed at a node's centre stops on its outline
+  instead of running into it; an end at a box corner of a circle (or a turned leaf) is on the round outline.
+- **Branch lines through their commits:** a path written from its place (its 0,0 there) but drawn centred
+  on it is moved onto the points it was written through, when they land exactly on other objects (the
+  polish does it before a lesson is accepted).
+- **Commits piled on one spot are noticed:** two nodes of one diagram drawn on each other (commit D' on
+  commit D, call-stack cards on one spot) count as a glitch; the one that hides the other is moved clear.
+- **Stored lessons keep playing** when a newer engine's layout checks find fault with a scene (a label
+  nudged to the frame's edge).
+- Checked on all 847 stored scenes (41 change, all by the fixes) and on fresh Git lessons. Proposed next, for
+  review: a diagram component laid out by the engine, so the model writes structure instead of coordinates.

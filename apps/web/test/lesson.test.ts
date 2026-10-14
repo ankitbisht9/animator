@@ -41,6 +41,20 @@ describe("lesson building", () => {
     expect(lesson.scenes[2]?.ok).toBe(true);
   });
 
+  it("plays a stored scene whose only faults are layout checks (a label off the frame, ADR-060)", () => {
+    const offFrame = {
+      ...scene("b", 5),
+      objects: [{ id: "far", type: "label", params: { text: "Smaller radius" }, place: { x: -20, y: 400 } }],
+    };
+    const lesson = buildLesson("L", [scene("a", 4), offFrame, scene("c", 3)]);
+    const b = lesson.scenes[1];
+    expect(b?.issues.some((i) => i.severity === "error" && i.source === "layout")).toBe(true);
+    expect(b?.ok).toBe(true);
+    expect(b?.compiled?.objects.map((o) => o.id)).toContain("far");
+    expect(b?.endState).not.toBeNull();
+    expect(lesson.scenes[2]?.compiled?.objects.map((o) => o.id)).toContain("far");
+  });
+
   it("reuses compiled scenes when later scenes arrive (progressive playback)", () => {
     const cache: LessonCache = { keys: [], scenes: [] };
     const a = buildLesson("L", [scene("a", 4)], cache);

@@ -506,6 +506,7 @@ class Compiler {
         const local = this.toParentFrame(o, p, ctx);
         o.ch.x.base = roundTo(local.x, 4);
         o.ch.y.base = roundTo(local.y, 4);
+        if ("x" in place && (place.anchor ?? "center") === "center" && !o.parent) o.pointPlaced = true;
       }
     }
   }

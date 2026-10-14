@@ -9,7 +9,7 @@ from typing import Any
 
 from animator.engine_client import EngineClient, EngineWorkerPool
 from animator.llm import LLMRequest
-from animator.pipeline.generator import GLITCHES, glitches_of
+from animator.pipeline.generator import GLITCHES, UNTIDY, glitches_of
 from animator.pipeline.tidy import autofix
 from tests.test_pipeline import SCENES, Script, run
 
@@ -86,6 +86,74 @@ async def test_the_glitch_scene_really_has_a_glitch_the_polish_cannot_fix(pool: 
     assert "LEAVES_CONTAINER" in await glitch_count(pool, with_pebble(560))
     assert await glitch_count(pool, with_pebble(470)) == []
     assert {"HIDDEN_TEXT", "OUT_OF_STAGE", "TEXT_WRAPPED", "LEAVES_CONTAINER"} <= GLITCHES
+
+
+async def test_nodes_piled_on_one_spot_are_a_glitch_the_polish_moves_clear(pool: EngineWorkerPool) -> None:
+    """ADR-060: commit D' drawn right on commit D, each labelled on its own, is a glitch (the overlap
+    check used to skip them: one id prefix). The engine's hint moves D' clear, its label following."""
+    s: dict[str, Any] = copy.deepcopy(SCENES[0])
+    commits = [
+        {"id": "commit_d", "type": "circle", "params": {"radius": 34}, "place": {"x": 1300, "y": 420}},
+        {"id": "commit_d_prime", "type": "circle", "params": {"radius": 34}, "place": {"x": 1300, "y": 420}},
+        {
+            "id": "d_label",
+            "type": "label",
+            "params": {"text": "D"},
+            "place": {"relativeTo": "commit_d", "side": "above"},
+        },
+        {
+            "id": "d2_label",
+            "type": "label",
+            "params": {"text": "D'"},
+            "place": {"relativeTo": "commit_d_prime", "side": "below"},
+        },
+    ]
+    s["objects"] += commits
+    s["timeline"] += [
+        {"id": f"mk_{o['id']}", "action": "create", "target": o["id"], "start": {"at": 0.5}} for o in commits
+    ]
+    engine = EngineClient(pool)
+    res = await engine.compile(s, None)
+    assert res.ok, [i.message for i in res.issues if i.severity == "error"]
+    piles = [i for i in glitches_of(res) if i.code == "NODE_OVERLAP"]
+    assert piles and piles[0].fix is not None and "NODE_OVERLAP" in UNTIDY
+    fixed = autofix(s, [i.model_dump() for i in piles])
+    assert fixed is not None
+    again = await engine.compile(fixed, None)
+    assert again.ok and not any(i.code == "NODE_OVERLAP" for i in again.issues)
+
+
+async def test_a_branch_line_beside_its_commits_is_moved_onto_them(pool: EngineWorkerPool) -> None:
+    """ADR-060 (seen in a fresh Git lesson): a branch drawn as a path whose `d` starts at its place
+    (`M 0 0 L 145 50 L 290 50` at the first commit) is drawn centred there, beside its commits. The
+    engine's hint moves it onto them: every corner then sits on a commit."""
+    s: dict[str, Any] = copy.deepcopy(SCENES[0])
+    commits = [
+        {"id": f"commit_{i}", "type": "circle", "params": {"radius": 22}, "place": {"x": x, "y": y}}
+        for i, (x, y) in enumerate([(900, 500), (1045, 550), (1190, 550)])
+    ]
+    lane = {
+        "id": "rebase_path",
+        "type": "path",
+        "params": {"d": "M 0 0 L 145 50 L 290 50", "closed": False},
+        "place": {"x": 900, "y": 500, "anchor": "center"},
+    }
+    s["objects"] += [*commits, lane]
+    s["timeline"] += [
+        {"id": f"mk_{o['id']}", "action": "create", "target": o["id"], "start": {"at": 0.5}}
+        for o in [*commits, lane]
+    ]
+    engine = EngineClient(pool)
+    res = await engine.compile(s, None)
+    assert res.ok, [i.message for i in res.issues if i.severity == "error"]
+    off = [i for i in glitches_of(res) if i.code == "PATH_OFF_ITS_POINTS"]
+    assert off and "PATH_OFF_ITS_POINTS" in UNTIDY
+    fixed = autofix(s, [i.model_dump() for i in off])
+    assert fixed is not None
+    moved = next(o for o in fixed["objects"] if o["id"] == "rebase_path")
+    assert moved["place"] == {"x": 1045.0, "y": 525.0, "anchor": "center"}
+    again = await engine.compile(fixed, None)
+    assert again.ok and not any(i.code == "PATH_OFF_ITS_POINTS" for i in again.issues)
 
 
 def scripted(repair: dict[str, Any] | None) -> Script:

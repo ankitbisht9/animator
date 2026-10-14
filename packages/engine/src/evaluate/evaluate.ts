@@ -14,6 +14,7 @@ import { pinnedOrigin, relativeOrigin } from "../layout/placement";
 import {
   apply,
   IDENTITY,
+  invert,
   type Mat,
   multiply,
   objectMatrix,
@@ -30,6 +31,7 @@ import { getTheme } from "../theme/themes";
 import { currentSegment, type SampleEnv, sampleChannel, sampleNumber } from "../timeline/channel";
 import type { CompiledObject, CompiledScene, CompiledSolver, PulseSeg } from "../timeline/types";
 import { CANVAS } from "../version";
+import { bindArrowEnds } from "./binding";
 import { emphasisEffect, presenceEffect } from "./effects";
 
 export interface Emphasis {
@@ -242,18 +244,45 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
       const v = safeExpr(b.expr, null);
       params[name] = b.text ? formatNumber(v, b.format) : v;
     }
+    // The group this object moves with: its static parent, or a group it joined (`group` action).
+    const link = obj.links.find((l) => t >= l.t0 && t < l.t1);
+    const parentId = link?.group ?? obj.parent;
+    const parent = parentId ? objects.get(parentId) : undefined;
+    const groupFrame = parent ? (link ? multiply(parent.rawMatrix, link.inv) : parent.rawMatrix) : null;
+    // An object drawn from its endpoints draws in its group's frame: raw points are given in that
+    // frame (parts of the group, by offsets from it), while what it refers to (another object's anchor
+    // or box) is found on the canvas, so it is brought into the frame to land exactly there (ADR-060).
+    const toFrame = spec?.worldSpace && groupFrame ? invert(groupFrame) : null;
+    const refs: Record<string, string> = {};
     for (const key of spec?.pointParams ?? []) {
       const v = params[key];
       if (typeof v === "string") {
         const dot = v.indexOf(".");
-        params[key] = anchorOf(v.slice(0, dot), v.slice(dot + 1)) ?? { x: 0, y: 0 };
+        const p = anchorOf(v.slice(0, dot), v.slice(dot + 1));
+        params[key] = p ?? { x: 0, y: 0 };
+        if (p) refs[key] = v;
       }
     }
+    if (obj.type === "arrow" && Object.keys(refs).length) {
+      bindArrowEnds(
+        params,
+        refs,
+        (id) => {
+          const e = objects.get(id);
+          return e && { type: e.obj.type, params: e.params, localBBox: e.localBBox, rawMatrix: e.rawMatrix };
+        },
+        toFrame ? Math.sqrt(Math.abs(toFrame[0] * toFrame[3] - toFrame[1] * toFrame[2])) : 1,
+      );
+    }
+    if (toFrame) for (const key of Object.keys(refs)) params[key] = apply(toFrame, params[key] as Vec2);
     for (const key of spec?.objectParams ?? []) {
       const ref = params[key];
       const e = typeof ref === "string" ? objects.get(ref) : undefined;
       if (typeof ref === "string" && e) {
-        params[`__${key}`] = { box: bboxOf(ref) ?? e.layoutBBox, matrix: e.rawMatrix, params: e.params };
+        const box = bboxOf(ref) ?? e.layoutBBox;
+        params[`__${key}`] = toFrame
+          ? { box: transformRect(toFrame, box), matrix: multiply(toFrame, e.rawMatrix), params: e.params }
+          : { box, matrix: e.rawMatrix, params: e.params };
       }
     }
     const morph = (obj.prep as { morph?: MorphPrep } | undefined)?.morph;
@@ -296,15 +325,10 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
     let raw: Mat = own;
     let m: Mat = own;
     let parentAlpha = 1;
-    const link = obj.links.find((l) => t >= l.t0 && t < l.t1);
-    const parentId = link?.group ?? obj.parent;
-    if (parentId) {
-      const p = objects.get(parentId);
-      if (p) {
-        raw = link ? multiply(multiply(p.rawMatrix, link.inv), own) : multiply(p.rawMatrix, own);
-        m = link ? multiply(multiply(p.matrix, link.inv), own) : multiply(p.matrix, own);
-        parentAlpha = p.alpha;
-      }
+    if (parent && groupFrame) {
+      raw = multiply(groupFrame, own);
+      m = link ? multiply(multiply(parent.matrix, link.inv), own) : multiply(parent.matrix, own);
+      parentAlpha = parent.alpha;
     }
 
     // Emphasis.

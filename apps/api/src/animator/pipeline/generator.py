@@ -329,6 +329,8 @@ UNTIDY = {
     "CONNECTOR_CROSSES_OBJECT",
     "CONNECTORS_CROSS",
     "OBJECT_OVERLAP",
+    "NODE_OVERLAP",
+    "PATH_OFF_ITS_POINTS",
     "UNSUPPORTED_GLYPH",
     "NEAR_EDGE",
     "HIDDEN_TEXT",
@@ -339,8 +341,9 @@ UNTIDY = {
 }
 
 # What a viewer sees as a glitch: text hidden or cut, things out of the stage, one thing drawn into
-# another, a row that wraps. Counted per lesson (`glitches_left`); a new timing for the voice must not
-# add one. (ADR-040's model repair round for them was reverted in ADR-042.)
+# another (two nodes of a diagram piled on one spot, a branch line beside its commits: ADR-060), a row
+# that wraps. Counted per lesson (`glitches_left`); a new timing for the voice must not add one.
+# (ADR-040's model repair round for them was reverted in ADR-042.)
 GLITCHES = {
     "HIDDEN_TEXT",
     "OUT_OF_STAGE",
@@ -349,6 +352,8 @@ GLITCHES = {
     "TEXT_WRAPPED",
     "LEAVES_CONTAINER",
     "OBJECT_OVERLAP",
+    "NODE_OVERLAP",
+    "PATH_OFF_ITS_POINTS",
     "LABEL_OCCLUDES",
     "CONNECTOR_CROSSES_LABEL",
     "TEXT_TOO_SMALL",

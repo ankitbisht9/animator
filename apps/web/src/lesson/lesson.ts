@@ -35,6 +35,11 @@ export interface Lesson {
   duration: number;
 }
 
+/** Every error is a layout check's (what is drawn where), none a broken scene's. */
+export function layoutOnly(issues: ValidationIssue[]): boolean {
+  return issues.every((i) => i.severity !== "error" || i.source === "layout");
+}
+
 /** Fallback shown in place of a scene that failed validation (never silently). */
 function degradedDuration(raw: unknown): number {
   const d = (raw as { duration?: unknown })?.duration;
@@ -81,8 +86,10 @@ export function buildLesson(
     if (lifted.ok && lifted.scene) {
       const res = compileScene(lifted.scene, { prev });
       issues = res.issues;
-      ok = res.ok;
-      if (res.ok && res.compiled) {
+      // A scene was checked when it was made: one that compiles plays, even where a newer engine's
+      // layout checks find fault with it (a label nudged to the frame's edge, ADR-060).
+      ok = res.ok || (res.compiled !== undefined && layoutOnly(res.issues));
+      if (ok && res.compiled) {
         compiled = res.compiled;
         endState = sceneEndState(res.compiled, prev, index);
         prev = endState;

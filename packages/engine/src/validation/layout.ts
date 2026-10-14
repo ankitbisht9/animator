@@ -8,11 +8,12 @@
 import { getSpec } from "../catalog/registry";
 import { contrastRatio } from "../color/color";
 import { LIMITS } from "../dsl/scene";
-import { cameraMatrix, evaluate, type FrameObject } from "../evaluate/evaluate";
+import { cameraMatrix, evaluate, evaluateObjects, type FrameObject } from "../evaluate/evaluate";
+import { parsePath } from "../geom/path";
 import { CANVAS_RECT, CAPTION_BAR } from "../layout/templates";
-import { apply, multiply, transformRect } from "../math/matrix";
+import { apply, invert, multiply, transformRect } from "../math/matrix";
 import { roundTo } from "../math/num";
-import { area, contains, expand, intersection, type Rect } from "../math/rect";
+import { area, center, contains, expand, intersection, type Rect } from "../math/rect";
 import type { Vec2 } from "../math/vec";
 import { brokenWordsIn } from "../text/layout";
 import { getTheme } from "../theme/themes";
@@ -159,6 +160,106 @@ export function clearHint(a: Rect, b: Rect, zoom = 1): IssueFix | undefined {
 }
 /** A connector may touch a label's edge (e.g. an arrow ending at `label.left`), not run through it. */
 const CONNECTOR_CLEARANCE = 6;
+/** Peer nodes may touch or overlap a little (berries of a bunch); covering this share of the smaller
+ * one's box is drawn onto it, and this much all but hides it. */
+const NODE_OVERLAP_SHARE = 0.5;
+const NODE_HIDDEN_SHARE = 0.85;
+/** Nodes of one diagram are drawn alike: their sizes differ by this factor at most. */
+const NODE_SIZE_RATIO = 1.3;
+/** Actions that leave an object where it is, the shape it is. */
+const STILL_ACTIONS = new Set([
+  "create",
+  "remove",
+  "show",
+  "hide",
+  "fade",
+  "color_change",
+  "draw",
+  "write",
+  "highlight",
+  "label",
+  "wait",
+]);
+/** A corner of a path lands on an object when it is this close (px) to its centre, a side's middle or an
+ * end: a model writes the points it means exactly; a few px off is a coincidence. */
+const PATH_POINT_TOL = 2.5;
+/** ... and at least this share of its corners must land so, for a reading to be the one meant. */
+const PATH_POINT_SHARE = 0.4;
+
+/** The corners of a path or polygon (local coordinates): where its segments start and end. */
+function cornersOf(o: FrameObject): Vec2[] {
+  if (o.type === "polygon") return Array.isArray(o.params.points) ? (o.params.points as Vec2[]) : [];
+  try {
+    return parsePath(String(o.params.d ?? ""))
+      .flatMap((s) => (s.c === "Z" ? [] : [s.p]))
+      .slice(0, 400);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * For a path or polygon placed at a point: the move that draws it the way its coordinates were
+ * written (from its place, or on the canvas), when that puts at least two more of its corners right on
+ * other objects than it has now; otherwise undefined.
+ */
+export function pointsFix(
+  o: FrameObject,
+  objects: readonly FrameObject[],
+): { dx: number; dy: number; how: string; hits: number } | undefined {
+  const m = o.matrix;
+  // Upright, uniformly scaled (a turned path's corners are not compared).
+  if (Math.abs(m[1]) > 1e-9 || Math.abs(m[2]) > 1e-9 || m[0] <= 0 || Math.abs(m[0] - m[3]) > 1e-9) return undefined;
+  const k = m[0];
+  const c = center(o.localBBox);
+  if (Math.hypot(c.x, c.y) * k < 4) return undefined; // its 0,0 is its centre: one reading only
+  const corners = cornersOf(o);
+  if (corners.length < 2) return undefined;
+  const drawn = corners.map((v) => apply(m, v));
+  const targets: Vec2[] = [];
+  for (const x of objects) {
+    if (x.id === o.id || x.type === "group") continue;
+    const sp = getSpec(x.type);
+    if (sp?.labelLike || x.type === "text" || x.type === "equation") continue;
+    if (sp?.worldSpace) {
+      for (const key of sp.pointParams ?? []) {
+        const p = x.params[key] as Vec2 | undefined;
+        if (p && typeof p.x === "number" && typeof p.y === "number") targets.push(apply(x.matrix, p));
+      }
+      continue;
+    }
+    const b = x.bbox;
+    targets.push(
+      { x: b.x + b.w / 2, y: b.y + b.h / 2 },
+      { x: b.x + b.w / 2, y: b.y },
+      { x: b.x + b.w / 2, y: b.y + b.h },
+      { x: b.x, y: b.y + b.h / 2 },
+      { x: b.x + b.w, y: b.y + b.h / 2 },
+    );
+  }
+  const landed = (shift: Vec2) =>
+    drawn.map((p) => targets.some((q) => Math.hypot(p.x + shift.x - q.x, p.y + shift.y - q.y) <= PATH_POINT_TOL));
+  const now = landed({ x: 0, y: 0 }).filter(Boolean).length;
+  const readings = [
+    { how: "from its place (its 0,0 there)", shift: { x: k * c.x, y: k * c.y }, fromPlace: true },
+    ...(k === 1 ? [{ how: "on the canvas", shift: { x: -m[4], y: -m[5] }, fromPlace: false }] : []),
+  ];
+  let best: { dx: number; dy: number; how: string; hits: number } | undefined;
+  for (const r of readings) {
+    const on = landed(r.shift);
+    const h = on.filter(Boolean).length;
+    // Read from its place, its own 0,0 lands on the place, which models put on something (the sun an
+    // orbit goes round): that corner proves nothing, so two others must land.
+    const telling = on.filter(
+      (x, i) => x && !(r.fromPlace && Math.hypot((corners[i] as Vec2).x, (corners[i] as Vec2).y) < 0.5),
+    ).length;
+    // More corners on things than now (a lane of evenly spaced commits drawn one commit early still has
+    // most of its corners on commits), a fair share of all (not 2 of a crane's 9), two that tell.
+    if (telling >= 2 && h / corners.length >= PATH_POINT_SHARE && h > now && (!best || h > best.hits))
+      best = { dx: roundTo(r.shift.x, 1), dy: roundTo(r.shift.y, 1), how: r.how, hits: h };
+  }
+  return best;
+}
 /** How far a rerouted connector keeps from everything it does not join. */
 const ROUTE_CLEARANCE = 10;
 
@@ -242,6 +343,39 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
         t < a.end &&
         (a.action === "run_solver" || (a.target === id && (a.action === "move" || a.action === "animate"))),
     );
+  // Paths and polygons placed at a point (checked once each), and what moves or changes shape: its
+  // coordinates are not where it rests.
+  const pointPlaced = new Set(
+    cs.objects.filter((o) => o.pointPlaced && (o.type === "path" || o.type === "polygon")).map((o) => o.id),
+  );
+  const pathChecked = new Set<string>();
+  const reshaped = new Set(
+    actions.filter((a) => a.target && !STILL_ACTIONS.has(a.action)).map((a) => a.target as string),
+  );
+  // Things joined or labelled on their own: an end of an arrow or line, what a label or a text is placed
+  // against or points at. (A handle placed on a door is a part of the door, not a label.)
+  const addressed = new Set<string>();
+  for (const o of cs.objects) {
+    const sp = getSpec(o.type);
+    const labelling = (sp?.labelLike ?? false) || o.type === "text" || o.type === "equation";
+    if (!sp?.worldSpace && !labelling) continue;
+    for (const k of sp?.pointParams ?? []) {
+      const v = o.params[k];
+      if (typeof v === "string") addressed.add(v.split(".")[0] as string);
+    }
+    const on = placedOn.get(o.id);
+    if (labelling && on) addressed.add(on);
+  }
+  // Two nodes of one diagram (commit_d and commit_d_prime): parts of one drawing by their ids or their
+  // group, yet the same kind of thing, of the same size, each joined or labelled on its own.
+  const peers = (a: FrameObject, b: FrameObject) => {
+    if (a.type !== b.type || !addressed.has(a.id) || !addressed.has(b.id)) return false;
+    if (placedOn.get(a.id) === b.id || placedOn.get(b.id) === a.id) return false;
+    if (parentOf.get(a.id) === b.id || parentOf.get(b.id) === a.id) return false;
+    const sa = area(a.bbox);
+    const sb = area(b.bbox);
+    return Math.min(sa, sb) > 0 && Math.max(sa, sb) <= NODE_SIZE_RATIO * Math.min(sa, sb);
+  };
 
   for (const t of sampleTimes(cs)) {
     const frame = evaluate(cs, t);
@@ -461,11 +595,38 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
     });
     // `frame.objects` is in drawing order: a later object covers an earlier one.
     const drawnAt = new Map(frame.objects.map((o, i) => [o.id, i]));
+    // Peer nodes drawn into each other (commit D' right on commit D, call-stack cards piled on one
+    // spot) are a glitch even within one drawing (ADR-060). When one all but hides the other, the sure
+    // fix moves the upper one clear (with its own card, when each is part of a different group); what
+    // joins or labels it follows.
+    const nodeOverlap = (a: FrameObject, b: FrameObject, at: number, zoom: number) => {
+      const [lower, upper] = (drawnAt.get(a.id) ?? 0) < (drawnAt.get(b.id) ?? 0) ? [a, b] : [b, a];
+      if (upper.alpha < 0.9 || lower.alpha < 0.9) return;
+      const rl = screen.get(lower.id) as Rect;
+      const ru = screen.get(upper.id) as Rect;
+      const ov = intersection(rl, ru);
+      const share = ov ? area(ov) / Math.max(1, Math.min(area(rl), area(ru))) : 0;
+      if (share < NODE_OVERLAP_SHARE) return;
+      const group = parentOf.get(upper.id);
+      const mover = group && group !== parentOf.get(lower.id) ? group : upper.id;
+      report(
+        "NODE_OVERLAP",
+        `${mover}|${upper.id}|${lower.id}`,
+        `'${upper.id}' is drawn over '${lower.id}' at ${roundTo(at, 2)}s, though each is joined or labelled on its own.`,
+        at,
+        "warning",
+        "Give each node its own place (32 px or more apart), or show them at different times.",
+        share >= NODE_HIDDEN_SHARE ? clearHint(ru, rl, upper.layer === "overlay" ? 1 : zoom) : undefined,
+      );
+    };
     for (let i = 0; i < solids.length; i++) {
       for (let j = i + 1; j < solids.length; j++) {
         const a = solids[i] as FrameObject;
         const b = solids[j] as FrameObject;
-        if (sameDrawing(a.id, b.id) || related(a.id, b.id)) continue;
+        if (sameDrawing(a.id, b.id) || related(a.id, b.id)) {
+          if (peers(a, b) && !moving(a.id, t) && !moving(b.id, t)) nodeOverlap(a, b, t, frame.camera.zoom);
+          continue;
+        }
         const [lower, upper] = (drawnAt.get(a.id) ?? 0) < (drawnAt.get(b.id) ?? 0) ? [a, b] : [b, a];
         // See-through shapes (a Venn diagram, a pale "displaced water" region under a ship) hide nothing.
         if (upper.alpha < 0.9 || lower.alpha < 0.9) continue;
@@ -759,11 +920,21 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
       const boxA = a ? byId.get(a)?.bbox : undefined;
       const boxB = b ? byId.get(b)?.bbox : undefined;
       if (a && b && boxA && boxB) {
+        // Anchors are found on the canvas; the arrow draws its points in its own frame (its group's).
+        // Side anchors are not bound to an outline, so the gaps go back to the declared ones.
+        const own = invert(k.c.matrix);
         for (const side of ["top", "bottom", "left", "right"] as const) {
           for (const curve of steps) {
             candidates.push({
               cost: 60 + Math.abs(curve),
-              draw: { ...k.c.params, from: boxAnchor(boxA, side), to: boxAnchor(boxB, side), curve },
+              draw: {
+                ...k.c.params,
+                __startGap: undefined,
+                __endGap: undefined,
+                from: apply(own, boxAnchor(boxA, side)),
+                to: apply(own, boxAnchor(boxB, side)),
+                curve,
+              },
               fix: { from: `${a}.${side}`, to: `${b}.${side}`, curve },
             });
           }
@@ -843,6 +1014,30 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
         );
       }
     });
+
+    // A path or polygon placed at a point, drawn away from the points it was written through
+    // (ADR-060). Its coordinates are read with their centre on the place; models write them either
+    // from the place (0,0 there) or on the canvas. When one of those readings puts at least two more of
+    // its corners right on other objects (commits on a branch line), that is the drawing meant: the
+    // sure fix moves it there. Checked once, at rest.
+    for (const o of settled) {
+      if (!pointPlaced.has(o.id) || pathChecked.has(o.id) || reshaped.has(o.id) || moving(o.id, t)) continue;
+      pathChecked.add(o.id);
+      // Everything in the scene counts, shown yet or not (a trolley set on a crane's beam later).
+      const all = [...evaluateObjects(cs, t).objects.values()].map((e) => e.frame);
+      const fix = pointsFix(o, all);
+      if (fix) {
+        report(
+          "PATH_OFF_ITS_POINTS",
+          o.id,
+          `'${o.id}' is drawn ${Math.round(Math.hypot(fix.dx, fix.dy))} px away from the points it was written through: written ${fix.how}, ${fix.hits} of its corners land on other objects.`,
+          t,
+          "warning",
+          "Place it by the point its coordinates start from, or join the objects with lines or arrows by their anchors.",
+          { dx: fix.dx, dy: fix.dy },
+        );
+      }
+    }
   }
 
   if (clutterMax > LIMITS.maxVisibleObjects) {
