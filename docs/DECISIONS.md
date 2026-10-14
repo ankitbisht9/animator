@@ -2805,7 +2805,8 @@ stored scenes drawn by the old and the new engine):
   - `PATH_OFF_ITS_POINTS`: a path or polygon placed at a point, outside groups, that does not move: when its
     corners read from the place (or on the canvas) land exactly (2.5 px) on other objects' centres, sides'
     middles or connector ends, more of them than now, at least two besides its own 0,0 and 40% of all, the
-    sure fix moves it there. Checked against everything in the scene, shown yet or not.
+    sure fix moves it there. Checked against everything in the scene, shown yet or not; faded drawings (the
+    ghost of an old branch) are checked too.
   - The connector reroute hint (`bendFix`) tries new anchors in the arrow's own frame.
 - *Pipeline* (`generator.py`): both codes count as glitches and as untidy, so the polish applies their
   fixes before a lesson is accepted, a fix that adds one is refused, and a revision that piles nodes up

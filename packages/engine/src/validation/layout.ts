@@ -1020,8 +1020,10 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
     // from the place (0,0 there) or on the canvas. When one of those readings puts at least two more of
     // its corners right on other objects (commits on a branch line), that is the drawing meant: the
     // sure fix moves it there. Checked once, at rest.
-    for (const o of settled) {
-      if (!pointPlaced.has(o.id) || pathChecked.has(o.id) || reshaped.has(o.id) || moving(o.id, t)) continue;
+    // Faded drawings count too (a ghost of the old branch is still drawn where it is).
+    for (const o of frame.objects) {
+      if (o.presence < 0.999 || !pointPlaced.has(o.id) || pathChecked.has(o.id) || reshaped.has(o.id)) continue;
+      if (moving(o.id, t)) continue;
       pathChecked.add(o.id);
       // Everything in the scene counts, shown yet or not (a trolley set on a crane's beam later).
       const all = [...evaluateObjects(cs, t).objects.values()].map((e) => e.frame);
