@@ -75,6 +75,40 @@ def test_autofix_fixes_sure_things_only() -> None:
     assert autofix(dsl, []) is None
 
 
+def test_autofix_starts_an_action_from_the_end_of_the_last_beat_its_length_earlier() -> None:
+    # The last beat ends with the scene, so no longer scene fits an action that starts there.
+    dsl: dict[str, Any] = {
+        "duration": 20.4,
+        "narration": {"beats": [{"id": "b1"}, {"id": "b3"}]},
+        "timeline": [
+            {
+                "id": "glow",
+                "start": {"at": "beat_end:b3", "after": None, "with": None, "delay": 0.1},
+                "duration": 0.6,
+            },
+            {"id": "early", "start": {"at": "beat_end:b1"}, "duration": 30},
+        ],
+    }
+    late = {
+        "code": "ACTION_EXCEEDS_SCENE",
+        "message": "Action 'glow' ends at 21.1s but the scene lasts 20.4s.",
+    }
+    fixed = autofix(dsl, [late])
+    assert fixed is not None and fixed["duration"] == 20.4
+    assert fixed["timeline"][0]["start"] == {"at": 19.7, "after": None, "with": None, "delay": None}
+    # after another beat, a longer scene still does fit it
+    long = {
+        "code": "ACTION_EXCEEDS_SCENE",
+        "message": "Action 'early' ends at 21s but the scene lasts 20.4s.",
+    }
+    longer = autofix(dsl, [long])
+    assert (
+        longer is not None
+        and longer["duration"] == 21.3
+        and longer["timeline"][1]["start"] == {"at": "beat_end:b1"}
+    )
+
+
 def test_autofix_brings_an_object_back_into_the_frame_as_the_engine_says() -> None:
     def obj(oid: str, place: dict[str, Any]) -> dict[str, Any]:
         return {"id": oid, "type": "block", "params": {}, "place": place, "scale": None}
@@ -515,3 +549,158 @@ def test_a_path_drawn_in_frame_coordinates_goes_where_its_points_say() -> None:
     relative = {**frame, "params": {"d": "M0 0 l100 0", "closed": False}}  # relative commands: use the hint
     moved = autofix({"objects": [relative]}, [oob])
     assert moved is not None and moved["objects"][0]["place"]["x"] == 800.0
+
+
+def test_tidy_gives_diagram_parts_the_engine_form_and_follows_every_reference() -> None:
+    dsl: dict[str, Any] = {
+        "objects": [
+            {
+                "id": "history",
+                "type": "diagram",
+                "params": {
+                    "layout": "lanes",
+                    "lanes": [{"id": "Main", "label": "main"}, {"id": "feature", "label": "feature"}],
+                    "nodes": [
+                        {"id": "A", "label": "A", "lane": "Main"},
+                        {"id": "a", "label": "a", "lane": "main"},
+                        {"id": "C'", "label": "C'", "lane": "feature"},
+                        {"id": "10", "label": "Ten", "lane": "feature"},
+                        {"id": "top", "label": "top", "lane": "feature"},
+                    ],
+                    "edges": [
+                        {"from": "A", "to": "a"},
+                        {"from": "a", "to": "C'"},
+                        {"id": "C'->10", "from": "c'", "to": "Ten"},
+                        {"from": "10", "to": "top"},
+                    ],
+                },
+            },
+            {
+                "id": "tip",
+                "type": "label",
+                "params": {"text": "history.C'", "pointTo": "history.C'_top_left"},
+                "place": {"at": "history.10.left", "anchor": "right", "offset": None},
+            },
+            {
+                "id": "beside",
+                "type": "label",
+                "params": {"text": "new"},
+                "place": {
+                    "relativeTo": "history.C'",
+                    "side": "above",
+                    "gap": 30,
+                    "align": "center",
+                    "follow": True,
+                },
+            },
+            {"id": "link", "type": "arrow", "params": {"from": "history.top", "to": "history.A_bottom"}},
+        ],
+        "timeline": [
+            {
+                "id": "w",
+                "action": "write",
+                "target": "history",
+                "terms": ["C'", "C'->10", "Main"],
+                "start": {"at": 1},
+            },
+            {"id": "h", "action": "highlight", "target": "history", "terms": ["10"], "start": {"after": "w"}},
+            {"id": "t", "action": "highlight", "target": "tip", "terms": ["C'"], "start": {"with": "w"}},
+            {
+                "id": "m",
+                "action": "move",
+                "target": "beside",
+                "to": {"relativeTo": "history.10", "side": "right"},
+            },
+        ],
+    }
+    out = tidy(dsl)
+    params = out["objects"][0]["params"]
+    # 'A' would be 'a', which a node already is; a box anchor's name is taken by the diagram
+    assert [n["id"] for n in params["nodes"]] == ["a_2", "a", "c_prime", "n10", "top_node"]
+    assert [n["lane"] for n in params["nodes"]] == ["main", "main", "feature", "feature", "feature"]
+    assert params["lanes"][0]["id"] == "main"
+    # edge ends by id as written, in another spelling of it, or by the node's label
+    assert [(e.get("id"), e["from"], e["to"]) for e in params["edges"]] == [
+        (None, "a_2", "a"),
+        (None, "a", "c_prime"),
+        ("c_prime_10", "c_prime", "n10"),
+        (None, "n10", "top_node"),
+    ]
+    tip, beside, link = out["objects"][1:]
+    assert tip["params"]["pointTo"] == "history.c_prime_top_left"
+    assert tip["params"]["text"] == "history.C'"  # text stays as written
+    assert tip["place"]["at"] == "history.n10_left"
+    # beside a part (relativeTo takes whole objects): pinned at that side of it
+    assert beside["place"] == {
+        "at": "history.c_prime_top",
+        "anchor": "bottom",
+        "offset": {"x": 0, "y": -30},
+        "follow": True,
+    }
+    assert link["params"] == {"from": "history.top", "to": "history.a_2_bottom"}  # the box's top stays
+    assert [a.get("terms") for a in out["timeline"]] == [
+        ["c_prime", "c_prime_10", "main"],
+        ["n10"],
+        ["C'"],
+        None,
+    ]
+    # a move beside a part, too
+    assert out["timeline"][3]["to"] == {
+        "at": "history.n10_right",
+        "anchor": "left",
+        "offset": {"x": 24, "y": 0},
+        "follow": None,
+    }
+
+
+def test_tidy_leaves_a_clean_diagram_as_it_is() -> None:
+    dsl: dict[str, Any] = {
+        "objects": [
+            {
+                "id": "flow",
+                "type": "diagram",
+                "params": {
+                    "nodes": [{"id": "s", "label": "Start"}, {"id": "e", "label": "End", "lane": None}],
+                    "edges": [{"id": None, "from": "s", "to": "e"}],
+                },
+                "place": {"relativeTo": "title", "side": "below", "gap": None},
+            },
+            {"id": "note", "type": "label", "params": {"text": "0.5 s", "pointTo": "flow.e_top"}},
+            {
+                "id": "aside",
+                "type": "label",
+                "params": {"text": "x"},
+                "place": {"relativeTo": "flow", "side": "left"},
+            },
+        ],
+        "timeline": [{"id": "h", "action": "highlight", "target": "flow", "terms": ["s", "nowhere"]}],
+    }
+    before = copy.deepcopy(dsl)
+    assert tidy(dsl) == before
+
+
+def test_tidy_gives_action_ids_the_engine_form_and_the_starts_that_name_them() -> None:
+    dsl: dict[str, Any] = {
+        "timeline": [
+            {"id": "Show_C'", "start": {"at": 0}},
+            {"id": "show_c_prime", "start": {"after": "Show_C'"}},
+            {"id": "2nd step", "start": {"with": "2nd step"}},
+            {"id": "glow", "start": {"after": "Show_c_prime_2"}},
+            {"id": "late", "start": {"after": "a8"}},
+        ]
+    }
+    out = tidy(dsl)
+    assert [a["id"] for a in out["timeline"]] == [
+        "show_c_prime_2",
+        "show_c_prime",
+        "n2nd_step",
+        "glow",
+        "late",
+    ]
+    assert [a["start"].get("after") or a["start"].get("with") for a in out["timeline"]] == [
+        None,
+        "show_c_prime_2",
+        "n2nd_step",
+        "show_c_prime_2",
+        "a8",  # no such action: left for the engine to report
+    ]

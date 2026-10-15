@@ -84,6 +84,27 @@ Entrance: `slide_up` · Supports: label-like
 {"type":"caption","params":{"text":"Density decides: float or sink."},"place":{"slot":"stage.bottom"}}
 ```
 
+### `diagram`
+
+A diagram of nodes joined by edges that the engine lays out (never place its nodes yourself): `lanes` for histories on parallel lanes (git branches and commits), `layered` for flowcharts, processes, trees and networks, `ring` for cycles. Write only the structure: nodes (`id`, a short `label` inside, `lane`, a `note` under it), edges (`from`, `to`, an optional `label`) and lanes. Each node is an anchor of the diagram (`history.c2`, and `c2_top`, `c2_bottom`, `c2_left`, `c2_right` and the corners `c2_top_left` and so on, on its outline) for labels, callouts and arrows from other objects. `create` builds it node by node; `write` with `terms` (node, edge or lane ids) adds parts in that order, an edge appearing with the later of its nodes; `highlight` with `terms` marks parts; `transform` with `into` another diagram changes it into its next state, nodes with the same id moving to their new places.
+
+Entrance: `draw` · Supports: draw, write
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `layout` | `"layered"` \| `"lanes"` \| `"ring"` |  | `"layered"` |  |
+| `direction` | `"right"` \| `"down"` \| `"left"` \| `"up"` |  | `"right"` | Which way it grows: lanes and layered diagrams run this way; ring: right = clockwise |
+| `nodes` | [DiagramNode](#diagramnode)[] | yes |  |  |
+| `edges` | [DiagramEdge](#diagramedge)[] |  | `[]` |  |
+| `lanes` | [DiagramLane](#diagramlane)[] |  | `[]` | lanes layout: the lanes in order, top to bottom |
+| `size` | `"small"` \| `"medium"` \| `"large"` |  | `"medium"` | Node and text size |
+| `width` | number |  | `1200` | Most width it takes; a larger diagram is scaled down |
+| `height` | number |  | `560` | Most height it takes |
+
+```json
+{"type":"diagram","params":{"layout":"lanes","lanes":[{"id":"main","label":"main"},{"id":"feature","label":"feature"}],"nodes":[{"id":"a","label":"A","lane":"main"},{"id":"b","label":"B","lane":"main"},{"id":"e","label":"E","lane":"main"},{"id":"c","label":"C","lane":"feature"},{"id":"d","label":"D","lane":"feature"}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"e"},{"from":"b","to":"c"},{"from":"c","to":"d"}]},"place":{"slot":"stage.center"}}
+```
+
 ### `dimension`
 
 A measurement line with end ticks and a label (e.g. a height or a rise in water level). `offset` shifts it sideways from the measured points.

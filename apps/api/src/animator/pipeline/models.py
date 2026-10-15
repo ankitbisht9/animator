@@ -345,6 +345,9 @@ class Metrics(BaseModel):
     glitches_left: int = 0
     # Cost-saver lessons (ADR-055): saved drawings placed in the finished scenes.
     saved_objects: int = 0
+    # The critic's second look at a revision it asked for (ADR-061), and revisions it turned down.
+    second_looks: int = 0
+    revisions_turned_down: int = 0
 
 
 class Generation(BaseModel):

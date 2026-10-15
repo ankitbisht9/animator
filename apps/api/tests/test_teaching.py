@@ -138,7 +138,7 @@ async def test_a_lesson_is_taught_reviewed_directed_then_drawn(pool: EngineWorke
     assert gen.teaching["look"].startswith("A glass tank")
     # Scenes are drawn with the teaching prompt at the teaching effort, knowing the whole lesson.
     draft = next(r for r in script.calls if r.label == "scene 2 attempt 1")
-    assert draft.prompt_version == "animation.v7" and draft.effort == "medium"
+    assert draft.prompt_version == "animation.v8" and draft.effort == "medium"
     context = text_of(draft)
     assert "The lesson's look (keep it in every scene): A glass tank" in context
     assert "you are drawing scene 2" in context and "Look closely at the **tank**" in context

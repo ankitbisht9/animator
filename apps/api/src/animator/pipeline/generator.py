@@ -277,6 +277,20 @@ def normalize(dsl: dict[str, Any], rec: SceneRecord, independent: bool = False) 
     return tidy(dsl)
 
 
+def describe_diagram(params: dict[str, Any]) -> str:
+    """A diagram in a line: its layout, nodes (label) and edges (ADR-061)."""
+    nodes = [n for n in params.get("nodes") or [] if isinstance(n, dict)]
+    edges = [e for e in params.get("edges") or [] if isinstance(e, dict)]
+    shown = ", ".join(
+        f"{n.get('id')}"
+        + (f" '{n.get('label')}'" if n.get("label") else "")
+        + (" (ghost)" if n.get("ghost") else "")
+        for n in nodes[:24]
+    )
+    joins = ", ".join(f"{e.get('from')}->{e.get('to')}" for e in edges[:30])
+    return f"{params.get('layout') or 'layered'} diagram; nodes: {shown}; edges: {joins or 'none'}"
+
+
 def summarize_for_critic(dsl: dict[str, Any], res: CompileResult) -> str:
     objs = []
     for o in dsl.get("objects") or []:
@@ -287,7 +301,10 @@ def summarize_for_critic(dsl: dict[str, Any], res: CompileResult) -> str:
         kind = o.get("type")
         if kind == "figure":  # a saved drawing (ADR-055), by what it shows
             kind, text = "saved drawing", str((o.get("metadata") or {}).get("description") or text)
-        objs.append(f"- {o.get('id')} ({kind}){': ' + text[:80] if text else ''}")
+        elif kind == "diagram":  # laid out by the engine (ADR-061): what it joins
+            text = describe_diagram(params)
+        limit = 400 if kind == "diagram" else 80
+        objs.append(f"- {o.get('id')} ({kind}){': ' + text[:limit] if text else ''}")
     acts = [
         f"- {a.get('id')}: {a.get('action')} {a.get('target') or ''} start={a.get('start')}"
         for a in (dsl.get("timeline") or [])[:60]
@@ -667,6 +684,7 @@ class Pipeline:
         critic_rounds = 0  # reviews spent on this scene
         # The valid scene a critic asked to revise: kept if the revision does not come out better.
         reviewed: tuple[dict[str, Any], CompileResult] | None = None
+        reviewed_majors = 0  # the major problems the critic found in it
         planned = self._planned(gen)
         plan: Any = None  # the planned flow's stage plan (ADR-047), carried into corrections
         # Cost-saver lessons (ADR-055): the saved drawings this scene's brief names exactly.
@@ -766,13 +784,23 @@ class Pipeline:
                     issues = []
                     if shown_res.endState is not None:
                         reviewed = (shown, shown_res)
+                        reviewed_majors = len(major)
                     continue
             attempt.seconds = round(time.perf_counter() - t0, 2)
             rec.attempts.append(attempt)
             if res.ok and res.endState is not None:
-                if reviewed is not None and len(glitches_of(shown_res)) > len(glitches_of(reviewed[1])):
-                    # The revision added visual glitches: the scene the critic saw stays.
-                    shown, shown_res = reviewed
+                if reviewed is not None:
+                    shown, shown_res = await self._second_look(
+                        gen,
+                        rec,
+                        attempt,
+                        (shown, shown_res),
+                        reviewed,
+                        reviewed_majors,
+                        previous_scenes,
+                        ctx,
+                        prev_state,
+                    )
                 warnings = [i.model_dump() for i in shown_res.issues if i.severity == "warning"]
                 gen.metrics.glitches_left += len(glitches_of(shown_res))
                 self._accept(rec, shown, shown_res, warnings, "ready")
@@ -1411,6 +1439,43 @@ class Pipeline:
             gen.teaching is not None and self.settings.animator_teaching_visual_critic
         )
         return wanted and self.keyframes is not None
+
+    async def _second_look(
+        self,
+        gen: Generation,
+        rec: SceneRecord,
+        attempt: Any,
+        revised: tuple[dict[str, Any], CompileResult],
+        reviewed: tuple[dict[str, Any], CompileResult],
+        reviewed_majors: int,
+        previous_scenes: list[dict[str, Any]],
+        ctx: CallContext,
+        prev_state: SceneState | None,
+    ) -> tuple[dict[str, Any], CompileResult]:
+        """The scene a revision asked for by the critic leaves behind (ADR-061): the critic looks once
+        more (one call, no further fixes) and the revision is kept unless it came out worse than the
+        scene it reviewed (more major problems; as many and more visual glitches). Without that look,
+        only the glitches decide, as before."""
+        more_glitches = len(glitches_of(revised[1])) > len(glitches_of(reviewed[1]))
+        report = None
+        if self.settings.animator_critic_second_look and self._critics_on(gen):
+            report = await self._critique(gen, rec, revised[0], revised[1], previous_scenes, ctx, prev_state)
+            gen.metrics.second_looks += 1
+        if report is None:
+            # The revision added visual glitches: the scene the critic saw stays.
+            return reviewed if more_glitches else revised
+        attempt.critic = report.model_dump()
+        majors = len([i for i in report.issues if i.severity == "major"]) if report.verdict == "revise" else 0
+        if majors > reviewed_majors or (majors == reviewed_majors and more_glitches):
+            gen.metrics.revisions_turned_down += 1
+            log.info(
+                "scene %s: the revision came out worse (%d > %d major problems); kept the one reviewed",
+                rec.id,
+                majors,
+                reviewed_majors,
+            )
+            return reviewed
+        return revised
 
     def _critic_rounds(self, gen: Generation) -> int:
         """How many times a scene may be reviewed (each review can ask for one round of fixes)."""

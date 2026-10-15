@@ -19,15 +19,17 @@ import { apply, invert, type Mat } from "../math/matrix";
 import type { Rect } from "../math/rect";
 import { dist, type Vec2 } from "../math/vec";
 
+type Outline = { kind: "ellipse"; cx: number; cy: number; rx: number; ry: number } | { kind: "polygon"; pts: Vec2[] };
+
 /** What binding needs of the object an end refers to. */
 export interface BindTarget {
   type: string;
   params: Record<string, unknown>;
   localBBox: Rect;
   rawMatrix: Mat;
+  /** The outline of a named part (a diagram's node `c2`), local frame; null when it has none. */
+  partOutline?: (part: string) => Outline | null;
 }
-
-type Outline = { kind: "ellipse"; cx: number; cy: number; rx: number; ry: number } | { kind: "polygon"; pts: Vec2[] };
 
 const ROUND = new Set(["circle", "ellipse", "ball"]);
 /** Components drawn as (rounded) boxes filling their bounds. */
@@ -59,6 +61,14 @@ const MIN_ARROW = 12;
 export const BOUND_GAP = { startGap: "__startGap", endGap: "__endGap" } as const;
 
 const scaleOf = (m: Mat): number => Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
+
+/** Half the smaller side of an outline's bounds. */
+function halfSideOf(o: Outline): number {
+  if (o.kind === "ellipse") return Math.min(o.rx, o.ry);
+  const xs = o.pts.map((p) => p.x);
+  const ys = o.pts.map((p) => p.y);
+  return Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) / 2;
+}
 
 function outlineOf(e: BindTarget): Outline | null {
   const b = e.localBBox;
@@ -156,11 +166,12 @@ function roundCorner(e: BindTarget, anchor: string): Vec2 | null {
  * How far from an object's centre (world px) the line from `from` to it crosses its outline, or null
  * when the arrow should not be bound there (no exact outline, a region, `from` inside the object).
  */
-function clearance(e: BindTarget, center: Vec2, from: Vec2): number | null {
-  const o = outlineOf(e);
+function clearance(e: BindTarget, center: Vec2, from: Vec2, part?: Outline): number | null {
+  const o = part ?? outlineOf(e);
   if (!o) return null;
   const k = scaleOf(e.rawMatrix);
-  if (k === 0 || (Math.min(e.localBBox.w, e.localBBox.h) / 2) * k > NODE_HALF_MAX) return null;
+  const half = part ? halfSideOf(part) : Math.min(e.localBBox.w, e.localBBox.h) / 2;
+  if (k === 0 || half * k > NODE_HALF_MAX) return null;
   const inv = invert(e.rawMatrix);
   const a = apply(inv, from);
   const c = apply(inv, center);
@@ -204,8 +215,12 @@ export function bindArrowEnds(
     const ref = refs[key];
     if (!ref) return 0;
     const { id, anchor } = split(ref);
-    const e = anchor === "center" ? target(id) : undefined;
-    const d = e ? clearance(e, params[key] as Vec2, other) : null;
+    const e = target(id);
+    if (!e) return 0;
+    // An object's centre, or the centre of a named part with an outline (a diagram's node, ADR-061).
+    const part = anchor === "center" ? undefined : (e.partOutline?.(anchor) ?? undefined);
+    if (anchor !== "center" && !part) return 0;
+    const d = clearance(e, params[key] as Vec2, other, part);
     return d === null ? 0 : d * unit;
   };
   const endGap = Math.max(gapOf("endGap"), needed("to", from));
@@ -216,4 +231,25 @@ export function bindArrowEnds(
   // carries into the next scene, stays as written.
   if (endGap !== gapOf("endGap")) params[BOUND_GAP.endGap] = endGap;
   if (startGap !== gapOf("startGap")) params[BOUND_GAP.startGap] = startGap;
+}
+
+/**
+ * A pointer (a label's leader, a bubble's tail, a callout's pointer) aimed at a named part with an
+ * outline (a diagram's node, ADR-061) stops on that outline, on the side it comes from, instead of
+ * running over the part's text. Pointers at anything else stay as written.
+ */
+export function bindPointer(
+  point: Vec2,
+  ref: string,
+  from: Vec2,
+  target: (id: string) => BindTarget | undefined,
+): Vec2 {
+  const dot = ref.indexOf(".");
+  const e = target(ref.slice(0, dot));
+  const part = e?.partOutline?.(ref.slice(dot + 1));
+  if (!e || !part) return point;
+  const d = clearance(e, point, from, part);
+  const len = dist(from, point);
+  if (d === null || len <= d) return point;
+  return { x: point.x + ((from.x - point.x) * d) / len, y: point.y + ((from.y - point.y) * d) / len };
 }

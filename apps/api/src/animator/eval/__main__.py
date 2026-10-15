@@ -4,12 +4,14 @@
     uv run python -m animator.eval --only archimedes,photosynthesis --duration-min 1
     uv run python -m animator.eval --name astra --set ANIMATOR_MODEL_ANIMATION_PLANNER=gpt-6-astra
     uv run python -m animator.eval --name flash --trial-model qwen/qwen3.5-flash-02-23   # ADR-056
+    uv run python -m animator.eval --only git_integration --critic     # with the visual critic (ADR-061)
 
 Reports go to var/eval/<name>/report.md and report.json; each generation is stored there too and
 can be opened with the API's FileStore (and the debug page) by pointing ANIMATOR_DATA_DIR at it.
 For a model bake-off, run once per configuration with --set and compare the reports. With
 --trial-model (one of ANIMATOR_TRIAL_MODELS) the lessons are made with that OpenRouter model, as an
-admin's trial lesson would be (ADR-056).
+admin's trial lesson would be (ADR-056). With --critic, keyframes are rendered for the visual critic
+as the app does for teaching lessons (it needs the built web app and Chromium); without it, no critic.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from typing import Any
 from animator.config import Settings, get_settings
 from animator.engine_client import EngineClient, pool_from_settings
 from animator.eval import generation_metrics, summarize
+from animator.export.jobs import BrowserKeyframes
 from animator.jobs.runner import GenerationRunner
 from animator.jobs.store import FileStore
 from animator.llm import LLMClient, ModelCatalog, PriceTable
@@ -113,6 +116,7 @@ async def run(args: argparse.Namespace) -> int:
 
     pool = pool_from_settings(settings)
     await pool.start()
+    frames = BrowserKeyframes() if args.critic else None
     try:
         prices = PriceTable.load(settings.resolve(settings.animator_pricing_file))
         llm: LLMClient = OpenAILLM(
@@ -122,7 +126,7 @@ async def run(args: argparse.Namespace) -> int:
             llm = TrialRouter(llm, OpenRouterLLM(settings, prices), settings.trial_models)
         # Saved drawings are read as lessons would; evaluation lessons record no uses (ADR-055).
         objects = ObjectLibrary(settings, record=False) if settings.animator_objects_enabled else None
-        pipeline = Pipeline(EngineClient(pool), llm, settings, objects=objects)
+        pipeline = Pipeline(EngineClient(pool), llm, settings, frames, objects=objects)
         runner = GenerationRunner(FileStore(out), pipeline, settings)
         rows: list[dict[str, Any]] = []
         for t in topics:
@@ -157,6 +161,8 @@ async def run(args: argparse.Namespace) -> int:
         print(f"[eval] report: {out / 'report.md'}")
         return 0
     finally:
+        if frames is not None:
+            await frames.close()
         await pool.close()
 
 
@@ -171,6 +177,9 @@ def main() -> int:
         "--set", action="append", default=[], help="setting override, e.g. ANIMATOR_MODEL_STORYBOARD=gpt-5"
     )
     ap.add_argument("--trial-model", help="make the lessons with this OpenRouter model (ADR-056)")
+    ap.add_argument(
+        "--critic", action="store_true", help="render keyframes for the visual critic, as the app does"
+    )
     return asyncio.run(run(ap.parse_args()))
 
 

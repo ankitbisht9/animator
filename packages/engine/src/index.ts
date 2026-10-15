@@ -8,6 +8,7 @@ export * from "./expr";
 export * from "./geom/path";
 export * from "./geom/shapes";
 export * from "./interp/easing";
+export * from "./layout/diagram";
 export * from "./layout/placement";
 export * from "./layout/templates";
 export * from "./math";

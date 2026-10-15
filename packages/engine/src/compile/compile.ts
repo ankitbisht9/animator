@@ -6,6 +6,7 @@
  * action expansion (in time order) -> values -> dynamic segment end values.
  * Deterministic: same input, same output, byte for byte.
  */
+import { layoutOf as diagramLayoutOf, diagramScale } from "../catalog/diagram";
 import { getSpec } from "../catalog/registry";
 import type { ComponentSpec } from "../catalog/spec";
 import type { ActionT } from "../dsl/actions";
@@ -29,7 +30,15 @@ import { motionDefault, resolveColor, type Theme } from "../theme/theme";
 import { getTheme } from "../theme/themes";
 import { currentSegment, type SampleEnv, sampleChannel } from "../timeline/channel";
 import { resolveTiming, type TimingResult, UNTIL_SCENE_END } from "../timeline/timing";
-import type { Channel, ChannelValue, CompiledObject, CompiledScene, CompiledSolver, Segment } from "../timeline/types";
+import type {
+  Channel,
+  ChannelValue,
+  CompiledObject,
+  CompiledScene,
+  CompiledSolver,
+  PulseSeg,
+  Segment,
+} from "../timeline/types";
 import { hasErrors, issue, type ValidationIssue } from "../validation/issues";
 import { validateLayout } from "../validation/layout";
 import { normalizeScene } from "../validation/normalize";
@@ -981,23 +990,28 @@ class Compiler {
         );
         return;
       }
-      case "highlight":
+      case "highlight": {
         if (!target) return;
-        this.addSeg(
-          target.ch.emph as Channel,
-          {
-            k: "pulse",
-            t0: start,
-            t1: end,
-            style: a.style ?? "pulse",
-            color: resolveColor(this.theme, a.color ?? "highlight"),
-            src,
-            ...(a.terms ? { terms: a.terms } : {}),
-          },
-          `${target.id}.emphasis`,
-          where,
-        );
+        const seg: PulseSeg = {
+          k: "pulse",
+          t0: start,
+          t1: end,
+          style: a.style ?? "pulse",
+          color: resolveColor(this.theme, a.color ?? "highlight"),
+          src,
+          ...(a.terms ? { terms: a.terms } : {}),
+        };
+        // Marks on named parts of a component that marks its own parts (a diagram's nodes, ADR-061) may
+        // overlap: each lights its own parts, as a teacher points at one node, then the next.
+        if (a.terms?.length && getSpec(target.type)?.termIds) {
+          const marks = this.channelOf(target, "marks");
+          marks.segs.push(seg);
+          marks.segs.sort((x, y) => x.t0 - y.t0 || x.t1 - y.t1);
+          return;
+        }
+        this.addSeg(target.ch.emph as Channel, seg, `${target.id}.emphasis`, where);
         return;
+      }
       case "label": {
         const label = this.obj(a.labelId ?? `${a.id}_label`);
         if (label)
@@ -1130,6 +1144,8 @@ class Compiler {
     if (a.into) {
       const into = this.obj(a.into);
       if (!into) return;
+      if (target.type === "diagram" && into.type === "diagram" && this.morphDiagram(a, target, into, where, start, end))
+        return;
       const ctx = evaluateObjects(this.cs, start);
       const tb = ctx.bboxOf(target.id);
       const ib = ctx.bboxOf(into.id);
@@ -1171,6 +1187,69 @@ class Compiler {
         where,
       );
     }
+  }
+
+  /**
+   * One diagram changing into the next state of it (ADR-061): the nodes (and lane tags) both have
+   * move from their old places to their new ones, the old diagram's other parts fade out and the new
+   * one's fade in. Without a node in common it is the usual crossfade (false).
+   */
+  private morphDiagram(
+    a: Extract<ActionT, { action: "transform" }>,
+    target: CompiledObject,
+    into: CompiledObject,
+    where: string,
+    start: number,
+    end: number,
+  ): boolean {
+    const ctx = evaluateObjects(this.cs, start);
+    const et = ctx.objects.get(target.id);
+    const ei = ctx.objects.get(into.id);
+    if (!et || !ei) return false;
+    const lt = diagramLayoutOf(et.params, target.prep);
+    const li = diagramLayoutOf(ei.params, into.prep);
+    const theirs = new Map(lt.nodes.map((n) => [n.id, n]));
+    const shared = li.nodes.filter((n) => theirs.has(n.id)).map((n) => n.id);
+    if (!shared.length) return false;
+    const kt = diagramScale(et.params, lt);
+    const ki = diagramScale(ei.params, li);
+    const toInto = invert(ei.rawMatrix);
+    const unit = (m: Mat) => Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
+    const size = (unit(et.rawMatrix) * kt) / Math.max(1e-6, unit(ei.rawMatrix) * ki);
+    // Where the old diagram drew a point, in the new one's layout units.
+    const carry = (x: number, y: number) => {
+      const p = apply(toInto, apply(et.rawMatrix, { x: x * kt, y: y * kt }));
+      return { x: p.x / ki, y: p.y / ki };
+    };
+    const nodes: Record<string, { cx: number; cy: number; w: number; h: number }> = {};
+    for (const id of shared) {
+      const m = theirs.get(id);
+      if (!m) continue;
+      const p = carry(m.cx, m.cy);
+      nodes[id] = { cx: p.x, cy: p.y, w: m.w * size, h: m.h * size };
+    }
+    const lanes: Record<string, Vec2> = {};
+    for (const t of lt.lanes) if (li.lanes.some((u) => u.id === t.id)) lanes[t.id] = carry(t.tag.cx, t.tag.cy);
+    into.prep = { ...li, morphFrom: { nodes, lanes } };
+    target.prep = { ...lt, handoff: [...shared, ...Object.keys(lanes)] };
+    const src = a.id ?? "?";
+    // The new state is there at once, its shared nodes where they were; the old one hands them over
+    // and fades out around them.
+    this.ensurePresent(into, a, where, start);
+    this.addSeg(
+      this.channelOf(into, "params.__morph"),
+      { k: "tween", t0: start, t1: end, from: 0, to: 1, ease: this.ease(a, "transform"), src },
+      `${into.id}.morph`,
+      where,
+    );
+    this.addSeg(
+      this.channelOf(target, "params.__handoff"),
+      { k: "step", t0: start, t1: start, value: 1, src },
+      `${target.id}.handoff`,
+      where,
+    );
+    this.presence(target, a, where, start, end, 0, "fade", this.ease(a, "fade"));
+    return true;
   }
 
   private expandGroup(a: Extract<ActionT, { action: "group" }>, where: string, start: number) {

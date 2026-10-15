@@ -31,7 +31,7 @@ import { getTheme } from "../theme/themes";
 import { currentSegment, type SampleEnv, sampleChannel, sampleNumber } from "../timeline/channel";
 import type { CompiledObject, CompiledScene, CompiledSolver, PulseSeg } from "../timeline/types";
 import { CANVAS } from "../version";
-import { bindArrowEnds } from "./binding";
+import { type BindTarget, bindArrowEnds, bindPointer } from "./binding";
 import { emphasisEffect, presenceEffect } from "./effects";
 
 export interface Emphasis {
@@ -67,6 +67,8 @@ export interface FrameObject {
   /** Per-term reveal for equations written term by term. */
   terms?: Record<string, number>;
   emph?: Emphasis;
+  /** Marks on named parts that are on at this time (a diagram's nodes, ADR-061), oldest first. */
+  marks?: Emphasis[];
   shadow: boolean;
   dashed: boolean;
   /** World-space axis-aligned bounds. */
@@ -219,6 +221,21 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
     return e.anchors[anchor] ?? null;
   }
 
+  /** What an arrow's end or a pointer refers to, for binding it to the outline (ADR-060, ADR-061). */
+  const bindTarget = (id: string): BindTarget | undefined => {
+    const e = objects.get(id);
+    const outline = e?.spec?.partOutline;
+    return (
+      e && {
+        type: e.obj.type,
+        params: e.params,
+        localBBox: e.localBBox,
+        rawMatrix: e.rawMatrix,
+        ...(outline ? { partOutline: (part: string) => outline(e.params, e.obj.prep, part) } : {}),
+      }
+    );
+  };
+
   for (const obj of cs.objects) {
     const spec = getSpec(obj.type);
     const ch = obj.ch;
@@ -267,10 +284,7 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
       bindArrowEnds(
         params,
         refs,
-        (id) => {
-          const e = objects.get(id);
-          return e && { type: e.obj.type, params: e.params, localBBox: e.localBBox, rawMatrix: e.rawMatrix };
-        },
+        bindTarget,
         toFrame ? Math.sqrt(Math.abs(toFrame[0] * toFrame[3] - toFrame[1] * toFrame[2])) : 1,
       );
     }
@@ -330,6 +344,12 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
       m = link ? multiply(multiply(parent.matrix, link.inv), own) : multiply(parent.matrix, own);
       parentAlpha = parent.alpha;
     }
+    // A label's leader, a bubble's tail or a callout's pointer aimed at a diagram's node stops on it.
+    if (spec?.labelLike && !spec.worldSpace) {
+      const from = apply(raw, center(geo.bbox));
+      for (const [key, ref] of Object.entries(refs))
+        params[key] = bindPointer(params[key] as Vec2, ref, from, bindTarget);
+    }
 
     // Emphasis.
     const eSeg = currentSegment(ch.emph, t);
@@ -340,7 +360,23 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
       emph = { style: ps.style, color: ps.color, amount: emphasisAmount(ps.style, u), u };
       if (ps.terms) emph.terms = ps.terms;
     }
-    const emphEff = emph ? emphasisEffect(emph.style, emph.amount, emph.u) : { scale: 1, dx: 0 };
+    // Marks on named parts of a component that marks its own parts (a diagram's nodes, ADR-061): several
+    // may be on at once, each in its own color.
+    const marks: Emphasis[] = [];
+    for (const seg of spec?.termIds ? (ch.marks?.segs ?? []) : []) {
+      if (seg.k !== "pulse" || t < seg.t0 || t > seg.t1) continue;
+      const u = seg.t1 > seg.t0 ? (t - seg.t0) / (seg.t1 - seg.t0) : 1;
+      marks.push({
+        style: seg.style,
+        color: seg.color,
+        amount: emphasisAmount(seg.style, u),
+        u,
+        terms: seg.terms ?? [],
+      });
+    }
+    // A highlight of named parts of such a component leaves the whole object still.
+    const partsOnly = !!emph?.terms && !!spec?.termIds;
+    const emphEff = emph && !partsOnly ? emphasisEffect(emph.style, emph.amount, emph.u) : { scale: 1, dx: 0 };
 
     // Entrance/exit and emphasis transforms apply about the object's visual center.
     const pre = transformRect(m, geo.bbox);
@@ -389,6 +425,7 @@ export function evaluateObjects(cs: CompiledScene, tIn: number): EvalContext {
     };
     if (terms) frame.terms = terms;
     if (emph) frame.emph = emph;
+    if (marks.length) frame.marks = marks;
     if (obj.metadata?.name) frame.name = obj.metadata.name;
     if (obj.metadata?.description) frame.description = obj.metadata.description;
 

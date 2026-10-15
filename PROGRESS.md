@@ -590,3 +590,23 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   nudged to the frame's edge).
 - Checked on all 847 stored scenes (41 change, all by the fixes) and on fresh Git lessons. Proposed next, for
   review: a diagram component laid out by the engine, so the model writes structure instead of coordinates.
+
+## Diagrams laid out by the engine (ADR-061)
+
+- **A `diagram` object for anything of nodes and links:** git histories on lanes, flowcharts, processes,
+  trees and networks (laid out by dagre), cycles on a ring. The model writes only the nodes, edges and
+  lanes; the engine places them so nodes never overlap and every edge meets its nodes and passes between
+  the others (checked on thousands of random diagrams).
+- **Teaching with it:** it builds node by node, adds parts later (`write` with node ids), highlights a node,
+  and changes into its next state with the shared nodes sliding to their new places (a rebase: C and D
+  move onto the new base as C' and D'). Labels, callouts and arrows point at its nodes by name.
+- **Connection rules in the scene prompts** (v8, planned v5, cost saver v2): join by anchors, one connector
+  per pair, a group's lines by offsets from it.
+- **A second look:** after the fixes the critic asked for, it looks once more; a revision that came out
+  worse is turned down (switch: `ANIMATOR_CRITIC_SECOND_LOOK`).
+- **Tested on five graph-heavy lessons against v2.8** (both layouts): about half the visual glitches
+  (planned 67 to 30, classic 32 to 19), far fewer labels covering things, a little cheaper and quicker to
+  first play. What the first run showed was fixed without new model calls: ids the model writes its own
+  way are cleaned, a diagram never shrinks its text past readable, no more than two diagrams at once, its
+  edges and leaders stop on node outlines, several nodes can be marked at once.
+- Stored lessons draw exactly as before.

@@ -304,12 +304,10 @@ export function validateSemantics(scene: SceneT, prev?: SceneState | null): Vali
     }
     for (const problem of spec.validate?.(def.params) ?? []) {
       issues.push(
-        issue(
-          problem.code,
-          `${p}/params/${problem.param}`,
-          problem.message,
-          problem.suggestion ? { suggestion: problem.suggestion } : {},
-        ),
+        issue(problem.code, `${p}/params/${problem.param}`, problem.message, {
+          ...(problem.suggestion ? { suggestion: problem.suggestion } : {}),
+          ...(problem.severity ? { severity: problem.severity } : {}),
+        }),
       );
     }
     if (def.type === "image") {
@@ -507,16 +505,19 @@ export function validateSemantics(scene: SceneT, prev?: SceneState | null): Vali
   }
 
   function checkTerms(def: ObjectDefT, terms: string[], where: string) {
+    // A diagram names its nodes, edges and lanes (ADR-061); an equation its parts.
+    const named = getSpec(def.type)?.termIds?.(def.params);
     const parts = def.params.parts as { id: string }[] | undefined;
-    if (!Array.isArray(parts)) {
-      issues.push(issue("TERMS_UNSUPPORTED", where, `'${def.id}' has no terms (only equations do).`));
+    if (!named && !Array.isArray(parts)) {
+      issues.push(issue("TERMS_UNSUPPORTED", where, `'${def.id}' has no terms (only equations and diagrams do).`));
       return;
     }
-    const ids = parts.map((x) => x.id);
+    const ids = named ?? (parts as { id: string }[]).map((x) => x.id);
+    const kind = named ? "Diagram" : "Equation";
     for (const t of terms)
       if (!ids.includes(t))
         issues.push(
-          issue("UNKNOWN_TERM", where, `Equation '${def.id}' has no part '${t}'.`, {
+          issue("UNKNOWN_TERM", where, `${kind} '${def.id}' has no part '${t}'.`, {
             suggestion: didYouMean(t, ids) ?? `Parts: ${ids.join(", ")}.`,
           }),
         );

@@ -92,10 +92,23 @@ export interface ComponentSpec {
   /** Expensive compile-time preparation, keyed by `prepareKey`. */
   prepare?: (p: Params) => unknown;
   prepareKey?: (p: Params) => string;
-  /** Component-specific semantic checks (e.g. path syntax, TeX allowlist). */
-  validate?: (p: Params) => { code: string; message: string; param: string; suggestion?: string }[];
+  /** Component-specific semantic checks (e.g. path syntax, TeX allowlist); errors unless marked. */
+  validate?: (
+    p: Params,
+  ) => { code: string; message: string; param: string; suggestion?: string; severity?: "warning" }[];
   /** Anchors that depend on params (e.g. equation terms, pipe sections). */
   dynamicAnchors?: (p: Params) => string[];
+  /** Parts a `write` or `highlight` can name in `terms` (default: an equation's `parts`). */
+  termIds?: (p: Params) => string[];
+  /** Boxes of what is actually drawn (local frame), for layout checks on a drawing with empty space
+   * inside its bounds (a diagram): labels and connectors are checked against these, not the bounds. */
+  solidParts?: (p: Params, prep: unknown) => Rect[];
+  /** The outline of a named part (local frame), for arrows aimed at it (`flow.c2`). */
+  partOutline?: (
+    p: Params,
+    prep: unknown,
+    part: string,
+  ) => { kind: "ellipse"; cx: number; cy: number; rx: number; ry: number } | { kind: "polygon"; pts: Vec2[] } | null;
   /** Smallest font size (canvas px) this component draws text at, for legibility checks. */
   minTextSize?: (p: Params, theme: Theme) => number | null;
   /** True when text is drawn straight on the background (so contrast must be checked). */

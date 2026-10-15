@@ -116,6 +116,9 @@ class Settings(BaseSettings):
     animator_teaching_visual_critic: bool = True
     # How many times a teaching scene is reviewed (each review can ask for one round of fixes).
     animator_teaching_critic_rounds: int = Field(default=1, ge=1, le=3)
+    # After the round of fixes the last review asked for, the critic looks once more (no further
+    # fixes): the revision is kept unless it came out worse than the scene it reviewed (ADR-061).
+    animator_critic_second_look: bool = True
     # A teaching lesson's valid scenes are framed by the camera: their content centred on the stage
     # and zoomed in (up to 1.5x) to fill it, when the engine confirms the framed scene is clean.
     animator_auto_frame: bool = True

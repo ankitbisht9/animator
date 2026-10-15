@@ -2836,3 +2836,121 @@ optional re-review after a critic-driven revision; repolishing stored lessons. N
 engine (Manim, Motion Canvas, Remotion, Mermaid/D2 renderers, Penrose). See the plan delivered with this ADR.
 
 **Rollback:** the tag `backup/before-placement-fixes`.
+
+## ADR-061 Diagrams laid out by the engine, connection rules, a second look (2026-10-14)
+
+**Asked.** Build steps 1, 2 and 3 of the plan in ADR-060's review: a diagram building block (the model
+states nodes and links, the engine places everything), three prompt rules for connections, and a second
+critic look after a revision. Step 4 (repolishing stored lessons) was not asked for.
+
+**Backup first:** tag `backup/before-diagram` (= v2.8), `.env.backup-before-diagram`, and a snapshot in
+`D:\animation-backups\v2.8-before-diagram` (all git refs, a consistent copy of the database, the lessons).
+
+**Decision.**
+- *The `diagram` component* (`catalog/diagram.ts`, layout in `layout/diagram.ts`, renderer
+  `components/renderers/diagram.tsx`). The model writes nodes (`id`, a short `label` inside, `shape`, `lane`,
+  `step`, `note` under it, `color`, `ghost`), edges (`from`, `to`, `label`, `head`, `dashed`) and lanes; the
+  engine decides every position, once per compile (cached):
+  - `lanes` (git histories): each node a step after its parents and after the node before it on its lane;
+    along a lane a straight edge, or round the lane's nodes in the corridor beside it; across lanes as git
+    graphs draw them (turn into the child's lane right after a fork, or at the last step into a merge,
+    whichever lane is clear; else along the corridor); lane tags in the lanes' colors.
+  - `layered` (flowcharts, processes, trees, networks): dagre 3.1.1 (MIT, about 36 KB) ranks and orders;
+    edges leave and enter along the flow, spread over the node's side (ports), and bend through dagre's
+    points between ranks.
+  - `ring` (cycles): nodes round a circle, edges along it, chords bowed inwards.
+  - Every edge stops on its nodes' outlines (arrowheads on them), circles of one diagram share one size,
+    the whole drawing scales down to fit `width` x `height` (text keeps its size otherwise).
+  - Parts are named: each node is an anchor (`history.c2`, with `c2_top`, `c2_bottom`, `c2_left`,
+    `c2_right`), as are named edges and lane tags; arrows from other objects aimed at a node stop on its
+    outline (ADR-060's binding, through a new `partOutline` hook).
+  - `create` builds it node by node; `write` with `terms` adds parts later (an edge with the later of its
+    nodes); `highlight` with `terms` rings parts and leaves the diagram still.
+  - `transform` one diagram `into` another: nodes with the same id move from their old places (edges
+    blend from the straight line between the moving nodes into their new curves), new parts appear, the
+    old diagram's other parts fade (nodes and lanes it shares are handed over, never shown twice).
+  - Checks: unknown nodes, repeated or reserved names, loops (errors); characters the font lacks
+    (warning); text too small after the fit. Layout checks see its nodes and tags (`solidParts`), not the
+    empty space between them (a label between two lanes is fine, one on a node is not).
+- *Pipeline:* the critic reads a diagram as its nodes and edges; the planner moves and scales one as an
+  item, never shrinking its text below readable.
+- *Prompts (model-facing, approved):* `animation.v8`, `animation-planned.v5`, `animation-costsaver.v2`: when
+  to use a diagram (git histories, flowcharts, trees, networks, cycles, state machines), how to reveal,
+  point at and change it, and the three rules: join objects by their anchors (never by coordinates), one
+  connector per pair (never one line through several nodes), lines that are parts of a group by offsets
+  from the group's place. The fast pipeline keeps `animation.v5`; the old versions stay for rollback.
+- *The second look* (`ANIMATOR_CRITIC_SECOND_LOOK=true`): after the round of fixes a review asked for, the
+  critic looks once more (one call, no further fixes); the revision is kept unless it came out worse than
+  the scene it reviewed (more major problems, or as many and more visual glitches). Metrics
+  `second_looks`, `revisions_turned_down`.
+
+**What the evaluation found, and the fixes** (none of them adds a model call):
+- *Diagrams squeezed into thumbnails* (four in 430 x 250 boxes; text at 14 to 18 px; two scenes degraded).
+  A diagram never scales its text below readable (about 22 px at 1080p): given too little room it keeps
+  that size and says how much it needs (`DIAGRAM_CROWDED`, a warning). `size: "small"` is spaced tighter.
+- *Part ids written the model's way* (`C'`, `A`, `10`: 97 schema errors in two lessons, most of their
+  corrections). `tidy` gives them the engine's form (`c_prime`, `a`, `n10`) and rewrites every reference
+  with them: edge ends, node lanes, `terms`, anchors (`history.C'_top`, `tree.10.left`); an edge end or a
+  term may also name a node by its label. Action ids get the same, with the starts that name them. A label
+  placed or moved `relativeTo` a node (that form takes whole objects only) becomes a pin beside the node.
+- *Several diagrams piled on one spot* (a 2 x 2 grid of four histories that fit only at 0.35x, so the
+  planner kept the draft, which had all four at the centre). The prompts say: at most two diagrams on the
+  stage at once; three or more states in turn, or better one diagram `transform`ed into the next; never a
+  row or grid of small ones; and the room a diagram needs (about 110 px per commit or circle along it, 200
+  per labelled box, 110 per lane or layer), and node ids lowercase.
+- *A diagram past the frame was only "near the edge"*: its words count, so a lane tag cut by the frame is
+  `OUT_OF_BOUNDS` (moved back by the engine's hint, no model call), and one reaching the title or caption
+  bar is `OUT_OF_STAGE` like any content (diagrams had been exempt, as things drawn through are).
+- *Leaders ran over node letters*: a label's leader, a bubble's tail or a callout's pointer aimed at a node
+  stops on its outline, facing the label.
+- *Two nodes highlighted at once were a `TRACK_CONFLICT`* (one emphasis track per object, a correction
+  round each time). Marks on different parts of a diagram may overlap, each in its own color (a path walked
+  node by node, each mark staying on); a highlight of the whole diagram is still one at a time.
+- *Corners*: nodes have corner anchors too (`c2_top_left`, on the outline toward the box corner); the model
+  reached for them.
+- *An action started at the end of the last beat* starts where the scene ends however long the scene is
+  (the last beat ends with it), so lengthening the scene never fitted it and three corrections did not
+  either (one scene fell back to a card). The sure fix starts it its own length earlier; the voice's
+  retiming keeps that time in step. (Not new with diagrams; found by this evaluation.)
+- *The critic never ran in evaluations*: the harness had no keyframe renderer (the app has one).
+  `python -m animator.eval --critic` renders keyframes as the app does.
+
+**Evaluation.** Five graph-heavy one-minute lessons (git integration, Dijkstra, the water cycle, an online
+order, a binary search tree), same harness (no critic), v2.8 run from a worktree at `backup/before-diagram`
+with its own engine:
+
+| | v2.8 planned | v2.9 planned | v2.8 classic | v2.9 classic |
+|---|---|---|---|---|
+| cost of the 5 lessons | $0.361 | $0.332 | $0.548 | $0.488 |
+| first play (average) | 98.9 s | 91.5 s | 77.4 s | 70.2 s |
+| scenes ready / degraded (of 20) | 20 / 0 | 20 / 0 | 20 / 0 | 20 / 0 |
+| correction rounds | 3 | 8 | 7 | 7 |
+| visual glitches left | 67 | 30 | 32 | 19 |
+| labels covering something | 55 | 16 | 38 | 11 |
+| connectors across labels | 42 | 1 | 14 | 6 |
+| connectors drawn by hand (ends given as coordinates) | 111 (12) | 51 (24) | 122 (108) | 46 (25) |
+| scenes drawn with a diagram | 0 | 9 | 0 | 7 |
+
+- The v2.9 columns are the run after the first fixes (ids, readable text, room). The first v2.9 run had 3
+  degraded scenes and 16 corrections; most of the v2.9 planned glitches (21 of 30) were the pile of
+  diagrams in one git scene.
+- On the final build (piles, frame edges, marks, leaders fixed): git and binary search tree, planned:
+  1 and 0 glitches (git had 21), no id errors; one scene of eight fell back for the end-of-beat slip above,
+  fixed since (checked against the engine).
+- With the visual critic on (git, planned): 7 critic calls ($0.018), 3 second looks, 1 revision turned
+  down (it came out worse than the scene reviewed), 4 of 4 scenes ready.
+- Spend: $2.27 in all (25 lessons in five runs, 3 more on the final build), against about $2 planned; the
+  extra went on checking the fixes the evaluation called for.
+
+**Verified:**
+- Tests: engine 202 (19 for diagrams, among them a property test of 300 random diagrams: no two nodes
+  overlap, every edge meets its nodes and passes between the others; a stress run of 3,000 found none
+  either), components 55 (6 new), worker 13, web 12, Python 371 (11 new), browser end-to-end 10.
+- The 855 stored scenes draw and check exactly as before (old and new engine compared object by object),
+  and the 72 evaluation scenes are unchanged by the last two fixes.
+- The model-facing schema stays well inside the provider's limits (1,345 of 5,000 properties, 752 of 1,000
+  enum values, depth 5 of 10).
+
+**Rollback:** the tag `backup/before-diagram` (v2.8); or, keeping the engine, delete the three new prompt
+versions (`animation.v8`, `animation-planned.v5`, `animation-costsaver.v2`) and the model no longer writes
+diagrams; `ANIMATOR_CRITIC_SECOND_LOOK=false` turns the second look off.

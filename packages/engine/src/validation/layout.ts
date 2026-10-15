@@ -5,11 +5,13 @@
  * 1080p, low contrast, objects hidden under the caption bar, clutter.
  * Only settled objects are checked (entrances/exits in progress are transient).
  */
+import { layoutOf as diagramLayoutOf } from "../catalog/diagram";
 import { getSpec } from "../catalog/registry";
 import { contrastRatio } from "../color/color";
 import { LIMITS } from "../dsl/scene";
 import { cameraMatrix, evaluate, evaluateObjects, type FrameObject } from "../evaluate/evaluate";
 import { parsePath } from "../geom/path";
+import { diagramNeeds } from "../layout/diagram";
 import { CANVAS_RECT, CAPTION_BAR } from "../layout/templates";
 import { apply, invert, multiply, transformRect } from "../math/matrix";
 import { roundTo } from "../math/num";
@@ -87,6 +89,7 @@ const NOT_SOLID = new Set([
   "line",
   "marker",
   "caption",
+  "diagram",
 ]);
 
 /** Parts of one drawing share the first word of their ids (cart_body, cart_wheel_1). */
@@ -349,6 +352,7 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
     cs.objects.filter((o) => o.pointPlaced && (o.type === "path" || o.type === "polygon")).map((o) => o.id),
   );
   const pathChecked = new Set<string>();
+  const crowdChecked = new Set<string>();
   const reshaped = new Set(
     actions.filter((a) => a.target && !STILL_ACTIONS.has(a.action)).map((a) => a.target as string),
   );
@@ -385,6 +389,14 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
     for (const o of settled) screen.set(o.id, o.layer === "overlay" ? o.bbox : transformRect(cam, o.bbox));
     const spec = (o: FrameObject) => getSpec(o.type);
     const counted = settled.filter((o) => !(spec(o)?.decorative ?? false) && o.type !== "group");
+    // Where an object is solid on screen: the boxes of its drawn parts when it says (a diagram is its
+    // nodes and tags, not the empty space between them, ADR-061), else its bounds.
+    const solidBoxes = (o: FrameObject): Rect[] => {
+      const parts = spec(o)?.solidParts?.(o.params, prepById.get(o.id));
+      if (!parts) return [screen.get(o.id) as Rect];
+      const m = o.layer === "overlay" ? o.matrix : multiply(cam, o.matrix);
+      return parts.map((r) => transformRect(m, r));
+    };
     if (counted.length > clutterMax) {
       clutterMax = counted.length;
       clutterT = t;
@@ -402,8 +414,9 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
       };
       const worldOut = o.layer === "overlay" ? outside(r) : outside(o.bbox);
       const screenOut = outside(r);
-      // Clipped words are unreadable: text, labels and equations must be fully inside.
-      const textual = (sp?.labelLike ?? false) || o.type === "text" || o.type === "equation";
+      // Clipped words are unreadable: text, labels, equations and diagrams (their nodes and lane tags carry
+      // words) must be fully inside.
+      const textual = (sp?.labelLike ?? false) || o.type === "text" || o.type === "equation" || o.type === "diagram";
       if (worldOut > (textual ? 0.01 : 0.1)) {
         const fix = fitHint(o.layer === "overlay" ? r : o.bbox);
         const by = fix ? ` (about ${fix.dx}, ${fix.dy} px${fix.scale ? `, at ${fix.scale}x the size` : ""})` : "";
@@ -551,28 +564,30 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
       for (const b of counted) {
         if (b === a || spec(b)?.labelLike || spec(b)?.worldSpace || b.type === "equation") continue;
         if (parentOf.get(a.id) === b.id || parentOf.get(b.id) === a.id) continue;
-        const rb = screen.get(b.id) as Rect;
-        const ov = intersection(ra, rb);
-        if (!ov) continue;
-        // A label straddling a larger object's edge half-covers both, even when pinned to it on purpose
-        // ("Down" pinned under a person's feet, but overlapping them).
-        const share = area(ov) / Math.max(1, area(ra));
-        const straddles = share >= 0.15 && share < 0.9 && area(ra) < area(rb);
-        const covers = area(ov) > 0.35 * area(ra) || area(ov) > 0.25 * area(rb);
-        if (followTarget.get(a.id) === b.id ? straddles : straddles || covers) {
-          // A label sitting inside an object (a name written on a box) is meant; one straddling the
-          // object's edge is not, and has a sure fix: move it clear.
-          const inside = share;
-          const zoom = a.layer === "overlay" ? 1 : frame.camera.zoom;
-          report(
-            "LABEL_OCCLUDES",
-            `${a.id}|${b.id}`,
-            `'${a.id}' covers part of '${b.id}' at ${roundTo(t, 2)}s.`,
-            t,
-            "warning",
-            "Place the label beside the object instead of on top of it.",
-            inside < 0.9 ? clearHint(ra, rb, zoom) : undefined,
-          );
+        for (const rb of solidBoxes(b)) {
+          const ov = intersection(ra, rb);
+          if (!ov) continue;
+          // A label straddling a larger object's edge half-covers both, even when pinned to it on purpose
+          // ("Down" pinned under a person's feet, but overlapping them).
+          const share = area(ov) / Math.max(1, area(ra));
+          const straddles = share >= 0.15 && share < 0.9 && area(ra) < area(rb);
+          const covers = area(ov) > 0.35 * area(ra) || area(ov) > 0.25 * area(rb);
+          if (followTarget.get(a.id) === b.id ? straddles : straddles || covers) {
+            // A label sitting inside an object (a name written on a box) is meant; one straddling the
+            // object's edge is not, and has a sure fix: move it clear.
+            const inside = share;
+            const zoom = a.layer === "overlay" ? 1 : frame.camera.zoom;
+            report(
+              "LABEL_OCCLUDES",
+              `${a.id}|${b.id}`,
+              `'${a.id}' covers part of '${b.id}' at ${roundTo(t, 2)}s.`,
+              t,
+              "warning",
+              "Place the label beside the object instead of on top of it.",
+              inside < 0.9 ? clearHint(ra, rb, zoom) : undefined,
+            );
+            break;
+          }
         }
       }
     }
@@ -650,6 +665,56 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
           "warning",
           "Keep separate objects apart (32 px or more); parts of one drawing share an id prefix (cart_body, cart_wheel).",
           clearHint(ru, rl, zoom),
+        );
+      }
+    }
+    // A diagram's nodes and tags run into another object or another diagram (ADR-061). Diagrams are
+    // left out of the solid overlaps above (their bounds are mostly empty space), so their drawn parts
+    // are compared here. A diagram given too little room to stay readable is drawn larger than its box.
+    for (const d of counted) {
+      if (d.type !== "diagram") continue;
+      if (!crowdChecked.has(d.id)) {
+        crowdChecked.add(d.id);
+        const w = typeof d.params.width === "number" ? d.params.width : 1200;
+        const h = typeof d.params.height === "number" ? d.params.height : 560;
+        const need = diagramNeeds(diagramLayoutOf(d.params, prepById.get(d.id)), w, h);
+        if (need)
+          report(
+            "DIAGRAM_CROWDED",
+            d.id,
+            `'${d.id}' needs about ${need.w} x ${need.h} px to keep its text readable but was given ${w} x ${h}: it is drawn larger.`,
+            t,
+            "warning",
+            "Give it that much room (width and height), fewer nodes, or show it on its own.",
+          );
+      }
+      const parts = solidBoxes(d);
+      for (const o of counted) {
+        if (o === d || (o.type === "diagram" && o.id < d.id)) continue;
+        const sp = spec(o);
+        if (sp?.labelLike || sp?.worldSpace || sp?.strokeLine || sp?.decorative) continue;
+        if (o.type !== "diagram" && NOT_SOLID.has(o.type)) continue;
+        if (related(d.id, o.id) || o.alpha < 0.9 || d.alpha < 0.9) continue;
+        const hit = parts.some((a) =>
+          solidBoxes(o).some((b) => {
+            const ov = intersection(a, b);
+            return ov !== null && area(ov) >= 0.1 * Math.min(area(a), area(b));
+          }),
+        );
+        if (!hit) continue;
+        const [lower, upper] = (drawnAt.get(d.id) ?? 0) < (drawnAt.get(o.id) ?? 0) ? [d, o] : [o, d];
+        report(
+          "OBJECT_OVERLAP",
+          `${upper.id}|${lower.id}`,
+          `'${upper.id}' covers part of '${lower.id}' at ${roundTo(t, 2)}s.`,
+          t,
+          "warning",
+          "Keep separate objects apart (32 px or more): give the diagram its own room.",
+          clearHint(
+            screen.get(upper.id) as Rect,
+            screen.get(lower.id) as Rect,
+            upper.layer === "overlay" ? 1 : frame.camera.zoom,
+          ),
         );
       }
     }
@@ -739,9 +804,11 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
     for (const o of counted) {
       const sp = spec(o);
       if (o.layer === "overlay" || sp?.decorative || sp?.strokeLine || sp?.worldSpace) continue;
-      if (NOT_SOLID.has(o.type) && o.type !== "container" && !sp?.labelLike) continue;
+      // A diagram is drawn through by nature, but its nodes and tags are content like any other.
+      const diagram = o.type === "diagram";
+      if (NOT_SOLID.has(o.type) && o.type !== "container" && !diagram && !sp?.labelLike) continue;
       const r = screen.get(o.id) as Rect;
-      if (r.w > 0.9 * safe.w || r.h > 0.9 * safe.h) continue;
+      if (!diagram && (r.w > 0.9 * safe.w || r.h > 0.9 * safe.h)) continue;
       if (seen.has(`OUT_OF_BOUNDS|${o.id}`) || seen.has(`NEAR_EDGE|${o.id}`)) continue;
       if (sp?.labelLike && r.y + r.h <= safe.y + 4) continue; // a title in the title bar
       // Against a frame edge, text looks cut: strict. Near the caption bar, a little tolerance (the
@@ -880,13 +947,13 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
       const inner = expand(screen.get(b.id) as Rect, -CONNECTOR_CLEARANCE);
       return inner.w > 0 && inner.h > 0 && pts.filter((p) => inRect(p, inner)).length >= 2;
     };
-    const throughObject = (pts: Vec2[], o: FrameObject) => {
-      const r = screen.get(o.id) as Rect;
-      const inner = expand(r, -CONNECTOR_CLEARANCE);
-      const ends = [pts[0], pts[pts.length - 1]].filter((p): p is Vec2 => p !== undefined);
-      if (inner.w <= 0 || inner.h <= 0 || ends.some((p) => inRect(p, expand(r, 4)))) return false;
-      return pts.filter((p) => inRect(p, inner)).length >= 3;
-    };
+    const throughObject = (pts: Vec2[], o: FrameObject) =>
+      solidBoxes(o).some((r) => {
+        const inner = expand(r, -CONNECTOR_CLEARANCE);
+        const ends = [pts[0], pts[pts.length - 1]].filter((p): p is Vec2 => p !== undefined);
+        if (inner.w <= 0 || inner.h <= 0 || ends.some((p) => inRect(p, expand(r, 4)))) return false;
+        return pts.filter((p) => inRect(p, inner)).length >= 3;
+      });
     const bendFix = (k: (typeof connectors)[number]): IssueFix | undefined => {
       const c0 = k.c.params.curve;
       if (typeof c0 !== "number") return undefined;
@@ -903,7 +970,7 @@ export function validateLayout(cs: CompiledScene): ValidationIssue[] {
         const near = (o: FrameObject) =>
           !joined.has(o.id) &&
           unrelated(k.c, o) &&
-          inner.some((p) => inRect(p, expand(screen.get(o.id) as Rect, ROUTE_CLEARANCE)));
+          solidBoxes(o).some((r) => inner.some((p) => inRect(p, expand(r, ROUTE_CLEARANCE))));
         if (labels.some(near) || obstacles.some(near)) return false;
         return !connectors.some((other) => other.c !== k.c && polylinesCross(pts, other.pts));
       };

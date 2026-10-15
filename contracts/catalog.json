@@ -2202,6 +2202,481 @@
       ]
     },
     {
+      "type": "diagram",
+      "category": "annotation",
+      "description": "A diagram of nodes joined by edges that the engine lays out (never place its nodes yourself): `lanes` for histories on parallel lanes (git branches and commits), `layered` for flowcharts, processes, trees and networks, `ring` for cycles. Write only the structure: nodes (`id`, a short `label` inside, `lane`, a `note` under it), edges (`from`, `to`, an optional `label`) and lanes. Each node is an anchor of the diagram (`history.c2`, and `c2_top`, `c2_bottom`, `c2_left`, `c2_right` and the corners `c2_top_left` and so on, on its outline) for labels, callouts and arrows from other objects. `create` builds it node by node; `write` with `terms` (node, edge or lane ids) adds parts in that order, an edge appearing with the later of its nodes; `highlight` with `terms` marks parts; `transform` with `into` another diagram changes it into its next state, nodes with the same id moving to their new places.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "layout": {
+            "default": "layered",
+            "type": "string",
+            "enum": [
+              "layered",
+              "lanes",
+              "ring"
+            ]
+          },
+          "direction": {
+            "default": "right",
+            "description": "Which way it grows: lanes and layered diagrams run this way; ring: right = clockwise",
+            "type": "string",
+            "enum": [
+              "right",
+              "down",
+              "left",
+              "up"
+            ]
+          },
+          "nodes": {
+            "minItems": 1,
+            "maxItems": 40,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/DiagramNode"
+            }
+          },
+          "edges": {
+            "default": [],
+            "maxItems": 80,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/DiagramEdge"
+            }
+          },
+          "lanes": {
+            "default": [],
+            "description": "lanes layout: the lanes in order, top to bottom",
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/DiagramLane"
+            }
+          },
+          "size": {
+            "default": "medium",
+            "description": "Node and text size",
+            "type": "string",
+            "enum": [
+              "small",
+              "medium",
+              "large"
+            ]
+          },
+          "width": {
+            "default": 1200,
+            "description": "Most width it takes; a larger diagram is scaled down",
+            "type": "number",
+            "minimum": 100,
+            "maximum": 1600
+          },
+          "height": {
+            "default": 560,
+            "description": "Most height it takes",
+            "type": "number",
+            "minimum": 60,
+            "maximum": 900
+          }
+        },
+        "required": [
+          "nodes"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "DiagramNode": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,24}$",
+                "description": "The node's name (lowercase snake_case, short: a, c1, c_prime; its text goes in label): an anchor of the diagram ('history.c2') and a term to reveal or highlight"
+              },
+              "label": {
+                "default": "",
+                "description": "Text inside the node: a letter or a few words",
+                "type": "string",
+                "maxLength": 40
+              },
+              "shape": {
+                "description": "circle (commits, states: short labels), box (steps), pill, diamond (a decision); default circle for lanes, box for layered, pill for ring",
+                "type": "string",
+                "enum": [
+                  "circle",
+                  "box",
+                  "pill",
+                  "diamond"
+                ]
+              },
+              "lane": {
+                "description": "lanes layout: the lane (branch) this node is on",
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,24}$"
+              },
+              "step": {
+                "description": "lanes layout: at least this many steps along (default: one after its parents and the node before it on its lane)",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "note": {
+                "description": "Small text under the node (a commit message, a value)",
+                "type": "string",
+                "maxLength": 60
+              },
+              "color": {
+                "description": "Default: its lane's color (lanes), else the diagram's",
+                "$ref": "#/$defs/ColorRef"
+              },
+              "ghost": {
+                "default": false,
+                "description": "Faded and dashed: a node that was replaced, or one still to come",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "ColorRef": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "A theme color role (e.g. 'fluid', 'force_buoyant', 'object_a'), optionally with a variant suffix '.light', '.dark' or '.soft'. Never raw hex.",
+            "x-llm": {
+              "type": "string",
+              "enum": [
+                "background",
+                "background.light",
+                "background.dark",
+                "background.soft",
+                "surface",
+                "surface.light",
+                "surface.dark",
+                "surface.soft",
+                "surface_alt",
+                "surface_alt.light",
+                "surface_alt.dark",
+                "surface_alt.soft",
+                "text",
+                "text.light",
+                "text.dark",
+                "text.soft",
+                "muted",
+                "muted.light",
+                "muted.dark",
+                "muted.soft",
+                "accent",
+                "accent.light",
+                "accent.dark",
+                "accent.soft",
+                "highlight",
+                "highlight.light",
+                "highlight.dark",
+                "highlight.soft",
+                "object_a",
+                "object_a.light",
+                "object_a.dark",
+                "object_a.soft",
+                "object_b",
+                "object_b.light",
+                "object_b.dark",
+                "object_b.soft",
+                "object_c",
+                "object_c.light",
+                "object_c.dark",
+                "object_c.soft",
+                "fluid",
+                "fluid.light",
+                "fluid.dark",
+                "fluid.soft",
+                "glass",
+                "glass.light",
+                "glass.dark",
+                "glass.soft",
+                "grid",
+                "grid.light",
+                "grid.dark",
+                "grid.soft",
+                "shadow",
+                "shadow.light",
+                "shadow.dark",
+                "shadow.soft",
+                "force_gravity",
+                "force_gravity.light",
+                "force_gravity.dark",
+                "force_gravity.soft",
+                "force_buoyant",
+                "force_buoyant.light",
+                "force_buoyant.dark",
+                "force_buoyant.soft",
+                "force_normal",
+                "force_normal.light",
+                "force_normal.dark",
+                "force_normal.soft",
+                "force_applied",
+                "force_applied.light",
+                "force_applied.dark",
+                "force_applied.soft",
+                "velocity",
+                "velocity.light",
+                "velocity.dark",
+                "velocity.soft",
+                "pressure",
+                "pressure.light",
+                "pressure.dark",
+                "pressure.soft",
+                "positive",
+                "positive.light",
+                "positive.dark",
+                "positive.soft",
+                "negative",
+                "negative.light",
+                "negative.dark",
+                "negative.soft",
+                "red",
+                "red.light",
+                "red.dark",
+                "red.soft",
+                "orange",
+                "orange.light",
+                "orange.dark",
+                "orange.soft",
+                "yellow",
+                "yellow.light",
+                "yellow.dark",
+                "yellow.soft",
+                "green",
+                "green.light",
+                "green.dark",
+                "green.soft",
+                "blue",
+                "blue.light",
+                "blue.dark",
+                "blue.soft",
+                "sky",
+                "sky.light",
+                "sky.dark",
+                "sky.soft",
+                "purple",
+                "purple.light",
+                "purple.dark",
+                "purple.soft",
+                "pink",
+                "pink.light",
+                "pink.dark",
+                "pink.soft",
+                "brown",
+                "brown.light",
+                "brown.dark",
+                "brown.soft",
+                "gray",
+                "gray.light",
+                "gray.dark",
+                "gray.soft"
+              ]
+            }
+          },
+          "DiagramEdge": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "Only to reveal or highlight this edge by name",
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,24}$"
+              },
+              "from": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,24}$",
+                "description": "A node id"
+              },
+              "to": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,24}$",
+                "description": "A node id"
+              },
+              "label": {
+                "description": "Short text beside the edge (a weight, a condition)",
+                "type": "string",
+                "maxLength": 24
+              },
+              "head": {
+                "description": "Arrowheads: end (default for layered and ring), none (default for lanes), both, start",
+                "type": "string",
+                "enum": [
+                  "end",
+                  "none",
+                  "both",
+                  "start"
+                ]
+              },
+              "dashed": {
+                "default": false,
+                "type": "boolean"
+              },
+              "color": {
+                "$ref": "#/$defs/ColorRef"
+              }
+            },
+            "required": [
+              "from",
+              "to"
+            ],
+            "additionalProperties": false
+          },
+          "DiagramLane": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,24}$",
+                "description": "Lowercase snake_case, short: a, c1, main (never capitals or a prime: C' is c_prime, labelled C')"
+              },
+              "label": {
+                "description": "The lane's name tag (default its id)",
+                "type": "string",
+                "maxLength": 24
+              },
+              "color": {
+                "description": "Its nodes' color (default: blue, green, orange, purple, ... in turn)",
+                "$ref": "#/$defs/ColorRef"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "anchors": [],
+      "dynamicAnchors": true,
+      "entrance": "draw",
+      "draw": true,
+      "write": true,
+      "labelLike": false,
+      "decorative": false,
+      "worldSpace": false,
+      "semanticRoles": [
+        "diagram",
+        "graph",
+        "flowchart",
+        "tree",
+        "history"
+      ],
+      "examples": [
+        {
+          "type": "diagram",
+          "params": {
+            "layout": "lanes",
+            "lanes": [
+              {
+                "id": "main",
+                "label": "main"
+              },
+              {
+                "id": "feature",
+                "label": "feature"
+              }
+            ],
+            "nodes": [
+              {
+                "id": "a",
+                "label": "A",
+                "lane": "main"
+              },
+              {
+                "id": "b",
+                "label": "B",
+                "lane": "main"
+              },
+              {
+                "id": "e",
+                "label": "E",
+                "lane": "main"
+              },
+              {
+                "id": "c",
+                "label": "C",
+                "lane": "feature"
+              },
+              {
+                "id": "d",
+                "label": "D",
+                "lane": "feature"
+              }
+            ],
+            "edges": [
+              {
+                "from": "a",
+                "to": "b"
+              },
+              {
+                "from": "b",
+                "to": "e"
+              },
+              {
+                "from": "b",
+                "to": "c"
+              },
+              {
+                "from": "c",
+                "to": "d"
+              }
+            ]
+          },
+          "place": {
+            "slot": "stage.center"
+          }
+        },
+        {
+          "type": "diagram",
+          "params": {
+            "layout": "layered",
+            "direction": "down",
+            "nodes": [
+              {
+                "id": "start",
+                "label": "Order placed",
+                "shape": "pill"
+              },
+              {
+                "id": "check",
+                "label": "In stock?",
+                "shape": "diamond"
+              },
+              {
+                "id": "ship",
+                "label": "Ship it"
+              },
+              {
+                "id": "wait",
+                "label": "Back-order"
+              }
+            ],
+            "edges": [
+              {
+                "from": "start",
+                "to": "check"
+              },
+              {
+                "from": "check",
+                "to": "ship",
+                "label": "yes"
+              },
+              {
+                "from": "check",
+                "to": "wait",
+                "label": "no"
+              }
+            ]
+          },
+          "place": {
+            "slot": "stage.center"
+          }
+        }
+      ]
+    },
+    {
       "type": "dimension",
       "category": "annotation",
       "description": "A measurement line with end ticks and a label (e.g. a height or a rise in water level). `offset` shifts it sideways from the measured points.",

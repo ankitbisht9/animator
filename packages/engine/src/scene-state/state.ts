@@ -39,9 +39,12 @@ export function sceneEndState(cs: CompiledScene, prevIn: SceneState | null, inde
       if (o.type === "path") params.d = params.__morphD;
       delete params.__morphD;
     }
-    // Gaps an arrow widened to meet an outline are worked out again in the next scene.
+    // Gaps an arrow widened to meet an outline are worked out again in the next scene, and so is
+    // a diagram's change of state (ADR-061).
     delete params.__startGap;
     delete params.__endGap;
+    delete params.__morph;
+    delete params.__handoff;
 
     // Group links active at the end are baked into world transforms.
     const link = o.links.find((l) => T >= l.t0 && T < l.t1);

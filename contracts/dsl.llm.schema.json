@@ -630,6 +630,9 @@
           "$ref": "#/$defs/Object_container"
         },
         {
+          "$ref": "#/$defs/Object_diagram"
+        },
+        {
           "$ref": "#/$defs/Object_dimension"
         },
         {
@@ -3949,6 +3952,445 @@
       ],
       "additionalProperties": false,
       "description": "A glass container with liquid: tank, beaker, measuring cylinder or overflow (Eureka) can. `level` is the fill fraction (0..1) and is driven by the buoyancy solver when a body enters. Anchors: water_surface, water_center, floor, rim, rim_left, rim_right, inner_left, inner_right, spout."
+    },
+    "Object_diagram": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "diagram"
+          ]
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "layout": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "layered",
+                    "lanes",
+                    "ring",
+                    null
+                  ]
+                },
+                "direction": {
+                  "description": "Which way it grows: lanes and layered diagrams run this way; ring: right = clockwise",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "right",
+                    "down",
+                    "left",
+                    "up",
+                    null
+                  ]
+                },
+                "nodes": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/DiagramNode"
+                  }
+                },
+                "edges": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/DiagramEdge"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "lanes": {
+                  "anyOf": [
+                    {
+                      "description": "lanes layout: the lanes in order, top to bottom",
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/DiagramLane"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "size": {
+                  "description": "Node and text size",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "small",
+                    "medium",
+                    "large",
+                    null
+                  ]
+                },
+                "width": {
+                  "description": "Most width it takes; a larger diagram is scaled down",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "height": {
+                  "description": "Most height it takes",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "layout",
+                "direction",
+                "nodes",
+                "edges",
+                "lanes",
+                "size",
+                "width",
+                "height"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "place": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Degrees, clockwise",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "scale": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opacity": {
+          "description": "0..1",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Style"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layer": {
+          "description": "'overlay' is pinned to the screen and ignores the camera",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "background",
+            "main",
+            "foreground",
+            "overlay",
+            null
+          ]
+        },
+        "z": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "persist": {
+          "description": "Carry into the next scene (default true)",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decorative": {
+          "description": "Excluded from clutter and overlap checks",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "description": "A group object this object belongs to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "description": "Shown when a viewer hovers the object",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "concept": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "description",
+                "concept"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "place",
+        "rotation",
+        "scale",
+        "opacity",
+        "style",
+        "layer",
+        "z",
+        "persist",
+        "decorative",
+        "parent",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A diagram of nodes joined by edges that the engine lays out (never place its nodes yourself): `lanes` for histories on parallel lanes (git branches and commits), `layered` for flowcharts, processes, trees and networks, `ring` for cycles. Write only the structure: nodes (`id`, a short `label` inside, `lane`, a `note` under it), edges (`from`, `to`, an optional `label`) and lanes. Each node is an anchor of the diagram (`history.c2`, and `c2_top`, `c2_bottom`, `c2_left`, `c2_right` and the corners `c2_top_left` and so on, on its outline) for labels, callouts and arrows from other objects. `create` builds it node by node; `write` with `terms` (node, edge or lane ids) adds parts in that order, an edge appearing with the later of its nodes; `highlight` with `terms` marks parts; `transform` with `into` another diagram changes it into its next state, nodes with the same id moving to their new places."
+    },
+    "DiagramNode": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The node's name (lowercase snake_case, short: a, c1, c_prime; its text goes in label): an anchor of the diagram ('history.c2') and a term to reveal or highlight"
+        },
+        "label": {
+          "description": "Text inside the node: a letter or a few words",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "shape": {
+          "description": "circle (commits, states: short labels), box (steps), pill, diamond (a decision); default circle for lanes, box for layered, pill for ring",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "circle",
+            "box",
+            "pill",
+            "diamond",
+            null
+          ]
+        },
+        "lane": {
+          "description": "lanes layout: the lane (branch) this node is on",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "step": {
+          "description": "lanes layout: at least this many steps along (default: one after its parents and the node before it on its lane)",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "note": {
+          "description": "Small text under the node (a commit message, a value)",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColorRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Default: its lane's color (lanes), else the diagram's"
+        },
+        "ghost": {
+          "description": "Faded and dashed: a node that was replaced, or one still to come",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "shape",
+        "lane",
+        "step",
+        "note",
+        "color",
+        "ghost"
+      ],
+      "additionalProperties": false
+    },
+    "DiagramEdge": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Only to reveal or highlight this edge by name",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from": {
+          "type": "string",
+          "description": "A node id"
+        },
+        "to": {
+          "type": "string",
+          "description": "A node id"
+        },
+        "label": {
+          "description": "Short text beside the edge (a weight, a condition)",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "head": {
+          "description": "Arrowheads: end (default for layered and ring), none (default for lanes), both, start",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "end",
+            "none",
+            "both",
+            "start",
+            null
+          ]
+        },
+        "dashed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColorRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "to",
+        "label",
+        "head",
+        "dashed",
+        "color"
+      ],
+      "additionalProperties": false
+    },
+    "DiagramLane": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Lowercase snake_case, short: a, c1, main (never capitals or a prime: C' is c_prime, labelled C')"
+        },
+        "label": {
+          "description": "The lane's name tag (default its id)",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColorRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Its nodes' color (default: blue, green, orange, purple, ... in turn)"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "color"
+      ],
+      "additionalProperties": false
     },
     "Object_dimension": {
       "type": "object",
@@ -11497,7 +11939,7 @@
             "terms": {
               "anyOf": [
                 {
-                  "description": "Equation part ids to reveal, in order",
+                  "description": "Parts to reveal, in order: an equation's part ids, or a diagram's node, edge or lane ids",
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -11774,7 +12216,7 @@
             "terms": {
               "anyOf": [
                 {
-                  "description": "For equations: which parts to highlight",
+                  "description": "Which parts to highlight: an equation's part ids, or a diagram's node, edge or lane ids (marks on different parts of a diagram may overlap)",
                   "type": "array",
                   "items": {
                     "type": "string"

@@ -170,7 +170,7 @@ Timing: `start` is `{at}` (seconds, `cue:<id>`, `beat:<id>`, `beat_end:<id>`), `
 | `easing` | [Easing](#easing) |  |  |  |
 | `action` | `"write"` | yes |  |  |
 | `target` | string | yes |  | Id of the object this action affects |
-| `terms` | string[] |  |  | Equation part ids to reveal, in order |
+| `terms` | string[] |  |  | Parts to reveal, in order: an equation's part ids, or a diagram's node, edge or lane ids |
 | `by` | `"char"` \| `"word"` \| `"term"` |  |  |  |
 
 ### `transform`
@@ -210,7 +210,7 @@ Timing: `start` is `{at}` (seconds, `cue:<id>`, `beat:<id>`, `beat_end:<id>`), `
 | `target` | string | yes |  | Id of the object this action affects |
 | `style` | `"pulse"` \| `"glow"` \| `"box"` \| `"underline"` \| `"circle"` \| `"flash"` \| `"shake"` \| `"color"` |  |  |  |
 | `color` | [ColorRef](#colorref) |  |  |  |
-| `terms` | string[] |  |  | For equations: which parts to highlight |
+| `terms` | string[] |  |  | Which parts to highlight: an equation's part ids, or a diagram's node, edge or lane ids (marks on different parts of a diagram may overlap) |
 
 ### `label`
 
@@ -428,6 +428,39 @@ Type: string
 | `id` | string | yes |  |  |
 | `at` | number \| string | yes |  | Seconds, or 'cue:<id>', 'beat:<id>' (beat start) or 'beat_end:<id>' |
 | `beat` | string |  |  | Beat this cue marks the start of |
+
+### DiagramEdge
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `id` | string |  |  | Only to reveal or highlight this edge by name |
+| `from` | string | yes |  | A node id |
+| `to` | string | yes |  | A node id |
+| `label` | string |  |  | Short text beside the edge (a weight, a condition) |
+| `head` | `"end"` \| `"none"` \| `"both"` \| `"start"` |  |  | Arrowheads: end (default for layered and ring), none (default for lanes), both, start |
+| `dashed` | boolean |  | `false` |  |
+| `color` | [ColorRef](#colorref) |  |  |  |
+
+### DiagramLane
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `id` | string | yes |  | Lowercase snake_case, short: a, c1, main (never capitals or a prime: C' is c_prime, labelled C') |
+| `label` | string |  |  | The lane's name tag (default its id) |
+| `color` | [ColorRef](#colorref) |  |  | Its nodes' color (default: blue, green, orange, purple, ... in turn) |
+
+### DiagramNode
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `id` | string | yes |  | The node's name (lowercase snake_case, short: a, c1, c_prime; its text goes in label): an anchor of the diagram ('history.c2') and a term to reveal or highlight |
+| `label` | string |  | `""` | Text inside the node: a letter or a few words |
+| `shape` | `"circle"` \| `"box"` \| `"pill"` \| `"diamond"` |  |  | circle (commits, states: short labels), box (steps), pill, diamond (a decision); default circle for lanes, box for layered, pill for ring |
+| `lane` | string |  |  | lanes layout: the lane (branch) this node is on |
+| `step` | integer |  |  | lanes layout: at least this many steps along (default: one after its parents and the node before it on its lane) |
+| `note` | string |  |  | Small text under the node (a commit message, a value) |
+| `color` | [ColorRef](#colorref) |  |  | Default: its lane's color (lanes), else the diagram's |
+| `ghost` | boolean |  | `false` | Faded and dashed: a node that was replaced, or one still to come |
 
 ### Easing
 

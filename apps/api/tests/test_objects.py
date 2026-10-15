@@ -578,7 +578,7 @@ async def test_a_cost_saver_lesson_places_saved_drawings(pool: EngineWorkerPool)
     assert "heart_exterior@1" in first.saved["offered"] and "heart_chambers@1" in first.saved["offered"]
     assert gen.metrics.saved_objects == len(gen.scenes)
     draft = next(r for r in script.calls if r.label == "scene 1 attempt 1")
-    assert draft.prompt_version == "animation-costsaver.v1"
+    assert draft.prompt_version == "animation-costsaver.v2"
     assert "Object_saved" in draft.schema["$defs"] and "stage" in draft.schema["properties"]
     assert "## Saved drawings" in draft.instructions
     message = draft.messages[0].parts[1].text  # type: ignore[union-attr]
@@ -674,7 +674,7 @@ async def test_planned_and_classic_lessons_never_see_saved_drawings(pool: Engine
         assert gen.status == "complete", gen.error
         draft = next(r for r in script.calls if r.label == "scene 1 attempt 1")
         assert "Object_saved" not in draft.schema["$defs"]
-        assert "Saved drawings" not in draft.instructions and draft.prompt_version != "animation-costsaver.v1"
+        assert "Saved drawings" not in draft.instructions and draft.prompt_version != "animation-costsaver.v2"
         assert all(s.saved is None for s in gen.scenes) and gen.metrics.saved_objects == 0
 
 
@@ -683,7 +683,7 @@ async def test_with_the_library_off_a_cost_saver_lesson_is_a_planned_one(pool: E
     gen = await run_lesson(pool, script, layout="costsaver", animator_objects_enabled=False)
     assert gen.status == "complete", gen.error
     draft = next(r for r in script.calls if r.label == "scene 1 attempt 1")
-    assert draft.prompt_version == "animation-planned.v4" and "Object_saved" not in draft.schema["$defs"]
+    assert draft.prompt_version == "animation-planned.v5" and "Object_saved" not in draft.schema["$defs"]
 
 
 def _drawn() -> dict[str, Any]:

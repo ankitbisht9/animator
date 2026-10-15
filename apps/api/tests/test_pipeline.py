@@ -379,6 +379,73 @@ async def test_a_critic_revision_spends_one_more_attempt(pool: EngineWorkerPool)
     assert "the tank is tiny -> make it bigger" in fix.messages[0].parts[-1].text  # type: ignore[union-attr]
 
 
+# What the revision adds, to tell it from the scene the critic reviewed.
+REVISED = {"id": "revised_note", "type": "text", "params": {"text": "Revised"}, "place": {"x": 300, "y": 760}}
+
+
+def revised(dsl: dict[str, Any] | None) -> bool:
+    return dsl is not None and any(o.get("id") == "revised_note" for o in dsl.get("objects") or [])
+
+
+def _major(problem: str) -> dict[str, str]:
+    return {"severity": "major", "problem": problem, "fix": "fix it"}
+
+
+def _second_look_script(second: dict[str, Any]) -> Script:
+    """Scene 1: the critic asks for a fix, then looks again at the revision (which adds a note)."""
+    reviews = iter([{"verdict": "revise", "issues": [_major("the tank is tiny")]}, second])
+
+    def scene(i: int, attempt: int, req: LLMRequest) -> Any:
+        s = copy.deepcopy(SCENES[i])
+        if i == 0 and attempt == 2:
+            s["objects"].append(REVISED)
+        return s
+
+    class Critical(Script):
+        def __call__(self, req: LLMRequest) -> Any:
+            if req.stage == "critic":
+                self.calls.append(req)
+                return next(reviews, {"verdict": "pass", "issues": []})
+            return super().__call__(req)
+
+    return Critical(scene)
+
+
+async def test_the_critic_looks_again_and_keeps_a_better_revision(pool: EngineWorkerPool) -> None:
+    """ADR-061: one more critic call after the fix it asked for; a revision that is not worse stays."""
+    script = _second_look_script({"verdict": "pass", "issues": []})
+    gen, _ = await run(pool, script, settings(animator_enable_llm_critic=True))
+    s1 = gen.scenes[0]
+    looks = [r for r in script.calls if r.stage == "critic" and r.label == "critic scene 1"]
+    assert len(looks) == 2 and len(s1.attempts) == 2
+    assert revised(s1.dsl)
+    assert s1.attempts[1].critic is not None and s1.attempts[1].critic["verdict"] == "pass"
+    assert gen.metrics.second_looks == 1 and gen.metrics.revisions_turned_down == 0
+
+
+async def test_the_critic_looks_again_and_turns_down_a_worse_revision(pool: EngineWorkerPool) -> None:
+    """A revision with more major problems than the scene the critic reviewed is not shown."""
+    worse = {"verdict": "revise", "issues": [_major("the tank is tiny"), _major("the label is cut off")]}
+    script = _second_look_script(worse)
+    gen, _ = await run(pool, script, settings(animator_enable_llm_critic=True))
+    s1 = gen.scenes[0]
+    assert s1.status == "ready" and not revised(s1.dsl)
+    assert gen.metrics.second_looks == 1 and gen.metrics.revisions_turned_down == 1
+    # No further fixes: the second look costs one critic call, nothing more.
+    assert not any(r.label == "scene 1 attempt 3" for r in script.calls)
+
+
+async def test_the_second_look_can_be_switched_off(pool: EngineWorkerPool) -> None:
+    script = _second_look_script({"verdict": "revise", "issues": [_major("a"), _major("b")]})
+    gen, _ = await run(
+        pool, script, settings(animator_enable_llm_critic=True, animator_critic_second_look=False)
+    )
+    looks = [r for r in script.calls if r.stage == "critic" and r.label == "critic scene 1"]
+    assert len(looks) == 1
+    assert revised(gen.scenes[0].dsl)
+    assert gen.metrics.second_looks == 0
+
+
 async def test_paced_generation_waits_for_the_viewer(pool: EngineWorkerPool) -> None:
     s = settings(animator_buffer_target_seconds=5, animator_min_ready_scenes=1)
     script = Script()

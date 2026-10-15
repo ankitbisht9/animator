@@ -14,6 +14,7 @@ import copy
 import json
 import math
 import re
+from collections.abc import Callable
 from typing import Any
 
 # TeX commands models like that the engine's TeX subset spells differently (same rendering).
@@ -98,7 +99,250 @@ def tidy(dsl: dict[str, Any]) -> dict[str, Any]:
     for action in dsl.get("timeline") or []:
         if action.get("property") == "text":
             _line_breaks(action.get("keyframes"))
+    _action_ids(dsl)
+    _diagram_parts(dsl)
     return dsl
+
+
+_ID = re.compile(r"^[a-z][a-z0-9_]{0,47}$")
+# Marks a model may write for a prime (a typographic apostrophe); opening quotes are dropped.
+_PRIMES = str.maketrans({"\u2019": "'", "\u2032": "'", "\u2033": "''", "`": "'", "\u2018": None, '"': None})
+
+
+def _id_form(raw: str, limit: int) -> str:
+    """The engine's form of a name a model wrote: "C'" -> 'c_prime', 'Feature/Login' ->
+    'feature_login', '10' -> 'n10'."""
+    s = raw.strip().translate(_PRIMES).lstrip("'").replace("'", "_prime").lower()
+    s = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
+    if not s[:1].isalpha():
+        s = f"n{s}"
+    return s[:limit].rstrip("_")
+
+
+def _free(base: str, limit: int, used: Callable[[str], bool]) -> str:
+    """`base`, or `base_2`, `base_3`... while it is taken."""
+    name, k = base, 2
+    while used(name):
+        tail = f"_{k}"
+        name = base[: limit - len(tail)].rstrip("_") + tail
+        k += 1
+    return name
+
+
+def _action_ids(dsl: dict[str, Any]) -> None:
+    """Action ids a model wrote off the engine's form ("show_C'", 'Step1') take it, and so do the
+    starts that name them."""
+    timeline = [a for a in dsl.get("timeline") or [] if isinstance(a, dict)]
+    ids = {a["id"] for a in timeline if isinstance(a.get("id"), str) and _ID.match(a["id"])}
+    renamed: dict[str, str] = {}
+    for action in timeline:
+        raw = action.get("id")
+        if not isinstance(raw, str) or not raw or _ID.match(raw):
+            continue
+        if raw not in renamed:
+            renamed[raw] = _free(_id_form(raw, 48), 48, ids.__contains__)
+            ids.add(renamed[raw])
+        action["id"] = renamed[raw]
+    for action in timeline:
+        start = action.get("start")
+        if not isinstance(start, dict):
+            continue
+        for k in ("after", "with"):
+            ref = start.get(k)
+            if isinstance(ref, str) and ref and ref not in ids:
+                fixed = renamed.get(ref) or _id_form(ref, 48)
+                if fixed in ids:
+                    start[k] = fixed
+
+
+# Diagram parts (ADR-061): nodes, named edges and lanes share one set of names, each node also takes
+# its sides and corners ('c2_top', 'c2_top_left'), and the diagram's box anchors are its own (the
+# engine's diagram checks).
+_PART_ID = re.compile(r"^[a-z][a-z0-9_]{0,24}$")
+_PART_SIDES = ("top_left", "top_right", "bottom_left", "bottom_right", "top", "bottom", "left", "right")
+_BOX_ANCHORS = frozenset(
+    ("center", "top", "bottom", "left", "right", "top_left", "top_right", "bottom_left", "bottom_right")
+)
+_PART_KINDS = (("node", "nodes"), ("edge", "edges"), ("lane", "lanes"))
+# Beside a part, by side: the part's anchor, this object's anchor and the direction of the gap.
+_BESIDE = {
+    "left": ("_left", "right", (-1, 0)),
+    "right": ("_right", "left", (1, 0)),
+    "above": ("_top", "bottom", (0, -1)),
+    "below": ("_bottom", "top", (0, 1)),
+    "center": ("", "center", (0, 0)),
+}
+_BESIDE_GAP = 24  # the engine's gap beside an object
+_ANCHOR_LIKE = re.compile(r"^[^.\s]+\.\S+$")
+_TEXT_KEYS = frozenset(("text", "label", "title", "caption", "note", "items"))  # shown, never references
+
+
+class _Parts:
+    """One diagram's part names, after any renaming, and what a reference to them means."""
+
+    def __init__(self, ids: dict[str, set[str]], renamed: dict[tuple[str, str], str], labels: dict[str, str]):
+        self.nodes = ids["node"]
+        self.parts = ids["node"] | ids["edge"] | ids["lane"]
+        self.anchors = (
+            set(_BOX_ANCHORS) | self.parts | {f"{n}_{side}" for n in self.nodes for side in _PART_SIDES}
+        )
+        self.renamed = renamed
+        self.labels = labels
+
+    def part(self, ref: str) -> str | None:
+        """The node, edge or lane that `ref` names (by its id as written, or a node's label)."""
+        if ref in self.parts:
+            return ref
+        for kind, _ in _PART_KINDS:
+            if (kind, ref) in self.renamed:
+                return self.renamed[(kind, ref)]
+        form = _id_form(ref, 25)
+        return form if form in self.parts else self.labels.get(ref)
+
+    def anchor(self, ref: str) -> str | None:
+        """The anchor that `ref` means: a part, a node's side ("C'_top", 'c2.top') or a box anchor."""
+        if ref in self.anchors:
+            return ref
+        for side in _PART_SIDES:
+            for sep in ("_", "."):
+                if ref.endswith(sep + side):
+                    node = self.part(ref[: -len(side) - 1])
+                    if node in self.nodes:
+                        return f"{node}_{side}"
+        form = _id_form(ref, 32)
+        return form if form in self.anchors else self.part(ref)
+
+
+def _rename_parts(params: dict[str, Any]) -> _Parts:
+    groups = {kind: [p for p in params.get(key) or [] if isinstance(p, dict)] for kind, key in _PART_KINDS}
+
+    def claims(kind: str, name: str) -> list[str]:
+        return [name, *(f"{name}_{side}" for side in _PART_SIDES)] if kind == "node" else [name]
+
+    def fine(v: Any) -> bool:
+        return isinstance(v, str) and _PART_ID.match(v) is not None and v not in _BOX_ANCHORS
+
+    taken = set(_BOX_ANCHORS)
+    for kind, items in groups.items():
+        for p in items:
+            if fine(p.get("id")):
+                taken.update(claims(kind, p["id"]))
+    renamed: dict[tuple[str, str], str] = {}
+    for kind, items in groups.items():
+        for p in items:
+            raw = p.get("id")
+            if not isinstance(raw, str) or not raw or fine(raw):
+                continue
+            if (kind, raw) not in renamed:
+                base = _id_form(raw, 25)
+                if base in _BOX_ANCHORS:
+                    base = f"{base}_node"  # the engine's own suggestion
+
+                def used(name: str, kind: str = kind) -> bool:
+                    return any(x in taken for x in claims(kind, name))
+
+                name = _free(base, 25, used)
+                taken.update(claims(kind, name))
+                renamed[(kind, raw)] = name
+            p["id"] = renamed[(kind, raw)]
+    ids = {kind: {p["id"] for p in items if isinstance(p.get("id"), str)} for kind, items in groups.items()}
+    labels: dict[str, str] = {}
+    for n in groups["node"]:
+        label = n.get("label")
+        if isinstance(label, str) and label and isinstance(n.get("id"), str):
+            labels[label] = n["id"] if label not in labels else ""  # a label two nodes share names neither
+    labels = {k: v for k, v in labels.items() if v}
+
+    def ref(kind: str, v: Any) -> Any:
+        if not isinstance(v, str) or v in ids[kind]:
+            return v
+        fixed = renamed.get((kind, v)) or _id_form(v, 25)
+        if fixed in ids[kind]:
+            return fixed
+        return labels.get(v, v) if kind == "node" else v
+
+    for n in groups["node"]:
+        if "lane" in n:
+            n["lane"] = ref("lane", n["lane"])
+    for e in groups["edge"]:
+        for end in ("from", "to"):
+            if end in e:
+                e[end] = ref("node", e[end])
+    return _Parts(ids, renamed, labels)
+
+
+def _diagram_parts(dsl: dict[str, Any]) -> None:
+    """Diagram part ids a model wrote off the engine's form ("C'", 'A', '10') take it, and so does
+    every reference to them: edge ends, node lanes, the `terms` that name them and anchors such as
+    "history.C'_top". A place beside a part ('relativeTo' takes whole objects) becomes a pin at
+    that side of the part."""
+    objects = [o for o in dsl.get("objects") or [] if isinstance(o, dict)]
+    diagrams = {
+        o["id"]: _rename_parts(o["params"])
+        for o in objects
+        if o.get("type") == "diagram" and isinstance(o.get("id"), str) and isinstance(o.get("params"), dict)
+    }
+    if not diagrams:
+        return
+
+    def anchor_ref(value: str) -> str:
+        diagram, _, rest = value.partition(".")
+        found = diagrams[diagram].anchor(rest) if diagram in diagrams else None
+        return f"{diagram}.{found}" if found else value
+
+    timeline = [a for a in dsl.get("timeline") or [] if isinstance(a, dict)]
+    for action in timeline:
+        parts = diagrams.get(action.get("target") or "")
+        if parts is not None and isinstance(action.get("terms"), list):
+            action["terms"] = [(parts.part(t) or t) if isinstance(t, str) else t for t in action["terms"]]
+    for o in objects:
+        if o.get("type") != "diagram":
+            _anchor_refs(o.get("params"), anchor_ref)
+        place = o.get("place")
+        if isinstance(place, dict):
+            pinned = _beside_part(place, diagrams)
+            o["place"] = pinned or _anchor_refs(place, anchor_ref)
+    for action in timeline:
+        to = action.get("to")
+        pinned = _beside_part(to, diagrams) if isinstance(to, dict) else None
+        if pinned:
+            action["to"] = pinned  # a move beside a part
+        for k, v in action.items():
+            if k not in ("id", "target", "terms", "start"):
+                action[k] = _anchor_refs(v, anchor_ref)
+
+
+def _anchor_refs(value: Any, fix: Callable[[str], str]) -> Any:
+    if isinstance(value, dict):
+        for k, v in value.items():
+            if k not in _TEXT_KEYS:
+                value[k] = _anchor_refs(v, fix)
+    elif isinstance(value, list):
+        value[:] = [_anchor_refs(v, fix) for v in value]
+    elif isinstance(value, str) and _ANCHOR_LIKE.match(value):
+        return fix(value)
+    return value
+
+
+def _beside_part(place: dict[str, Any], diagrams: dict[str, _Parts]) -> dict[str, Any] | None:
+    """{'relativeTo': 'tree.n10', 'side': 'left'}: the pin it means, at the part's left side."""
+    ref, side = place.get("relativeTo"), place.get("side")
+    if not isinstance(ref, str) or side not in _BESIDE:
+        return None
+    diagram, dot, rest = ref.partition(".")
+    found = diagrams[diagram].anchor(rest) if dot and diagram in diagrams else None
+    if found is None:
+        return None
+    suffix, own, (dx, dy) = _BESIDE[side]
+    gap = place.get("gap")
+    gap = float(gap) if isinstance(gap, (int, float)) else (0.0 if side == "center" else _BESIDE_GAP)
+    at = f"{found}{suffix}" if found in diagrams[diagram].nodes else found
+    return {
+        "at": f"{diagram}.{at}",
+        "anchor": own,
+        "offset": {"x": dx * gap, "y": dy * gap},
+        "follow": place.get("follow"),
+    }
 
 
 # Text params where a backslash is never meant literally (TeX and expressions keep theirs: \neq, \nu).
@@ -120,6 +364,34 @@ def _line_breaks(value: Any) -> Any:
 
 
 _ENDS_AT = re.compile(r"ends at ([0-9.]+)s")
+_LASTS = re.compile(r"lasts ([0-9.]+)s")
+_ACTION_NAMED = re.compile(r"Action '([a-z][a-z0-9_]*)'")
+
+
+def _pull_back_from_the_end(dsl: dict[str, Any], message: str, end: float) -> bool:
+    """An action started at the end of the last beat starts where the scene ends, however long the
+    scene is (the last beat ends with it), so a longer scene never fits it: it starts its own length
+    earlier instead, ending just before the scene does (a time the voice's retiming keeps in step)."""
+    named, lasts = _ACTION_NAMED.search(message), _LASTS.search(message)
+    beats = [b.get("id") for b in (dsl.get("narration") or {}).get("beats") or [] if isinstance(b, dict)]
+    if not named or not lasts or not beats:
+        return False
+    action = next(
+        (a for a in dsl.get("timeline") or [] if isinstance(a, dict) and a.get("id") == named.group(1)), None
+    )
+    start = action.get("start") if action else None
+    if not isinstance(start, dict) or start.get("at") != f"beat_end:{beats[-1]}":
+        return False
+    scene = float(lasts.group(1))
+    delay = start.get("delay")
+    length = end - scene - (float(delay) if isinstance(delay, (int, float)) else 0.0)
+    at = round(scene - length - 0.1, 2)
+    if length <= 0 or at < 0:
+        return False
+    start.update(at=at, delay=None)
+    return True
+
+
 _TOO_BIG = re.compile(r"Too big: expected number to be <=?\s*(-?[0-9.]+)")
 _TOO_SMALL = re.compile(r"Too small: expected number to be >=?\s*(-?[0-9.]+)")
 
@@ -327,7 +599,9 @@ def autofix(dsl: dict[str, Any], errors: list[dict[str, Any]]) -> dict[str, Any]
         if code == "ACTION_EXCEEDS_SCENE" and (m := _ENDS_AT.search(message)):
             # An action running a moment past the end: the scene lasts that moment longer.
             end = float(m.group(1))
-            if end <= float(out.get("duration") or 0) + 3:  # longer is not a slip: the timing is off
+            if _pull_back_from_the_end(out, message, end):
+                applied = True
+            elif end <= float(out.get("duration") or 0) + 3:  # longer is not a slip: the timing is off
                 out["duration"] = max(out.get("duration") or 0, math.ceil(round((end + 0.3) * 10, 6)) / 10)
                 applied = True
         elif code == "SCHEMA" and (m := _TOO_BIG.search(message) or _TOO_SMALL.search(message)):

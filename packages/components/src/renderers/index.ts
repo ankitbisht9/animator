@@ -10,6 +10,7 @@ import {
   NoteR,
   VectorArrowR,
 } from "./annotation";
+import { DiagramR } from "./diagram";
 import { FigureR } from "./figure";
 import { AxesR, EquationR, GraphR, GridR, ReadoutR } from "./math";
 import {
@@ -56,6 +57,8 @@ export const RENDERERS: Record<string, Renderer> = {
   note: NoteR,
   marker: MarkerR,
   caption: CaptionBlockR,
+  // diagrams laid out by the engine (ADR-061)
+  diagram: DiagramR,
   // math
   equation: EquationR,
   readout: ReadoutR,

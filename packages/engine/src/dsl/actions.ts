@@ -96,7 +96,11 @@ export const WriteAction = z.strictObject({
   ...Common,
   action: z.literal("write"),
   target,
-  terms: z.array(Id).max(24).optional().describe("Equation part ids to reveal, in order"),
+  terms: z
+    .array(Id)
+    .max(24)
+    .optional()
+    .describe("Parts to reveal, in order: an equation's part ids, or a diagram's node, edge or lane ids"),
   by: z.enum(["char", "word", "term"]).optional(),
 });
 export const ParamChange = z.strictObject({
@@ -126,7 +130,13 @@ export const HighlightAction = z.strictObject({
   target,
   style: z.enum(HIGHLIGHT_STYLES).optional(),
   color: ColorRef.optional(),
-  terms: z.array(Id).max(24).optional().describe("For equations: which parts to highlight"),
+  terms: z
+    .array(Id)
+    .max(24)
+    .optional()
+    .describe(
+      "Which parts to highlight: an equation's part ids, or a diagram's node, edge or lane ids (marks on different parts of a diagram may overlap)",
+    ),
 });
 export const LabelAction = z.strictObject({
   ...Common,

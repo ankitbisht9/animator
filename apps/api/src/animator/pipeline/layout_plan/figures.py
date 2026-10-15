@@ -69,6 +69,11 @@ SHRINK_DRAWING = 0.6  # the least a drawing without text is scaled
 # Text sizes of the theme (canvas px) and the smallest the engine accepts (22 px at 1080p), with a
 # little room.
 TEXT_SIZES = {"title": 60, "heading": 44, "body": 32, "label": 28, "caption": 30, "small": 24}
+# Drawings with text of their own (a diagram's labels, ADR-061): scaled like a drawing, but no smaller
+# than that text stays readable, and enlarged no more than text. The smallest text each diagram size
+# draws (its notes and edge labels).
+WITH_TEXT = {"diagram"}
+DIAGRAM_TEXT = {"small": 20, "medium": 22, "large": 24}
 MIN_TEXT = 22 * 900 / 1080 + 1
 
 
@@ -209,16 +214,19 @@ def text_px(objects: dict[str, dict[str, Any]], oid: str) -> float | None:
     """The size an object's text is drawn at on the canvas (its size role or number, times its own
     scale and its groups'), or None for an object without text."""
     o = objects.get(oid) or {}
-    if o.get("type") not in TEXT_TYPES:
-        return None
     params = o.get("params") or {}
-    # Without a size, the component may draw its smaller text at the smallest role: assume that.
-    size = params.get("size", params.get("titleSize", "small"))
-    px = (
-        float(size)
-        if isinstance(size, (int, float))
-        else float(TEXT_SIZES.get(str(size), TEXT_SIZES["small"]))
-    )
+    if o.get("type") in WITH_TEXT:
+        px = float(DIAGRAM_TEXT.get(str(params.get("size") or "medium"), DIAGRAM_TEXT["medium"]))
+    elif o.get("type") not in TEXT_TYPES:
+        return None
+    else:
+        # Without a size, the component may draw its smaller text at the smallest role: assume that.
+        size = params.get("size", params.get("titleSize", "small"))
+        px = (
+            float(size)
+            if isinstance(size, (int, float))
+            else float(TEXT_SIZES.get(str(size), TEXT_SIZES["small"]))
+        )
     seen: set[str] = set()
     while o and oid not in seen:
         seen.add(oid)
@@ -399,7 +407,7 @@ def measure(
         kinds = {str(objects[m].get("type")) for m in fig.members if m in objects}
         drawn = kinds - TEXT_TYPES - {"group"}
         fig.scalable = bool(drawn)
-        fig.smax = SCALE_MAX_TEXT if kinds & TEXT_TYPES else SCALE_MAX
+        fig.smax = SCALE_MAX_TEXT if kinds & (TEXT_TYPES | WITH_TEXT) else SCALE_MAX
         # How far it may shrink: text keeps nearly its size (and stays readable); a drawing alone
         # may shrink more.
         sizes = [px for px in (text_px(objects, m) for m in fig.members) if px]
