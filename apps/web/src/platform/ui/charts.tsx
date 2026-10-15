@@ -1,4 +1,5 @@
 /** Small SVG charts (no library): bars, an activity calendar, a donut. Bars grow in on first paint. */
+import { useId } from "react";
 
 export function BarChart({
   data,
@@ -16,11 +17,30 @@ export function BarChart({
 }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   const w = 100 / Math.max(1, data.length);
+  // Each chart its own gradient (several share a page): the app's color, lighter at the top (ADR-062).
+  const fill = `bars-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   return (
     <figure className="ui-bars" aria-label={label}>
       <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" role="img" aria-label={label} style={{ height }}>
+        <defs>
+          <linearGradient id={fill} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="ui-bars-stop-top" />
+            <stop offset="1" className="ui-bars-stop-foot" />
+          </linearGradient>
+        </defs>
         {[0.25, 0.5, 0.75].map((g) => (
           <line key={g} x1="0" x2="100" y1={height * g} y2={height * g} className="ui-bars-grid" />
+        ))}
+        {data.map((d, i) => (
+          <rect
+            key={`track-${d.label}`}
+            x={i * w + w * 0.18}
+            y={0}
+            width={w * 0.64}
+            height={height}
+            rx="1.2"
+            className="ui-bars-track"
+          />
         ))}
         {data.map((d, i) => {
           const h = (d.value / max) * (height - 6);
@@ -33,7 +53,7 @@ export function BarChart({
               height={Math.max(h, d.value > 0 ? 2 : 0)}
               rx="1.2"
               className="ui-bars-bar"
-              style={{ animationDelay: `${i * 25}ms` }}
+              style={{ animationDelay: `${i * 25}ms`, fill: `url(#${fill})` }}
             >
               <title>{`${d.hint ?? d.label}: ${format ? format(d.value) : `${d.value}${unit}`}`}</title>
             </rect>

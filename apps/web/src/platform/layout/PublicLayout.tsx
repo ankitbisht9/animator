@@ -1,6 +1,7 @@
 /** Pages for everyone (landing, Explore and shared lessons when signed out, help, legal): a top bar
- * with sign-in and a footer. */
-import { Menu as MenuIcon, X } from "lucide-react";
+ * with sign-in and a footer. The bar floats (ADR-062): clear over the page at its top, a rounded bar
+ * once the page scrolls; on phones its links open in a sheet under it. */
+import { ArrowUpRight, Menu as MenuIcon, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useAuth } from "../auth";
 import { Link, navigate, useLocation } from "../nav";
@@ -20,44 +21,64 @@ export function PublicLayout({ children, bare = false }: { children: ReactNode; 
     window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
   }, []);
+  useEffect(() => {
+    if (!open) return;
+    const key = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [open]);
   const signedIn = status === "signed-in";
+  const home = path === "/" || path === "";
   return (
-    <div className="public">
+    <div className={`public ${home ? "public-home" : ""}`}>
       <header className={`public-bar ${scrolled ? "scrolled" : ""} ${open ? "open" : ""}`}>
         <div className="public-bar-inner">
           <Link href="/" className="public-brand" aria-label={`${BRAND} home`}>
             <Logo size={32} />
           </Link>
-          <nav className="public-nav" aria-label="Site">
-            <a href="/#features">Features</a>
-            <a href="/#how">How it works</a>
-            <Link href="/explore" activeClassName="active">
-              Explore
-            </Link>
-            <Link href="/help" activeClassName="active">
-              Help
-            </Link>
-          </nav>
-          <div className="public-cta">
-            {signedIn ? (
-              <Button variant="primary" onClick={() => navigate("/dashboard")}>
-                Go to dashboard
-              </Button>
-            ) : (
-              <>
-                <Link href="/login" className="public-signin">
-                  Sign in
-                </Link>
-                <Button variant="primary" onClick={() => navigate("/signup")}>
-                  Get started free
+          <div className="public-links">
+            <nav className="public-nav" aria-label="Site">
+              <a href="/#features">Features</a>
+              <a href="/#how">How it works</a>
+              <Link href="/explore" activeClassName="active">
+                Explore
+              </Link>
+              <Link href="/help" activeClassName="active">
+                Help
+              </Link>
+            </nav>
+            <div className="public-cta">
+              {signedIn ? (
+                <Button
+                  variant="primary"
+                  className="public-pill"
+                  iconRight={ArrowUpRight}
+                  onClick={() => navigate("/dashboard")}
+                >
+                  Go to dashboard
                 </Button>
-              </>
-            )}
+              ) : (
+                <>
+                  <Link href="/login" className="public-signin">
+                    Sign in
+                  </Link>
+                  <Button
+                    variant="primary"
+                    className="public-pill"
+                    iconRight={ArrowUpRight}
+                    onClick={() => navigate("/signup")}
+                  >
+                    Get started free
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
           <button
             type="button"
-            className="ui-icon-btn public-menu"
+            className="public-menu"
             aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
           >
             {open ? <X size={20} /> : <MenuIcon size={20} />}
@@ -77,8 +98,11 @@ function Footer() {
     <footer className="public-footer">
       <div className="public-footer-inner">
         <div className="public-footer-brand">
-          <Logo size={28} />
+          <Logo size={30} />
           <p>Animated lessons for any topic, made in minutes, explained like a great teacher would.</p>
+          <Link href="/signup" className="public-footer-cta">
+            Make your first lesson <ArrowUpRight size={15} />
+          </Link>
         </div>
         <div className="public-footer-cols">
           <div>
@@ -101,7 +125,13 @@ function Footer() {
         </div>
       </div>
       <div className="public-footer-base">
-        © {new Date().getFullYear()} {BRAND}. All rights reserved.
+        <span>
+          © {new Date().getFullYear()} {BRAND}. All rights reserved.
+        </span>
+        <span className="public-footer-note">Made for curious minds, in English and Hinglish.</span>
+      </div>
+      <div className="public-footer-mark" aria-hidden="true">
+        {BRAND}
       </div>
     </footer>
   );

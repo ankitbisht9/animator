@@ -3,9 +3,24 @@ import { HttpError, http, qs } from "./http";
 
 export type Role = "learner" | "educator" | "admin";
 export type Visibility = "private" | "unlisted" | "public";
-export type ThemePref = "light" | "dark" | "system";
-/** The app's color (ADR-057): one of the avatar colors; crimson is the brand's red, the default. */
-export type Accent = "crimson" | "ruby" | "amber" | "teal" | "indigo" | "slate" | "plum" | "forest";
+export type ThemePref = "light" | "ivory" | "dark" | "system";
+/** The app's color (ADR-057): one of the avatar colors; crimson is the brand's red, the default. The
+ * classic colors (tan to gold) came with ADR-062. */
+export type Accent =
+  | "crimson"
+  | "ruby"
+  | "amber"
+  | "teal"
+  | "indigo"
+  | "slate"
+  | "plum"
+  | "forest"
+  | "tan"
+  | "espresso"
+  | "onyx"
+  | "navy"
+  | "olive"
+  | "gold";
 /** How a lesson's scenes are laid out (ADR-047), or cost saver: planned, placing saved drawings (ADR-055). */
 export type LessonLayout = "classic" | "planned" | "costsaver";
 

@@ -2954,3 +2954,64 @@ with its own engine:
 **Rollback:** the tag `backup/before-diagram` (v2.8); or, keeping the engine, delete the three new prompt
 versions (`animation.v8`, `animation-planned.v5`, `animation-costsaver.v2`) and the model no longer writes
 diagrams; `ANIMATOR_CRITIC_SECOND_LOOK=false` turns the second look off.
+
+## ADR-062 A richer, classic look: the landing page, the dashboard, classic colors (2026-10-15)
+
+**Asked.** Make the front page as engaging as a reference site the person shared (its animations,
+interactions, navbar and light gradient theme), not a copy, in today's colors, professional and
+classic. In the dashboard: more classic colors (beige, #ddb892, black), a richer, bolder, sharper
+theme (look and type) instead of a dull one, and richer cards, boxes and bars on every page. Keep
+every feature working, responsive and pixel perfect.
+
+**Backup first:** tag `backup/before-rich-ui` (= v2.9), `.env.backup-before-rich-ui`, and
+`D:\animation-backups\v2.9-before-rich-ui` (a git bundle, a consistent copy of the database, the local
+`vite.config.ts`). The work was done in a separate worktree, so the running app never showed it half
+done.
+
+**Decision.**
+- *Type.* Headlines in Inter's display optical size (`@fontsource-variable/inter/opsz.css`), bold and
+  tight; a page's own title in Source Serif 4's display cut (the classic voice), and its true italic for
+  the words a front-page headline leans on. Figures in the display cut, tabular.
+- *Classic colors* for the app (Settings → Appearance, grouped Vivid / Classic; the avatar colors too):
+  tan (#9c6644 on light pages; the beige #ddb892 shows in its tints and on dark pages), espresso, onyx
+  (black; ivory on dark pages), navy, olive, gold. Each is at least 4.5:1 for text on white. New
+  people's random avatars keep the vivid set.
+- *Ivory*, a third theme: the light theme on warm paper (page #f5efe5, cards #fffcf6, warm lines,
+  shadows and ink); every color's tints mix with the paper. It reads as light everywhere else.
+- *Depth, everywhere at once* (the shared components): cards with a hairline and a soft shadow and a
+  lit top edge, raised when pointed at; primary buttons lit from above with a rim; badges with a fine
+  rim of their color; stat tiles with a solid, lit icon tile of their tone and uppercase labels;
+  progress on a deeper track; bar charts with gradient bars in faint columns (the spend chart too);
+  table heads crisper; the sidebar's chosen page a tile of the app's color with a rim; the top bar a
+  soft shadow (still solid: lessons play under it). On the dashboard: an icon tile on each card's
+  title, a light of the app's color in the top cards' corner, the streak's days as tiles, more
+  presence for "Start with a question".
+- *The front page* (`landing.css`, `landing/motion.tsx`): a floating bar (clear at the top, a rounded
+  bar once the page scrolls, a pill call to action, a sheet on phones); an opening of soft glows, a
+  fine grid and a slow network of points (a canvas of at most 64 points, at most 30 frames a second,
+  only while on screen and the tab is visible); the headline's accent in the serif's italic, drawn
+  under by hand; "I'm a student / teacher / curious", which changes the example topics; the live
+  lesson in a window that tilts flat as it rises, with floating chips; subjects gliding by; the
+  features as a bento with small live drawings (a thrown ball's arc, a doubt and its answer, captions
+  lighting word by word, a quick check, a pinned note, a share link) lit where the pointer is; three
+  steps joined by a line drawn once seen; a night band for who it is for, its figures counting up;
+  questions; a red closing card; a footer with the name in outline. Parts rise into view once; nothing
+  moves for reduced motion (the device's or the app's setting); classes only, never attribute
+  selectors, so the live lesson in it pays nothing. Signed-out visitors still always see light and
+  the brand's red.
+- *Removed:* the old front page's styles (90 selectors); the Help page keeps its questions' styles.
+- *Fixed on the way:* Explore's "Make your own" took a legacy `.create` margin (taller than its
+  neighbour); a long word in a legacy admin card made that page wider than the window.
+
+**Verified:**
+- A browser check of every new interaction (the learner switch, ideas, the ask form to sign-up with
+  the topic, questions, the bar's links, the phone menu and Escape, rising parts and counting figures,
+  reduced motion), ivory and the classic colors applied, saved and kept after a reload, an avatar of a
+  classic color, dark from the account menu, 23 pages without an error or a sideways scroll, a lesson
+  that plays.
+- Screens at 1440, 1024, 768 and 390 px wide, in light, ivory and dark, with crimson, tan and onyx.
+- Tests: engine 202, components 55, worker 13, web 12, Python 372 (1 new), browser end-to-end 10.
+- Lesson pages are as light as before: the player, the scene components and `lesson.css` are
+  unchanged, and nothing new moves there.
+
+**Rollback:** the tag `backup/before-rich-ui`.

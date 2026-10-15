@@ -1,8 +1,9 @@
 /*
- * Design tokens. The brand: white and red (#d90429) with a deep navy-grey ink; serif headings
- * (Source Serif 4) for a classic, academic feel, Inter for everything you read and click.
- * Light is the default; dark is chosen in settings (data-theme on <html>). The app's color is the
- * brand's red unless the person picks another (data-accent on <html>, ADR-057).
+ * Design tokens. The brand: white and red (#d90429) with a deep navy-grey ink. Headlines are set in
+ * Inter's display cut, bold and tight (sharp, modern); Source Serif 4 gives the classic touch (its
+ * italic marks the words a headline leans on); Inter for everything you read and click (ADR-062).
+ * Light is the default; ivory (warm paper) and dark are chosen in settings (data-theme on <html>).
+ * The app's color is the brand's red unless the person picks another (data-accent on <html>, ADR-057).
  * The older names (--accent, --good, ...) are kept for the player, the playground and doubts.
  */
 
@@ -26,7 +27,7 @@
   --brand-glow: #ff2d4d;
   --brand-night: #4a1520;
 
-  --ink: #14161f;
+  --ink: #10121a;
   --text: #2b2d42;
   --muted: #646a82;
   --subtle: #959bb0;
@@ -65,9 +66,18 @@
   --shadow-lg: 0 24px 60px rgba(20, 22, 31, 0.14), 0 6px 16px rgba(20, 22, 31, 0.06);
   --shadow-brand: 0 10px 26px rgba(217, 4, 41, 0.28);
   --ring: 0 0 0 3px rgba(217, 4, 41, 0.24);
+  /* Cards: a hairline shadow and a soft one beneath; raised when pointed at (ADR-062). */
+  --shadow-card: 0 1px 2px rgba(16, 18, 27, 0.05), 0 8px 22px -12px rgba(16, 18, 27, 0.12);
+  --shadow-raise: 0 2px 4px rgba(16, 18, 27, 0.05), 0 22px 44px -20px rgba(16, 18, 27, 0.24);
+  /* The top edge of a card: a line of light (surfaces look cut, not printed). */
+  --edge-light: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
   --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-sans);
   --font-serif: "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman", serif;
+  /* Headline tracking: the display cut set tight. */
+  --track-display: -0.035em;
+  --track-title: -0.02em;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --dur: 180ms;
 
@@ -114,14 +124,50 @@
   --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
   --shadow-brand: 0 10px 26px rgba(255, 45, 77, 0.25);
   --ring: 0 0 0 3px rgba(255, 45, 77, 0.35);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 26px -14px rgba(0, 0, 0, 0.6);
+  --shadow-raise: 0 2px 4px rgba(0, 0, 0, 0.45), 0 24px 48px -18px rgba(0, 0, 0, 0.75);
+  --edge-light: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   color-scheme: dark;
+}
+
+/* Ivory (ADR-062): the light theme on warm paper. Every page reads as in light; only the paper, the
+   lines and the ink turn warm, so it suits the classic colors (tan, espresso, onyx, gold) best. */
+:root[data-theme="ivory"] {
+  --ink: #1c160f;
+  --text: #3b3229;
+  --muted: #74685a;
+  --subtle: #a19381;
+
+  --bg: #f5efe5;
+  --surface: #fffcf6;
+  --surface-2: #f8f1e6;
+  --surface-3: #efe5d6;
+  --line: #e6dccb;
+  --line-strong: #d4c6ae;
+  --overlay: rgba(30, 22, 12, 0.46);
+
+  --brand-50: color-mix(in srgb, var(--brand) 7%, #fffcf6);
+  --brand-100: color-mix(in srgb, var(--brand) 14%, #fffcf6);
+  --brand-200: color-mix(in srgb, var(--brand) 30%, #fffcf6);
+
+  --shadow-xs: 0 1px 2px rgba(58, 40, 20, 0.07);
+  --shadow-sm: 0 1px 3px rgba(58, 40, 20, 0.09), 0 1px 2px rgba(58, 40, 20, 0.05);
+  --shadow: 0 8px 24px rgba(58, 40, 20, 0.09), 0 2px 6px rgba(58, 40, 20, 0.05);
+  --shadow-lg: 0 24px 60px rgba(58, 40, 20, 0.15), 0 6px 16px rgba(58, 40, 20, 0.07);
+  --shadow-card: 0 1px 2px rgba(58, 40, 20, 0.06), 0 8px 22px -12px rgba(58, 40, 20, 0.16);
+  --shadow-raise: 0 2px 4px rgba(58, 40, 20, 0.06), 0 22px 44px -20px rgba(58, 40, 20, 0.28);
+  --edge-light: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  color-scheme: light;
 }
 
 /* ---------------- the app's color (ADR-057) ----------------
    Crimson, the brand's red, is the default: the values above, unchanged. Each other color (picked in
    Settings, or with the avatar's) sets its shade for light pages and for dark pages, and the ink that
    reads on the dark one; every tint, hover and ring comes from those. The "solid" shades are the same
-   on light and dark pages (the logo, the doubt button, the large colored panels), as the red is. */
+   on light and dark pages (the logo, the doubt button, the large colored panels), as the red is.
+   The classic colors (ADR-062) keep a shade dark enough for text on white (4.5:1 or more): tan's
+   beige shows in its tints and on dark pages (#ddb892), onyx is black on light pages and ivory on
+   dark ones. */
 
 :root[data-accent="ruby"] {
   --accent-light: #c9184a;
@@ -165,6 +211,42 @@
   --accent-dark-ink: #052012;
 }
 
+:root[data-accent="tan"] {
+  --accent-light: #9c6644;
+  --accent-dark: #ddb892;
+  --accent-dark-ink: #2a1a0e;
+}
+
+:root[data-accent="espresso"] {
+  --accent-light: #5b3a29;
+  --accent-dark: #c8a27a;
+  --accent-dark-ink: #1e130b;
+}
+
+:root[data-accent="onyx"] {
+  --accent-light: #17181e;
+  --accent-dark: #ece8df;
+  --accent-dark-ink: #111217;
+}
+
+:root[data-accent="navy"] {
+  --accent-light: #1f3a68;
+  --accent-dark: #7fa3e0;
+  --accent-dark-ink: #08142a;
+}
+
+:root[data-accent="olive"] {
+  --accent-light: #5b6b2e;
+  --accent-dark: #a9bd6b;
+  --accent-dark-ink: #161c05;
+}
+
+:root[data-accent="gold"] {
+  --accent-light: #8a6a1f;
+  --accent-dark: #e0b84f;
+  --accent-dark-ink: #241a03;
+}
+
 :root[data-accent]:not([data-accent="crimson"]) {
   --brand: var(--accent-light);
   --brand-ink: #ffffff;
@@ -198,6 +280,14 @@
   --brand-200: color-mix(in srgb, var(--brand) 35%, transparent);
   --shadow-brand: 0 10px 26px color-mix(in srgb, var(--brand) 25%, transparent);
   --ring: 0 0 0 3px color-mix(in srgb, var(--brand) 35%, transparent);
+}
+
+/* On ivory paper the tints of any color are mixed with the paper, not with white. */
+:root[data-theme="ivory"][data-accent]:not([data-accent="crimson"]) {
+  --brand-50: color-mix(in srgb, var(--brand) 7%, #fffcf6);
+  --brand-100: color-mix(in srgb, var(--brand) 14%, #fffcf6);
+  --brand-200: color-mix(in srgb, var(--brand) 30%, #fffcf6);
+  --brand-solid-100: color-mix(in srgb, var(--accent-light) 14%, #fffcf6);
 }
 
 html {
@@ -329,16 +419,7 @@ code {
 :root[data-motion="reduced"] .bell-dot,
 :root[data-motion="reduced"] .gsearch-panel,
 :root[data-motion="reduced"] .orbit-spin,
-:root[data-motion="reduced"] .kicker-pill,
-:root[data-motion="reduced"] .hero h1,
-:root[data-motion="reduced"] .hero-lead,
-:root[data-motion="reduced"] .hero-ask,
-:root[data-motion="reduced"] .hero-secondary,
-:root[data-motion="reduced"] .hero-visual,
 :root[data-motion="reduced"] .hero-preview-stage.loading,
-:root[data-motion="reduced"] .hero-float,
-:root[data-motion="reduced"] .feature,
-:root[data-motion="reduced"] .faq-list details p,
 :root[data-motion="reduced"] .help-section details p,
 :root[data-motion="reduced"] .help-results details p,
 :root[data-motion="reduced"] .lesson-card,
@@ -383,16 +464,7 @@ code {
   .bell-dot,
   .gsearch-panel,
   .orbit-spin,
-  .kicker-pill,
-  .hero h1,
-  .hero-lead,
-  .hero-ask,
-  .hero-secondary,
-  .hero-visual,
   .hero-preview-stage.loading,
-  .hero-float,
-  .feature,
-  .faq-list details p,
   .help-section details p,
   .help-results details p,
   .lesson-card,

@@ -159,6 +159,8 @@ h2 {
 
 .card {
   display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 20px;
   border-radius: var(--radius);
   background: var(--surface);

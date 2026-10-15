@@ -1,4 +1,5 @@
-/** Light by default (the brand: white and red); dark or the system's choice when the learner picks it.
+/** Light by default (the brand: white and red); ivory (warm paper, ADR-062), dark or the system's choice
+ * when the learner picks it.
  * The app's color (ADR-057) is the brand's red unless the person picks another of the avatar colors.
  * Both are remembered in the browser too, so the right look shows before the profile loads. */
 import type { Accent, ThemePref } from "./api";
@@ -9,7 +10,22 @@ let current: ThemePref = "light";
 let motion = false;
 
 /** The app's colors, as the avatar colors are named; crimson (the brand's red) is the default. */
-export const ACCENTS: readonly Accent[] = ["crimson", "ruby", "amber", "teal", "indigo", "slate", "plum", "forest"];
+export const ACCENTS: readonly Accent[] = [
+  "crimson",
+  "ruby",
+  "amber",
+  "teal",
+  "indigo",
+  "slate",
+  "plum",
+  "forest",
+  "tan",
+  "espresso",
+  "onyx",
+  "navy",
+  "olive",
+  "gold",
+];
 export const ACCENT_NAMES: Record<Accent, string> = {
   crimson: "Crimson",
   ruby: "Ruby",
@@ -19,14 +35,25 @@ export const ACCENT_NAMES: Record<Accent, string> = {
   slate: "Slate",
   plum: "Plum",
   forest: "Forest",
+  tan: "Tan",
+  espresso: "Espresso",
+  onyx: "Onyx",
+  navy: "Navy",
+  olive: "Olive",
+  gold: "Gold",
 };
+/** The colors as Settings shows them: the vivid ones, then the classic ones (ADR-062). */
+export const ACCENT_GROUPS: readonly { label: string; colors: readonly Accent[] }[] = [
+  { label: "Vivid", colors: ACCENTS.slice(0, 8) },
+  { label: "Classic", colors: ACCENTS.slice(8) },
+];
 let accentNow: Accent = "crimson";
 
 export function isAccent(v: unknown): v is Accent {
   return typeof v === "string" && (ACCENTS as readonly string[]).includes(v);
 }
 
-function resolve(pref: ThemePref): "light" | "dark" {
+function resolve(pref: ThemePref): "light" | "ivory" | "dark" {
   if (pref !== "system") return pref;
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }

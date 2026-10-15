@@ -1,13 +1,15 @@
 /* The building blocks: buttons, fields, badges, cards, menus, dialogs, toasts, charts. */
 
+/* Headings in Inter's display cut, bold and tight (ADR-062); a page's own title keeps the serif, set
+   large and dark (layout.css), for the classic voice. */
 h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   color: var(--ink);
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: var(--track-title);
   line-height: 1.2;
 }
 
@@ -76,8 +78,9 @@ a {
   border-radius: 10px;
   border: 1px solid transparent;
   font: inherit;
-  font-weight: 600;
+  font-weight: 650;
   font-size: 14.5px;
+  letter-spacing: -0.005em;
   line-height: 1;
   white-space: nowrap;
   text-decoration: none;
@@ -126,13 +129,22 @@ a {
 .ui-btn-primary {
   background-color: var(--brand);
   color: var(--brand-ink);
+  /* Lit from above, with a rim, and a soft shadow of its own color under it (ADR-062). */
   box-shadow:
-    0 1px 2px color-mix(in srgb, var(--brand-700) 25%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 1px 2px color-mix(in srgb, var(--brand-700) 30%, transparent),
+    0 6px 14px -6px color-mix(in srgb, var(--brand-700) 55%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14);
   /* A light that sweeps across on hover (ADR-057). */
-  background-image: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.2) 50%, transparent 62%);
-  background-size: 260% 100%;
-  background-position: 100% 0;
+  background-image:
+    linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.2) 50%, transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 65%);
+  background-size:
+    260% 100%,
+    100% 100%;
+  background-position:
+    100% 0,
+    0 0;
   background-repeat: no-repeat;
   transition:
     background-color var(--dur) var(--ease),
@@ -145,19 +157,26 @@ a {
 
 .ui-btn-primary:hover:not(:disabled) {
   background-color: var(--brand-600);
-  background-position: 0 0;
-  box-shadow: var(--shadow-brand);
+  background-position:
+    0 0,
+    0 0;
+  box-shadow:
+    var(--shadow-brand),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14);
 }
 
 .ui-btn-secondary {
   background: var(--surface);
   color: var(--ink);
   border-color: var(--line-strong);
-  box-shadow: var(--shadow-xs);
+  box-shadow:
+    0 1px 2px rgba(16, 18, 27, 0.06),
+    var(--edge-light);
 }
 
 .ui-btn-secondary:hover:not(:disabled) {
-  border-color: var(--subtle);
+  border-color: color-mix(in srgb, var(--ink) 30%, var(--line-strong));
   background: var(--surface-2);
 }
 
@@ -243,6 +262,8 @@ a {
   font-weight: 650;
   line-height: 1.4;
   white-space: nowrap;
+  /* A fine rim of its own color: crisp on white, ivory and dark alike (ADR-062). */
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 16%, transparent);
 }
 
 .ui-badge-neutral {
@@ -319,6 +340,25 @@ a {
 .av-forest {
   background: linear-gradient(135deg, #40916c, #1b4332);
 }
+/* The classic colors (ADR-062): each dark enough at its foot for white initials. */
+.av-tan {
+  background: linear-gradient(135deg, #cfa77f, #8f5d3e);
+}
+.av-espresso {
+  background: linear-gradient(135deg, #8b5e3c, #45291b);
+}
+.av-onyx {
+  background: linear-gradient(135deg, #4a4b55, #0d0e12);
+}
+.av-navy {
+  background: linear-gradient(135deg, #3f5e93, #152a50);
+}
+.av-olive {
+  background: linear-gradient(135deg, #849449, #434f1c);
+}
+.av-gold {
+  background: linear-gradient(135deg, #d4ae55, #8a6a1f);
+}
 
 /* ---------------- cards, sections ---------------- */
 
@@ -326,7 +366,9 @@ a {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xs);
+  box-shadow:
+    var(--shadow-card),
+    var(--edge-light);
 }
 
 .ui-card-padded {
@@ -343,6 +385,8 @@ a {
   gap: 8px;
   margin: 0 0 14px;
   font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
 .card-h-row {
@@ -368,6 +412,8 @@ a {
 .ui-section-title h2 {
   margin: 0;
   font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
 }
 
 .ui-section-title p {
@@ -443,9 +489,10 @@ a {
 
 .ui-progress {
   position: relative;
-  height: 6px;
+  height: 7px;
   border-radius: 999px;
   background: var(--surface-3);
+  box-shadow: inset 0 1px 2px rgba(16, 18, 27, 0.08);
   overflow: hidden;
 }
 
@@ -454,6 +501,7 @@ a {
   inset: 0 auto 0 0;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--brand-600), var(--brand-400));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
   transition: width 600ms var(--ease);
 }
 
@@ -479,6 +527,7 @@ a {
 
 .ui-ring-value {
   stroke: var(--brand);
+  stroke-linecap: round;
   transition: stroke-dashoffset 900ms var(--ease);
 }
 
@@ -491,9 +540,12 @@ a {
 }
 
 .ui-ring-center b {
-  font-family: var(--font-serif);
-  font-size: 26px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-ring-center small {
@@ -983,7 +1035,9 @@ a {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xs);
+  box-shadow:
+    var(--shadow-card),
+    var(--edge-light);
   transition:
     transform var(--dur) var(--ease),
     box-shadow var(--dur) var(--ease);
@@ -992,16 +1046,59 @@ a {
 .ui-stat:hover {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--brand) 22%, var(--line));
-  box-shadow: var(--shadow);
+  box-shadow:
+    var(--shadow-raise),
+    var(--edge-light);
 }
 
 .ui-stat-icon {
   display: grid;
   place-items: center;
   flex: none;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
+}
+
+/* A stat's icon is a solid tile of its tone, lit from above (ADR-062). */
+.ui-stat-icon[class*="tone-"] {
+  --tile: var(--brand);
+  color: #fff;
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--tile) 78%, white),
+    var(--tile) 55%,
+    color-mix(in srgb, var(--tile) 82%, black)
+  );
+  box-shadow:
+    0 6px 14px -6px color-mix(in srgb, var(--tile) 70%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.ui-stat-icon.tone-brand {
+  --tile: var(--brand);
+  color: var(--brand-ink);
+}
+
+.ui-stat-icon.tone-success {
+  --tile: var(--success);
+}
+
+.ui-stat-icon.tone-warning {
+  --tile: var(--warning);
+}
+
+.ui-stat-icon.tone-info {
+  --tile: var(--info);
+}
+
+.ui-stat-icon.tone-neutral {
+  --tile: color-mix(in srgb, var(--ink) 72%, var(--surface));
+}
+
+/* Dark pages: the tones are light there, so the icon is dark on them. */
+:root[data-theme="dark"] .ui-stat-icon[class*="tone-"]:not(.tone-brand) {
+  color: #10121a;
 }
 
 .tone-brand {
@@ -1026,17 +1123,21 @@ a {
 }
 
 .ui-stat-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .ui-stat-value {
-  font-family: var(--font-serif);
-  font-size: 26px;
-  font-weight: 650;
+  margin-top: 2px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
   color: var(--ink);
-  line-height: 1.2;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1314,10 +1415,24 @@ a {
   transform-origin: bottom;
   transform-box: fill-box;
   animation: bar-grow 600ms var(--ease) backwards;
+  transition: opacity var(--dur) var(--ease);
 }
 
 .ui-bars-bar:hover {
-  fill: var(--brand-700);
+  opacity: 0.82;
+}
+
+/* The bars stand in faint columns, their color lighter at the top (ADR-062). */
+.ui-bars-track {
+  fill: color-mix(in srgb, var(--brand) 4%, var(--surface-2));
+}
+
+.ui-bars-stop-top {
+  stop-color: var(--brand-400);
+}
+
+.ui-bars-stop-foot {
+  stop-color: var(--brand-600);
 }
 
 @keyframes bar-grow {
@@ -1495,10 +1610,10 @@ a {
   padding: 11px 14px;
   font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  font-weight: 650;
-  border-bottom: 1px solid var(--line);
+  letter-spacing: 0.07em;
+  color: color-mix(in srgb, var(--ink) 62%, var(--muted));
+  font-weight: 700;
+  border-bottom: 1px solid var(--line-strong);
   background: var(--surface-2);
   white-space: nowrap;
 }

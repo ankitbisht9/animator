@@ -7,9 +7,26 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 Visibility = Literal["private", "unlisted", "public"]
-Theme = Literal["light", "dark", "system"]
-# The app's color (ADR-057): one of the avatar colors; crimson is the brand's red, the default.
-Accent = Literal["crimson", "ruby", "amber", "teal", "indigo", "slate", "plum", "forest"]
+# Ivory (ADR-062): the light theme on warm paper.
+Theme = Literal["light", "ivory", "dark", "system"]
+# The app's color (ADR-057): one of the avatar colors; crimson is the brand's red, the default. The
+# classic colors (tan to gold) came with ADR-062.
+Accent = Literal[
+    "crimson",
+    "ruby",
+    "amber",
+    "teal",
+    "indigo",
+    "slate",
+    "plum",
+    "forest",
+    "tan",
+    "espresso",
+    "onyx",
+    "navy",
+    "olive",
+    "gold",
+]
 
 
 class _In(BaseModel):

@@ -2,7 +2,7 @@
  * so far; who spent it (making lessons, learning) against their monthly credits; which lessons cost the
  * most; the ledger as a spreadsheet. Changing someone's credits needs `credits:manage` (the API checks). */
 import { Ban, Coins, Download, Gauge, ReceiptText, Settings2, TriangleAlert, Users, Wallet } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   type Credits,
   downloadUsageCsv,
@@ -321,6 +321,8 @@ function SplitLegend() {
 function DailySpend({ days, height = 170 }: { days: UsageDay[]; height?: number }) {
   const max = Math.max(0.000_001, ...days.map((d) => Math.max(0, d.create_usd) + Math.max(0, d.learn_usd)));
   const w = 100 / Math.max(1, days.length);
+  // Making lessons in the app's color, lighter at the top, as the other bar charts (ADR-062).
+  const fill = `spend-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   return (
     <figure className="ui-bars usage-days">
       <svg
@@ -330,6 +332,12 @@ function DailySpend({ days, height = 170 }: { days: UsageDay[]; height?: number 
         aria-label={`Spend per day over the last ${days.length} days`}
         style={{ height }}
       >
+        <defs>
+          <linearGradient id={fill} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="ui-bars-stop-top" />
+            <stop offset="1" className="ui-bars-stop-foot" />
+          </linearGradient>
+        </defs>
         {[0.25, 0.5, 0.75].map((g) => (
           <line key={g} x1="0" x2="100" y1={height * g} y2={height * g} className="ui-bars-grid" />
         ))}
@@ -343,6 +351,7 @@ function DailySpend({ days, height = 170 }: { days: UsageDay[]; height?: number 
                 {`${d.day}: ${usd(d.cost_usd)} (${credits(d.credits)} credits) · making lessons ${usd(d.create_usd)} · learning ${usd(d.learn_usd)}`}
               </title>
               <rect x={i * w} y={0} width={w} height={height} fill="transparent" />
+              <rect x={x} y={0} width={w * 0.64} height={height} rx="1" className="ui-bars-track" />
               {hc > 0 && (
                 <rect
                   x={x}
@@ -351,6 +360,7 @@ function DailySpend({ days, height = 170 }: { days: UsageDay[]; height?: number 
                   height={Math.max(hc, 1.5)}
                   rx="1"
                   className="usage-bar split-create"
+                  style={{ fill: `url(#${fill})` }}
                 />
               )}
               {hl > 0 && (

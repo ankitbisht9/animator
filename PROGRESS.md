@@ -610,3 +610,17 @@ Target: a lesson generates in no more time than it plays. A 30-second lesson use
   way are cleaned, a diagram never shrinks its text past readable, no more than two diagrams at once, its
   edges and leaders stop on node outlines, several nodes can be marked at once.
 - Stored lessons draw exactly as before.
+
+## A richer, classic look (ADR-062)
+
+- **A new front page:** a floating bar, an opening of soft glows and a drifting network, a bold
+  headline with a hand-drawn underline, "I'm a student / teacher / curious" with example topics, the
+  live lesson tilting flat as you scroll, a features bento with small live drawings, three steps, a
+  night band whose figures count up, questions and a red closing card. Everything rises into view once
+  and stays still for reduced motion; it works the same on phones.
+- **Classic colors** for the app: tan (the beige #ddb892 family), espresso, onyx (black), navy, olive and
+  gold, beside the vivid ones; and **Ivory**, a warm paper theme beside light and dark.
+- **A bolder, sharper dashboard:** headlines in Inter's display cut, page titles in the serif's display
+  cut, cards with depth, stat tiles with solid icon tiles, gradient bar charts, a stronger chosen page in
+  the sidebar.
+- Lessons play exactly as before.

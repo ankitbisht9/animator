@@ -4,6 +4,7 @@ import {
   CirclePlay,
   Coins,
   Download,
+  Feather,
   GraduationCap,
   KeyRound,
   Laptop,
@@ -22,7 +23,7 @@ import { useAuth, useUser } from "../auth";
 import { ago, credits, date, device } from "../format";
 import { useResource, useTitle } from "../hooks";
 import { Link, navigate } from "../nav";
-import { ACCENT_NAMES, ACCENTS, applyAccent, applyTheme, isAccent } from "../theme";
+import { ACCENT_GROUPS, ACCENT_NAMES, ACCENTS, applyAccent, applyTheme, isAccent } from "../theme";
 import { AUDIENCES, SUBJECTS } from "../ui/brand";
 import {
   Alert,
@@ -52,7 +53,7 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
-const COLORS = ["crimson", "ruby", "amber", "teal", "indigo", "slate", "plum", "forest"];
+const COLORS: readonly string[] = ACCENTS;
 
 export function SettingsPage({ tab }: { tab?: string }) {
   useTitle("Settings");
@@ -380,6 +381,7 @@ function AppearanceTab() {
         {(
           [
             { v: "light", label: "Light", icon: Sun },
+            { v: "ivory", label: "Ivory", icon: Feather },
             { v: "dark", label: "Dark", icon: Moon },
             { v: "system", label: "Same as my device", icon: Monitor },
           ] as const
@@ -408,20 +410,22 @@ function AppearanceTab() {
           Buttons, links and highlights across the app (lessons keep their own colors). Changing your avatar color
           changes it too.
         </p>
-        <fieldset className="swatches accent-pick">
-          <legend className="sr-only">App color</legend>
-          {ACCENTS.map((a) => (
-            <button
-              key={a}
-              type="button"
-              aria-pressed={p.accent === a}
-              aria-label={a === "crimson" ? `${ACCENT_NAMES[a]} (default)` : ACCENT_NAMES[a]}
-              title={a === "crimson" ? `${ACCENT_NAMES[a]} (default)` : ACCENT_NAMES[a]}
-              className={`swatch av-${a} ${p.accent === a ? "on" : ""}`}
-              onClick={() => chooseAccent(a)}
-            />
-          ))}
-        </fieldset>
+        {ACCENT_GROUPS.map((g) => (
+          <fieldset key={g.label} className="swatches accent-pick">
+            <legend className="accent-group">{g.label}</legend>
+            {g.colors.map((a) => (
+              <button
+                key={a}
+                type="button"
+                aria-pressed={p.accent === a}
+                aria-label={a === "crimson" ? `${ACCENT_NAMES[a]} (default)` : ACCENT_NAMES[a]}
+                title={a === "crimson" ? `${ACCENT_NAMES[a]} (default)` : ACCENT_NAMES[a]}
+                className={`swatch av-${a} ${p.accent === a ? "on" : ""}`}
+                onClick={() => chooseAccent(a)}
+              />
+            ))}
+          </fieldset>
+        ))}
         <p className="field-note">
           {ACCENT_NAMES[p.accent] ?? ACCENT_NAMES.crimson}
           {p.accent === "crimson" ? " (default)" : ""}
