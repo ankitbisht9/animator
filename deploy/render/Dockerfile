@@ -58,6 +58,10 @@ COPY --from=web /src/apps/web/dist apps/web/dist
 COPY --from=web /src/packages/engine-worker/dist/worker.cjs packages/engine-worker/dist/worker.cjs
 COPY contracts contracts
 COPY config config
+# The scene writer's prompts are built from the DSL and component references and a few example
+# scenes (pipeline/prompts.py): without them every lesson stops before its first model call.
+COPY docs/DSL.md docs/COMPONENTS.md docs/
+COPY fixtures/scenes fixtures/scenes
 COPY deploy/render/start.sh deploy/render/start.sh
 
 # Not root. Lessons, audio and the platform's database are written under /app/var.

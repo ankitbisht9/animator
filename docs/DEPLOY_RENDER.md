@@ -83,6 +83,11 @@ memory more while it runs.
 
 - **The build fails:** the **Logs** of the deploy show the step. `pnpm install` and `uv sync` use the
   lockfiles, so a failure there usually means a lockfile was not committed.
+- **Every lesson stops before it starts:** open the lesson's details (`/api/generations/<id>`); an
+  "internal error: FileNotFoundError" names a file the image leaves out. The server reads a few files
+  from the repository's folders (the DSL and component references in `docs/`, example scenes in
+  `fixtures/scenes/`, `config/`); `apps/api/tests/test_deploy_image.py` checks the Dockerfile copies
+  each of them. (The first deploy lacked `docs/DSL.md`.)
 - **The service restarts during a lesson** (out of memory): keep one engine worker. Long lessons use the
   most memory.
 - **"Sign-ups are closed":** the email is not in `PLATFORM_ADMIN_EMAILS` or `PLATFORM_INVITE_EMAILS`, or
