@@ -9,6 +9,7 @@ import {
   roundedRectPath,
   type TextAlign,
 } from "@animator/engine";
+import { downIn, liftable, liftShadow, lightFor, richEdge, richStops } from "../finish";
 import { GlyphText } from "../GlyphText";
 import type { RenderProps } from "../types";
 import { darken, drawAttrs, fmt, lighten, n, s, shapePaint, uid } from "../util";
@@ -19,6 +20,7 @@ export function Shape({ p, d, radial = false }: { p: RenderProps; d: string; rad
   const paint = shapePaint(o);
   const gradId = uid(o.id, "fill");
   const useGrad = theme.effects.gradients;
+  if (useGrad && p.finish === "rich") return <RichShape p={p} d={d} radial={radial} />;
   return (
     <g>
       {useGrad && (
@@ -43,6 +45,56 @@ export function Shape({ p, d, radial = false }: { p: RenderProps; d: string; rad
         stroke={o.stroke}
         strokeWidth={paint.strokeWidth}
         strokeOpacity={paint.strokeOpacity}
+        strokeLinejoin="round"
+        strokeDasharray={o.dashed && o.draw >= 1 ? "12 9" : undefined}
+        {...paint.dash}
+      />
+    </g>
+  );
+}
+
+/** The rich finish (ADR-064): a lit gradient (full on objects, fading to the classic light on panels),
+ * and on an object, once it is fully drawn, a crisp outline where it had none and a soft lift shadow. */
+function RichShape({ p, d, radial }: { p: RenderProps; d: string; radial: boolean }) {
+  const { o, theme } = p;
+  const paint = shapePaint(o);
+  const gradId = uid(o.id, "fill");
+  const stops = richStops(o.fill, radial, lightFor(o.bbox.w, o.bbox.h));
+  const lift = liftable(o);
+  // While drawing, a shape without a stroke has the usual temporary one; drawn, an object gets an edge.
+  const edge = paint.strokeWidth === 0 && lift;
+  return (
+    <g>
+      <defs>
+        {radial ? (
+          <radialGradient id={gradId} cx="0.36" cy="0.3" r="0.8">
+            {stops.map(([at, c]) => (
+              <stop key={at} offset={at} stopColor={c} />
+            ))}
+          </radialGradient>
+        ) : (
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            {stops.map(([at, c]) => (
+              <stop key={at} offset={at} stopColor={c} />
+            ))}
+          </linearGradient>
+        )}
+      </defs>
+      {lift && (
+        <path
+          d={d}
+          transform={downIn(o.matrix, 6)}
+          fill={liftShadow(theme.colors.shadow, theme.mode === "dark")}
+          stroke="none"
+        />
+      )}
+      <path
+        d={d}
+        fill={`url(#${gradId})`}
+        fillOpacity={paint.fillOpacity}
+        stroke={edge ? richEdge(o.fill) : o.stroke}
+        strokeWidth={edge ? 2 : paint.strokeWidth}
+        strokeOpacity={edge ? 1 : paint.strokeOpacity}
         strokeLinejoin="round"
         strokeDasharray={o.dashed && o.draw >= 1 ? "12 9" : undefined}
         {...paint.dash}

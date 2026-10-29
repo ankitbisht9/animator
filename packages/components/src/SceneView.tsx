@@ -16,6 +16,7 @@ import { type ReactNode, useMemo } from "react";
 import { Background } from "./Background";
 import { CaptionBar } from "./Caption";
 import { EmphasisBehind, EmphasisFront } from "./Emphasis";
+import type { FinishId } from "./finish";
 import { FRONT_RENDERERS, RENDERERS } from "./renderers";
 import type { SceneNarration } from "./types";
 import { fmt, matrixAttr, withAlpha } from "./util";
@@ -34,6 +35,8 @@ export interface SceneViewProps {
   className?: string;
   /** Spoken narration (TTS on): caption words light up exactly when the voice says them. */
   narration?: SceneNarration | null;
+  /** How drawings are finished (ADR-064): classic (as before, the default) or rich. */
+  finish?: FinishId;
 }
 
 function SceneDefs({ theme }: { theme: Theme }) {
@@ -64,6 +67,7 @@ function ObjectView({
   t,
   seed,
   prep,
+  finish,
   interactive,
   hovered,
   onHover,
@@ -73,13 +77,14 @@ function ObjectView({
   t: number;
   seed: number;
   prep: unknown;
+  finish: FinishId;
   interactive: boolean;
   hovered: boolean;
   onHover?: (id: string | null) => void;
 }) {
   const render = RENDERERS[o.type];
   if (!render) return null;
-  const body: ReactNode = render({ o, theme, t, seed, prep });
+  const body: ReactNode = render({ o, theme, t, seed, prep, finish });
   const inner = (
     <g transform={matrixAttr(o.matrix)} opacity={o.alpha < 1 ? fmt(o.alpha, 3) : undefined}>
       {body}
@@ -123,18 +128,20 @@ function ObjectFront({
   t,
   seed,
   prep,
+  finish,
 }: {
   o: FrameObject;
   theme: Theme;
   t: number;
   seed: number;
   prep: unknown;
+  finish: FinishId;
 }) {
   const render = FRONT_RENDERERS[o.type];
   if (!render) return null;
   return (
     <g transform={matrixAttr(o.matrix)} opacity={o.alpha < 1 ? fmt(o.alpha, 3) : undefined} pointerEvents="none">
-      {render({ o, theme, t, seed, prep })}
+      {render({ o, theme, t, seed, prep, finish })}
     </g>
   );
 }
@@ -180,6 +187,7 @@ export function SceneView({
   onHover,
   className,
   narration,
+  finish = "classic",
 }: SceneViewProps) {
   const theme = getTheme(compiled.themeId);
   const prepById = useMemo(() => new Map(compiled.objects.map((o) => [o.id, o.prep])), [compiled]);
@@ -197,6 +205,7 @@ export function SceneView({
         t={frame.t}
         seed={compiled.seed}
         prep={prepById.get(o.id)}
+        finish={finish}
       />
     ) : null;
   const view = (o: FrameObject) => (
@@ -207,6 +216,7 @@ export function SceneView({
       t={frame.t}
       seed={compiled.seed}
       prep={prepById.get(o.id)}
+      finish={finish}
       interactive={interactive}
       hovered={hoverId === o.id}
       onHover={onHover}

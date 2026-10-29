@@ -84,16 +84,23 @@ class FileAudio:
 
 
 def _keyed(lesson: dict[str, Any]) -> list[Any]:
-    """What each segment's frames depend on: its scene, and its narration when there is a voice
-    (the captions then follow the speech word by word)."""
+    """What each segment's frames depend on: its scene, its narration when there is a voice (the
+    captions then follow the speech word by word), and the lesson's finish unless classic (ADR-064)."""
     scenes: list[Any] = lesson["scenes"]
     narration = lesson.get("narration")
-    if not narration:
+    finish = lesson.get("finish")
+    finished = finish not in (None, "classic")
+    if not narration and not finished:
         return scenes
-    return [
-        {"scene": sc, "narration": narration[i] if i < len(narration) else None}
-        for i, sc in enumerate(scenes)
-    ]
+    keyed: list[Any] = []
+    for i, sc in enumerate(scenes):
+        entry: dict[str, Any] = {"scene": sc}
+        if narration:
+            entry["narration"] = narration[i] if i < len(narration) else None
+        if finished:
+            entry["finish"] = finish
+        keyed.append(entry)
+    return keyed
 
 
 class ExportError(RuntimeError):

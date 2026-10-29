@@ -31,6 +31,7 @@ from animator.pipeline.narration import (
     take_needs,
     take_record,
 )
+from animator.pipeline.pace import PaceBook
 from animator.tts import ElevenLabsTTS, FakeTTS, SpeechCache, Spoken, WordMark, caption_words, speech_text
 from animator.tts.script import Script, SpeechScripter, wants_script
 from animator.tts.types import SpeechContext
@@ -295,3 +296,7 @@ async def test_a_hinglish_lesson_in_one_take_flows_without_breaks_and_pauses_bet
         said = last["start"] + last["words"][-1][1]
         assert rec.duration is not None and rec.duration >= said + 1.0 - 1e-3  # a pause before the next scene
     assert contiguous > 0  # the voice runs on from one sentence into the next
+    # Each narrated scene measured the voice's pace (ADR-063): later lessons are planned with it.
+    book = PaceBook(tmp_path / "pace.json", 2.45)
+    key = PaceBook.key("fake", "fake_hinglish", "Hinglish")
+    assert book.samples(key) >= 3 and 3.8 < book.wps(key) < 4.5  # a word every 0.25 s

@@ -221,6 +221,7 @@ async def create_lesson(
         paced=body.paced,
         layout=body.layout,
         trial_model=body.trial_model or None,
+        finish=body.finish,
     )
     gen = await runner.start(request_)
     row = new_row(gen, p.user_id)

@@ -27,11 +27,13 @@ from animator.llm import (
     Message,
 )
 from animator.objects.prompting import with_saved
+from animator.pipeline.depth import Blueprint, budget_note, teacher_lines, trim_lines
 from animator.pipeline.language import language_line
 from animator.pipeline.layout_plan import planned_patch_schema, planned_scene_schema
 from animator.pipeline.models import (
     BeatPlan,
     Chapter,
+    CoveragePlan,
     DirectedScene,
     Direction,
     EducationalPlan,
@@ -41,6 +43,7 @@ from animator.pipeline.models import (
     SceneRecord,
     ScriptReview,
     ScriptScene,
+    ScriptTrim,
     StoryboardChapter,
     StoryboardScene,
     TeachingScript,
@@ -73,8 +76,11 @@ CRITIC_SCHEMA = strict_schema(CriticReport)
 SCRIPT_SCHEMA = strict_schema(TeachingScript)
 REVIEW_SCHEMA = strict_schema(ScriptReview)
 DIRECTION_SCHEMA = strict_schema(Direction)
+COVERAGE_SCHEMA = strict_schema(CoveragePlan)
+TRIM_SCHEMA = strict_schema(ScriptTrim)
 
 WORDS_PER_SECOND = 2.5  # a teacher's pace (130 to 160 words a minute)
+CHECKS = " (never in the first scene, never in two scenes in a row)."
 
 
 def _validated[M: BaseModel](model: type[M], result: LLMResult) -> M:
@@ -327,27 +333,66 @@ class Stages:
 
     # ------------------------------------------------------------------ the teaching pipeline (ADR-044)
 
-    def _lesson_lines(self, gen: Generation) -> list[str]:
+    def _lesson_lines(self, gen: Generation, plan: Blueprint | None = None) -> list[str]:
+        """The lesson as the teacher and the reviewer are told it: with the plan for its length
+        (ADR-063), or, without one, a word count and a number of scenes (ADR-044)."""
         r = gen.request
         duration = round(r.duration_min * 60)
-        words, scenes = target_words(r.duration_min * 60), target_scenes(r.duration_min * 60)
-        return [
+        lines = [
             f"Topic: {r.topic}",
             f"Audience: {r.audience}",
             f"Duration: {duration} seconds",
             f"Language: {language_line(r.language)}",
             f"Style notes: {r.style}" if r.style else "Style notes: none",
+        ]
+        if plan is not None:
+            return lines + teacher_lines(plan)
+        words, scenes = target_words(r.duration_min * 60), target_scenes(r.duration_min * 60)
+        return [
+            *lines,
             f"Narration length: about {words} words in total (at most {round(words * 1.1)}), in "
             f"{scenes} scenes of about {round(words / scenes)} words each.",
         ]
 
-    async def teach(self, gen: Generation, ctx: CallContext) -> TeachingScript:
-        """The teacher: the whole lesson's explanation, every spoken word and what is seen."""
+    async def coverage(self, gen: Generation, ctx: CallContext) -> CoveragePlan:
+        """What there is to teach about the topic for this learner (ADR-063): the units a lesson of any
+        length chooses from, each with its priority (which depth needs it) and the time it needs."""
+        r = gen.request
+        minutes = r.duration_min
         req = self._request(
             "teacher",
-            self.pack.teacher.version,
-            self.pack.teacher_instructions(),
-            Message.user("\n".join(self._lesson_lines(gen))),
+            self.pack.coverage.version,
+            self.pack.coverage.text,
+            Message.user(
+                "\n".join(
+                    [
+                        f"Topic: {r.topic}",
+                        f"Audience: {r.audience}",
+                        f"Lesson length: {round(minutes * 60)} seconds ({minutes:g} minutes); map at least "
+                        f"{round(minutes * 90)} seconds of teaching.",
+                        f"Narration language: {r.language} (the map is in English)",
+                        f"Style notes: {r.style}" if r.style else "Style notes: none",
+                    ]
+                )
+            ),
+            "CoveragePlan",
+            COVERAGE_SCHEMA,
+            12_000,
+            gen,
+            "coverage plan",
+            self.settings.animator_effort_coverage,
+        )
+        return await self._retrying(req, CoveragePlan, ctx, tries=2)
+
+    async def teach(self, gen: Generation, ctx: CallContext, plan: Blueprint | None = None) -> TeachingScript:
+        """The teacher: the whole lesson's explanation, every spoken word and what is seen; with a plan
+        for its length (ADR-063), the scenes that plan lists, each to its word budget."""
+        prompt = self.pack.teacher_prompt(plan is not None)
+        req = self._request(
+            "teacher",
+            prompt.version,
+            self.pack.teacher_instructions(plan is not None),
+            Message.user("\n".join(self._lesson_lines(gen, plan))),
             "TeachingScript",
             SCRIPT_SCHEMA,
             24_000,
@@ -356,17 +401,25 @@ class Stages:
         )
         return await self._retrying(req, TeachingScript, ctx)
 
-    async def review(self, gen: Generation, script: TeachingScript, ctx: CallContext) -> ScriptReview:
+    async def review(
+        self, gen: Generation, script: TeachingScript, ctx: CallContext, plan: Blueprint | None = None
+    ) -> ScriptReview:
         """The head of teaching: checks the script (facts, depth, flow, delivery, timing) and returns
-        it improved."""
+        it improved. With a plan (ADR-063) it sees every scene's words against its budget."""
+        prompt = self.pack.review_prompt(plan is not None)
+        note = (
+            budget_note(script, plan)
+            if plan is not None
+            else length_note(script, target_words(gen.request.duration_min * 60))
+        )
         req = self._request(
             "reviewer",
-            self.pack.review.version,
-            self.pack.review_instructions(),
+            prompt.version,
+            self.pack.review_instructions(plan is not None),
             Message.user(
-                "\n".join(self._lesson_lines(gen))
+                "\n".join(self._lesson_lines(gen, plan))
                 + "\n\n"
-                + length_note(script, target_words(gen.request.duration_min * 60))
+                + note
                 + "\n\nThe teacher's script:\n"
                 + compact(script.model_dump())
             ),
@@ -378,6 +431,33 @@ class Stages:
         )
         return await self._retrying(req, ScriptReview, ctx)
 
+    async def trim(
+        self, gen: Generation, script: TeachingScript, plan: Blueprint, scenes: list[int], ctx: CallContext
+    ) -> ScriptTrim:
+        """The scenes of a script still well over their word budgets, shortened (ADR-063): only those
+        scenes go out and come back, before any voice or drawing is paid for."""
+        req = self._request(
+            "reviewer",
+            self.pack.trim.version,
+            self.pack.trim.text,
+            Message.user(
+                "\n".join(
+                    [
+                        f"Lesson: {script.title}. Audience: {gen.request.audience}. "
+                        f"Narration language: {gen.request.language}.",
+                        *trim_lines(script, plan, scenes),
+                    ]
+                )
+            ),
+            "ScriptTrim",
+            TRIM_SCHEMA,
+            12_000,
+            gen,
+            "script timing",
+            "low",
+        )
+        return await self._retrying(req, ScriptTrim, ctx, tries=2)
+
     async def direct(
         self,
         gen: Generation,
@@ -386,11 +466,13 @@ class Stages:
         on_look: Callable[[str], None] | None = None,
         on_scene: Callable[[DirectedScene], None] | None = None,
         library: str | None = None,
+        checkpoints: int | None = None,
     ) -> Direction:
         """The visual director: every scene's picture, planned together so the lesson looks
         consistent. Streamed: each scene's plan is handed over as soon as it is complete. A cost-saver
         lesson (ADR-055) also tells it which saved drawings the lesson can use (`library`), in the
-        message: its instructions stay those of every lesson."""
+        message: its instructions stay those of every lesson. A lesson planned for its length (ADR-063)
+        says how many quick checks it has room for (`checkpoints`; None: at most one, as in ADR-044)."""
         r = gen.request
         scenes = [
             {
@@ -413,6 +495,13 @@ class Stages:
                     "",
                     "The script, scene by scene:",
                     compact(scenes),
+                    *(
+                        ["", f"Quick checks: up to {checkpoints} in the lesson{CHECKS}"]
+                        if checkpoints
+                        else ["", "Quick checks: none in this lesson."]
+                        if checkpoints is not None
+                        else []
+                    ),
                     *(["", library] if library else []),
                 ]
             )
@@ -420,10 +509,11 @@ class Stages:
         if on_scene is not None or on_look is not None:
             sink = DirectionSink(on_look or (lambda look: None), on_scene or (lambda d: None))
             ctx = ctx.streaming(sink)
+        fit = checkpoints is not None
         req = self._request(
             "director",
-            self.pack.director.version,
-            self.pack.director_instructions(),
+            self.pack.director_prompt(fit).version,
+            self.pack.director_instructions(fit),
             msg,
             "Direction",
             DIRECTION_SCHEMA,

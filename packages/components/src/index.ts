@@ -1,5 +1,6 @@
 export * from "./Background";
 export * from "./Caption";
+export * from "./finish";
 export * from "./GlyphText";
 export * from "./renderers";
 export * from "./SceneView";

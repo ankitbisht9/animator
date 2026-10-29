@@ -8,20 +8,33 @@ recordings depend on: replay fixtures are keyed by the full prompt text.
 `load_prompt` picks the newest version of each pack, except where a pipeline pins one. There are two
 pipelines (`ANIMATOR_PIPELINE`).
 
-### The teaching pipeline (the default, ADR-044)
+### The teaching pipeline (the default, ADR-044; lessons that fit their length, ADR-063)
 
 | Stage | File | Output (strict JSON schema) | Model setting |
 |---|---|---|---|
-| Teacher | `teacher.v1.md` | `TeachingScript` (the whole explanation: every spoken sentence and what is seen, with the core idea, intuition, misconception and worked example) | `ANIMATOR_MODEL_TEACHER` (medium) |
-| Reviewer | `review.v1.md` | `ScriptReview` (what was fixed, and the improved script) | `ANIMATOR_MODEL_REVIEWER` (low) |
-| Visual director | `director.v1.md` | `Direction` (the lesson's look, then each scene's composition and what each beat shows), streamed | `ANIMATOR_MODEL_DIRECTOR` (medium) |
-| Scenes | `animation.v7.md` + DSL reference + component catalog + exemplars | the engine's LLM-facing Scene schema | `ANIMATOR_MODEL_ANIMATION_PLANNER`, at `ANIMATOR_EFFORT_TEACHING_SCENE` (medium) |
+| Coverage map | `coverage.v1.md` | `CoveragePlan` (the big idea, a hook, and the topic's teaching units: kind, priority = which lesson length needs it, seconds, what each builds on) | the teacher's model, at `ANIMATOR_EFFORT_COVERAGE` (low) |
+| Teacher | `teacher.v2.md` | `TeachingScript` (the whole explanation: every spoken sentence and what is seen, with the core idea, intuition, misconception and worked example) | `ANIMATOR_MODEL_TEACHER` (medium) |
+| Reviewer | `review.v2.md` | `ScriptReview` (what was fixed, and the improved script) | `ANIMATOR_MODEL_REVIEWER` (low) |
+| Trim (only a script still well over its budget) | `trim.v1.md` | `ScriptTrim` (the long scenes' beats, shortened) | the reviewer's model, low |
+| Visual director | `director.v2.md` | `Direction` (the lesson's look, then each scene's composition and what each beat shows), streamed | `ANIMATOR_MODEL_DIRECTOR` (medium) |
+| Scenes | `animation.v8.md` + DSL reference + component catalog + exemplars | the engine's LLM-facing Scene schema | `ANIMATOR_MODEL_ANIMATION_PLANNER`, at `ANIMATOR_EFFORT_TEACHING_SCENE` (medium) |
 | Correction | same instructions as the scenes | `ScenePatch` | `ANIMATOR_MODEL_CORRECTION`, final attempt `..._CORRECTION_FINAL` |
 | Visual critic | `critic.v2.md` | `CriticReport` | `ANIMATOR_MODEL_VISUAL_CRITIC` |
 
-- The teacher's message gives the length to aim for: duration x 2.5 words per second, split over
-  `max(3, duration / 14)` scenes.
-- The reviewer's message gives the script's measured word count against that target. Models cannot count words.
+- The plan for the lesson's length (`pipeline/depth.py`) is made by code from the coverage map: the depth
+  (Snapshot up to 75 s, Essentials up to 150 s, Deep dive up to 270 s, Mastery up to 450 s, Masterclass
+  beyond), the units that depth needs while they fit the time, in teaching order, cut into scenes of about
+  15 s, each with a word budget at the pace the lesson's voice really speaks (`pipeline/pace.py`), after the
+  1.2 s that ends every scene. What does not fit is the lesson's "Go deeper".
+- The teacher's message gives that plan: the depth, the hook, the one idea to land, every scene's step, what
+  it teaches and its word budget, and what is left for a longer lesson. Without a coverage map (switched
+  off, or the call failed) the plan has the depth, the number of scenes and their budgets only.
+- The reviewer's message gives every scene's measured word count against its budget. Models cannot count
+  words. A script still over 110% of its budget has its scenes that are over 112% of theirs trimmed.
+- The director's message says how many quick checks the lesson has room for (never in the first scene,
+  never two in a row); extra ones are left out by code.
+- With `ANIMATOR_TIME_FIT=false` the teaching pipeline is as in ADR-044: `teacher.v1`, `review.v1`,
+  `director.v1`, duration x 2.5 words per second over `max(3, duration / 14)` scenes, no coverage map, no trim.
 - The director gets the reviewed script. Each scene brief takes the script's narration word for word and the
   director's plan for the picture.
 - The scene message adds the lesson's look and the whole lesson's narration, so each scene knows where it sits.

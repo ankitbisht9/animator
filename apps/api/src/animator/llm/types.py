@@ -95,6 +95,13 @@ class Usage:
     def total(self) -> int:
         return self.input_tokens + self.output_tokens
 
+    @property
+    def fresh(self) -> int:
+        """Tokens worked through anew: input not read from the provider's prompt cache, and output.
+        The scene prompts' shared reference (about 25k tokens) is read from the cache on almost every
+        call, at a tenth of the price; counting it made every lesson of over about 55 calls stop."""
+        return self.input_tokens - self.cached_input_tokens + self.output_tokens
+
 
 @dataclass
 class LLMResult:
@@ -135,7 +142,8 @@ class CallRecord:
 
 
 class Budget:
-    """Per-generation hard stop on cost and tokens (spec Section 4)."""
+    """Per-generation hard stop on cost and on fresh tokens (spec Section 4; cached input is not
+    counted: its cost is in the cost budget)."""
 
     def __init__(self, max_usd: float, max_tokens: int) -> None:
         self.max_usd = max_usd
@@ -152,7 +160,7 @@ class Budget:
             raise BudgetExceeded(f"token budget reached: {self.spent_tokens} of {self.max_tokens}")
 
     def add(self, usage: Usage, cost_usd: float | None) -> None:
-        self.spent_tokens += usage.total
+        self.spent_tokens += usage.fresh
         self.spent_usd += cost_usd or 0.0
 
 

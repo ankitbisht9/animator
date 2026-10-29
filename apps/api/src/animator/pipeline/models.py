@@ -227,6 +227,60 @@ class ScriptReview(_Strict):
     script: TeachingScript
 
 
+# ------------------------------------------------------------ lessons that fit their length (ADR-063)
+
+CoverageKind = Literal[
+    "prerequisite",
+    "intuition",
+    "core",
+    "mechanism",
+    "example",
+    "misconception",
+    "application",
+    "extension",
+    "practice",
+]
+
+
+class CoverageUnit(_Strict):
+    id: str = Field(description="Short snake_case id, e.g. 'pressure_difference'")
+    kind: CoverageKind
+    title: str = Field(description="At most 8 words, in English")
+    teach: str = Field(description="What the learner understands after it, in one sentence, in English")
+    priority: int = Field(
+        description="1 = without it the topic is not understood; 2 = needed for real understanding; "
+        "3 = deepens it; 4 = enriches it; 5 = optional"
+    )
+    seconds: float = Field(description="Narration time a calm teacher needs to teach it well")
+    needs: list[str] = Field(description="Ids of the units it builds on (empty if none)")
+
+
+class CoveragePlan(_Strict):
+    """What there is to teach about a topic, for one learner: the lesson takes what fits its length."""
+
+    big_idea: str = Field(description="The one sentence the learner must remember, in English")
+    hook: str = Field(description="The opening question or surprise, in English")
+    units: list[CoverageUnit]
+
+    @field_validator("units")
+    @classmethod
+    def _has_units(cls, v: list[CoverageUnit]) -> list[CoverageUnit]:
+        if not v:
+            raise ValueError("the coverage plan needs at least one unit")
+        return v
+
+
+class TrimmedScene(_Strict):
+    scene: int = Field(description="The scene's number in the script (1-based)")
+    beats: list[ScriptBeat]
+
+
+class ScriptTrim(_Strict):
+    """Scenes of a script that ran over their word budgets, shortened."""
+
+    scenes: list[TrimmedScene]
+
+
 class DirectedScene(_Strict):
     scene: int = Field(description="The script scene this plans (1-based)")
     layout: Layout
@@ -272,6 +326,10 @@ class GenerationRequest(_Strict):
     # Model trials (ADR-056): an OpenRouter model (one of ANIMATOR_TRIAL_MODELS) this lesson is made
     # with instead of the configured ones, to compare it; None: the normal setup.
     trial_model: str | None = Field(default=None, max_length=120, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/~-]*$")
+    # How the lesson's drawings are finished (ADR-064): rich (shaded, with depth) or classic (as lessons
+    # first looked). None: the server's default (ANIMATOR_FINISH) for a new lesson; a lesson stored
+    # before ADR-064 has none and stays classic.
+    finish: Literal["classic", "rich"] | None = None
 
 
 class Attempt(BaseModel):
@@ -400,5 +458,19 @@ class Generation(BaseModel):
                 for s in self.scenes
             ],
             "metrics": self.metrics.model_dump(),
+            "depth": self.depth_summary(),
             "version": self.version,
+        }
+
+    def depth_summary(self) -> dict[str, Any] | None:
+        """A lesson planned for its length (ADR-063): its depth, and what a longer lesson would add."""
+        depth = (self.teaching or {}).get("depth")
+        if not isinstance(depth, dict):
+            return None
+        deeper = [d for d in depth.get("deeper") or [] if isinstance(d, dict) and d.get("title")]
+        return {
+            "tier": depth.get("tier"),
+            "name": depth.get("name"),
+            "summary": depth.get("summary"),
+            "deeper": [{"title": d.get("title"), "teach": d.get("teach")} for d in deeper[:6]],
         }

@@ -29,6 +29,7 @@ from animator.jobs.store import FileStore, GenerationStore, MemoryStore
 from animator.llm import LLMClient, build_llm
 from animator.objects.harvest import Harvester
 from animator.observability import setup_logging
+from animator.pipeline.depth import tiers_json
 from animator.pipeline.generator import KeyframeSource, Pipeline
 from animator.platform import Platform, PlatformSettings, serve_web
 from animator.platform import install as install_platform
@@ -169,6 +170,13 @@ def create_app(
             "layout_mode": st.animator_layout_mode,
             # Model trials (ADR-056): the OpenRouter models an admin may make a lesson with.
             "trial_models": st.trial_models,
+            # Lessons that fit their length (ADR-063): what each length teaches. Lessons longer than
+            # max_s are planned in chapters (the fast pipeline), without these depths.
+            "depth": {
+                "enabled": st.animator_pipeline == "teaching" and st.animator_time_fit,
+                "tiers": tiers_json(),
+                "max_s": st.animator_teaching_max_duration_s,
+            },
             "tts": {
                 "enabled": speech is not None,
                 "provider": st.animator_tts_provider if st.animator_tts_enabled else None,

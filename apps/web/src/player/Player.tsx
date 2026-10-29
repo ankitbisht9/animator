@@ -7,11 +7,12 @@
  * as pending. Reaching the end of what is ready holds the last frame with a "preparing the
  * next scene" overlay and resumes by itself when the next scene arrives (spec Section 13).
  */
-import { SceneView } from "@animator/components";
+import { type FinishId, SceneView } from "@animator/components";
 import { CANVAS, cameraMatrix, evaluate, type FrameObject, stripMarkup } from "@animator/engine";
 import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Lesson, locate } from "../lesson/lesson";
 import { formatTime, PlaybackClock } from "./clock";
+import { cuesBetween, SOUND_MODES, SoundBoard, type SoundMode, soundCues } from "./sound";
 import { VoicePlayer, voiceAt, voiceUrl } from "./voice";
 
 export interface PendingScene {
@@ -52,9 +53,22 @@ interface Props {
   addon?: (control: PlayerControl) => ReactNode;
   /** How playback starts (the learner's preferences); defaults: normal speed, captions and voice on. */
   initial?: { rate?: number; captions?: boolean; voice?: boolean };
+  /** How the lesson's drawings are finished (ADR-064); default classic. */
+  finish?: FinishId;
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+// Sound (ADR-065): the viewer's choice, kept in this browser.
+const SOUND_KEY = "animator.sound";
+function savedSoundMode(): SoundMode {
+  try {
+    const v = window.localStorage.getItem(SOUND_KEY);
+    return SOUND_MODES.includes(v as SoundMode) ? (v as SoundMode) : "all";
+  } catch {
+    return "all";
+  }
+}
 
 function prettyId(id: string): string {
   return id
@@ -91,12 +105,22 @@ class SceneBoundary extends Component<
   }
 }
 
-export function Player({ lesson, autoPlay = false, pending = [], generating = false, onTime, addon, initial }: Props) {
+export function Player({
+  lesson,
+  autoPlay = false,
+  pending = [],
+  generating = false,
+  onTime,
+  addon,
+  initial,
+  finish = "classic",
+}: Props) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(initial?.rate ?? 1);
   const [captions, setCaptions] = useState(initial?.captions ?? true);
   const [voiceOn, setVoiceOn] = useState(initial?.voice ?? true);
+  const [sound, setSound] = useState<SoundMode>(savedSoundMode);
   const [hover, setHover] = useState<string | null>(null);
   const [question, setQuestion] = useState<{ sceneIndex: number; id: string } | null>(null);
   const [answered, setAnswered] = useState<Record<string, number>>({});
@@ -192,6 +216,40 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
     if (!voiceRef.current) voiceRef.current = new VoicePlayer();
     voiceRef.current.sync(voice, playing, rate);
   }, [hasVoice, voice, playing, rate]);
+  // Sound (ADR-065): effects as the clock passes what happens on screen, and a music bed that ducks
+  // under the voice. Nothing is created until there is something to play.
+  const cues = useMemo(() => soundCues(lesson), [lesson]);
+  const boardRef = useRef<SoundBoard | null>(null);
+  const lastT = useRef(t);
+  useEffect(() => () => boardRef.current?.dispose(), []);
+  useEffect(() => {
+    const from = lastT.current;
+    lastT.current = t;
+    if (!playing || sound === "off") return;
+    const passed = cuesBetween(cues, from, t);
+    if (passed.length) {
+      boardRef.current ??= new SoundBoard();
+      boardRef.current.play(passed);
+    }
+  }, [t, playing, sound, cues]);
+  const speaking = voice !== null;
+  useEffect(() => {
+    const want = playing && sound === "all";
+    if (!want && !boardRef.current) return;
+    boardRef.current ??= new SoundBoard();
+    boardRef.current.setMusic(want, speaking);
+  }, [playing, sound, speaking]);
+  const cycleSound = useCallback(() => {
+    setSound((m) => {
+      const next = SOUND_MODES[(SOUND_MODES.indexOf(m) + 1) % SOUND_MODES.length] ?? "all";
+      try {
+        window.localStorage.setItem(SOUND_KEY, next);
+      } catch {
+        /* private window: kept for this page only */
+      }
+      return next;
+    });
+  }, []);
   useEffect(() => {
     // Fetch this scene's speech and the start of the next scene's ahead of time.
     if (!hasVoice || !scene) return;
@@ -223,9 +281,10 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
       else if (e.code === "ArrowLeft") clock.seek(clock.t - 5);
       else if (e.key === "c") setCaptions((c) => !c);
       else if (e.key === "m") setVoiceOn((v) => !v);
+      else if (e.key === "s" && !e.ctrlKey && !e.metaKey && !e.altKey) cycleSound();
       else if (e.key === "f") void stageRef.current?.requestFullscreen?.();
     },
-    [clock],
+    [clock, cycleSound],
   );
   useEffect(() => {
     window.addEventListener("keydown", onKey);
@@ -269,6 +328,7 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
                       frame={lastGood.current.frame}
                       captions={captions}
                       narration={scene.narration}
+                      finish={finish}
                     />
                     <div className="render-warning">This part could not be drawn; showing the last good frame.</div>
                   </>
@@ -282,6 +342,7 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
                 frame={frame}
                 captions={captions}
                 narration={scene.narration}
+                finish={finish}
                 interactive={!playing}
                 hoverId={playing ? null : hover}
                 onHover={setHover}
@@ -389,6 +450,8 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
           captions={captions}
           voice={hasVoice ? voiceOn : undefined}
           onVoice={() => setVoiceOn((v) => !v)}
+          sound={sound}
+          onSound={cycleSound}
           onToggle={() => !question && !empty && clock.toggle()}
           onSeek={(x) => {
             setBuffering(false);
@@ -456,6 +519,12 @@ export function Player({ lesson, autoPlay = false, pending = [], generating = fa
   );
 }
 
+const SOUND_LABEL: Record<SoundMode, string> = {
+  all: "Sound: effects and music",
+  effects: "Sound: effects only",
+  off: "Sound: off",
+};
+
 function Preparing({ title, first = false }: { title?: string; first?: boolean }) {
   return (
     <div className="preparing">
@@ -488,6 +557,9 @@ function Controls(props: {
   /** Narration audio on/off; undefined when the lesson has no voice (no button). */
   voice?: boolean;
   onVoice: () => void;
+  /** Sound effects and music (ADR-065). */
+  sound: SoundMode;
+  onSound: () => void;
   onToggle: () => void;
   onSeek: (t: number) => void;
   onRate: (r: number) => void;
@@ -592,6 +664,20 @@ function Controls(props: {
           </svg>
         </button>
       )}
+      <button
+        type="button"
+        className={`icon-btn ${props.sound !== "off" ? "on" : ""}`}
+        onClick={props.onSound}
+        aria-label={SOUND_LABEL[props.sound]}
+        title={`${SOUND_LABEL[props.sound]} (s)`}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M9 17V5l10-2v12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinejoin="round" />
+          <circle cx="6.5" cy="17" r="2.5" fill="currentColor" />
+          {props.sound !== "effects" && <circle cx="16.5" cy="15" r="2.5" fill="currentColor" />}
+          {props.sound === "off" && <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}
+        </svg>
+      </button>
       <button
         type="button"
         className={`icon-btn ${props.captions ? "on" : ""}`}

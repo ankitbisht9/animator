@@ -1,7 +1,8 @@
 """The teaching pipeline (ADR-044): a teacher writes the whole explanation, a reviewer checks and
 improves it, a visual director plans every scene's picture, then the scenes are drawn, looked at
 (rendered keyframes and the measured composition) and framed by the camera. The fast pipeline keeps
-its own prompts."""
+its own prompts. Lessons fit their length (ADR-063): a coverage map first, the teacher writes the
+scenes that fit the time, each to a word budget, and a script well over its budget is trimmed."""
 
 from __future__ import annotations
 
@@ -54,6 +55,35 @@ def teacher_script(words_per_beat: int = 6, scenes: int = 3) -> dict[str, Any]:
     }
 
 
+def coverage() -> dict[str, Any]:
+    """What there is to teach about floating, from what even a 1-minute lesson needs to extras."""
+
+    def unit(
+        uid: str, kind: str, title: str, priority: int, seconds: float, needs: list[str]
+    ) -> dict[str, Any]:
+        return {
+            "id": uid,
+            "kind": kind,
+            "title": title,
+            "teach": f"The learner understands {title.lower()}.",
+            "priority": priority,
+            "seconds": seconds,
+            "needs": needs,
+        }
+
+    return {
+        "big_idea": "Water pushes up with the weight of the water moved aside.",
+        "hook": "Why does a steel ship float when a nail sinks?",
+        "units": [
+            unit("push", "intuition", "Pushing a ball under water", 1, 12, []),
+            unit("buoyancy", "core", "The buoyant force", 1, 15, ["push"]),
+            unit("block", "example", "A 2 kg block in water", 2, 25, ["buoyancy"]),
+            unit("heavy", "misconception", "Heavy things always sink", 3, 20, ["buoyancy"]),
+            unit("ships", "application", "Why ships float", 4, 20, ["buoyancy"]),
+        ],
+    }
+
+
 def direction(scenes: int = 3) -> dict[str, Any]:
     return {
         "look": "A glass tank centred on the stage; blue water; the block is orange.",
@@ -86,6 +116,12 @@ class Teaching(Script):
             self.calls.append(req)
             out = self.overrides[label]
             return out(req) if callable(out) else copy.deepcopy(out)
+        if label == "coverage plan":
+            self.calls.append(req)
+            return coverage()
+        if label == "script timing":
+            self.calls.append(req)
+            return {"scenes": []}
         if label == "lesson script":
             self.calls.append(req)
             return teacher_script()
@@ -117,17 +153,17 @@ async def test_a_lesson_is_taught_reviewed_directed_then_drawn(pool: EngineWorke
     gen, _ = await run(pool, script, teaching(), duration_min=0.5)
     assert gen.status == "complete", gen.error
     labels = [r.label for r in script.calls]
-    assert labels[:3] == ["lesson script", "script review", "visual direction"]
+    assert labels[:4] == ["coverage plan", "lesson script", "script review", "visual direction"]
     assert "outline" not in labels and not any(r.stage == "educational_planner" for r in script.calls)
     assert [s.status for s in gen.scenes] == ["ready"] * 3
     # The teaching stages use the storyboard's model unless they have their own.
-    assert {r.stage: r.models[0] for r in script.calls[:3]} == {
+    assert {r.stage: r.models[0] for r in script.calls[:4]} == {
         "teacher": "m-board",
         "reviewer": "m-board",
         "director": "m-board",
     }
-    teacher = text_of(script.calls[0])
-    assert f"about {target_words(30)} words in total" in teacher and "3 scenes" in teacher
+    teacher = text_of(script.calls[1])
+    assert "Depth: Snapshot, a 30-second lesson" in teacher and "Plan for this length: exactly" in teacher
     # The narration is the reviewed script's, word for word; the pictures are the director's.
     first = gen.scenes[0].brief
     assert first.beats[0].narration == "Look closely at the **tank**, it holds water."
@@ -179,7 +215,7 @@ async def test_a_failed_direction_draws_the_scenes_from_the_teachers_show_notes(
 async def test_a_review_that_runs_far_too_long_keeps_the_teachers_script(pool: EngineWorkerPool) -> None:
     long = teacher_script(words_per_beat=60)
     script = Teaching(**{"script review": {"changes": ["Explained much more."], "script": long}})
-    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    gen, _ = await run(pool, script, teaching(animator_time_fit=False), duration_min=0.5)
     assert gen.status == "complete", gen.error
     assert gen.teaching is not None and gen.teaching["changes"] == []
     assert gen.scenes[0].brief.beats[0].narration == "Look at the **tank** number 1 energy energy."
@@ -195,6 +231,129 @@ async def test_the_review_can_be_switched_off(pool: EngineWorkerPool) -> None:
     assert gen.scenes[0].brief.beats[0].narration == "Look at the **tank** number 1 energy energy."
 
 
+# ------------------------------------------------------------ lessons that fit their length (ADR-063)
+
+
+def checked_direction() -> dict[str, Any]:
+    """A direction that puts a quick check in every scene."""
+    d = direction()
+    for sc in d["scenes"]:
+        sc["checkpoint"] = {
+            "question": "Does it float?",
+            "choices": ["yes", "no", "maybe"],
+            "answer": 0,
+            "explain": "It does.",
+        }
+    return d
+
+
+def call(script: Teaching, label: str) -> LLMRequest:
+    return next(r for r in script.calls if r.label == label)
+
+
+async def test_a_lesson_is_planned_for_its_length_before_it_is_taught(pool: EngineWorkerPool) -> None:
+    script = Teaching(**{"visual direction": checked_direction()})
+    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    cover = call(script, "coverage plan")
+    assert cover.stage == "teacher" and cover.effort == "low" and cover.prompt_version == "coverage.v1"
+    assert "Lesson length: 30 seconds (0.5 minutes); map at least 45 seconds" in text_of(cover)
+    teacher = call(script, "lesson script")
+    assert teacher.prompt_version == "teacher.v2"
+    told = text_of(teacher)
+    assert "Depth: Snapshot, a 30-second lesson" in told and "Hook: Why does a steel ship float" in told
+    assert "The buoyant force" in told.split("Left for a longer lesson")[0]  # what a 30 s lesson teaches
+    assert "A 2 kg block in water" in told.split("Left for a longer lesson")[1]  # and what it leaves
+    review = call(script, "script review")
+    assert review.prompt_version == "review.v2" and "Scene words against their budgets" in text_of(review)
+    director = call(script, "visual direction")
+    assert director.prompt_version == "director.v2" and "Quick checks: up to 1 in the lesson" in text_of(
+        director
+    )
+    # One quick check, never in the first scene: the others are left out.
+    assert [s.brief.checkpoint is not None for s in gen.scenes] == [False, True, False]
+    assert gen.teaching is not None
+    depth = gen.teaching["depth"]
+    # 30 seconds hold one idea, properly: the analogy is left for a longer lesson.
+    assert depth["tier"] == "snapshot" and depth["chosen"] == ["buoyancy"] and depth["trimmed"] == 0
+    assert depth["words"] == sum(s["words"] for s in depth["scenes"]) and depth["wps"] == 2.5  # no voice
+    summary = gen.summary()["depth"]
+    assert summary["name"] == "Snapshot" and summary["deeper"][0]["title"] == "Pushing a ball under water"
+    timing = gen.teaching["timing"]
+    assert timing["asked_s"] == 30 and timing["length_s"] > 0 and timing["voiced"] == 0
+
+
+async def test_without_time_fit_the_teaching_pipeline_is_as_before(pool: EngineWorkerPool) -> None:
+    script = Teaching(**{"visual direction": checked_direction()})
+    gen, _ = await run(pool, script, teaching(animator_time_fit=False), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    assert [r.label for r in script.calls][:3] == ["lesson script", "script review", "visual direction"]
+    versions = {r.label: r.prompt_version for r in script.calls[:3]}
+    assert versions == {
+        "lesson script": "teacher.v1",
+        "script review": "review.v1",
+        "visual direction": "director.v1",
+    }
+    teacher = text_of(script.calls[0])
+    assert f"about {target_words(30)} words in total" in teacher and "3 scenes" in teacher
+    assert "Quick checks" not in text_of(script.calls[2])
+    assert all(s.brief.checkpoint is not None for s in gen.scenes)  # as the director planned
+    assert gen.teaching is not None and "depth" not in gen.teaching and gen.summary()["depth"] is None
+
+
+async def test_a_failed_coverage_map_still_plans_the_lesson_by_its_length(pool: EngineWorkerPool) -> None:
+    script = Teaching(**{"coverage plan": LLMBadOutput("not a map")})
+    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    assert sum(r.label.startswith("coverage plan") for r in script.calls) == 2  # retried once
+    told = text_of(call(script, "lesson script"))
+    assert "Depth: Snapshot" in told and "your choice" in told and "Left for a longer lesson" not in told
+    assert gen.teaching is not None and gen.teaching["depth"]["chosen"] == []
+
+
+async def test_a_coverage_map_can_be_switched_off(pool: EngineWorkerPool) -> None:
+    script = Teaching()
+    gen, _ = await run(pool, script, teaching(animator_coverage_plan=False), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    assert "coverage plan" not in [r.label for r in script.calls]
+    assert "Depth: Snapshot" in text_of(call(script, "lesson script"))
+
+
+async def test_a_script_well_over_its_budget_is_trimmed_before_it_is_drawn(pool: EngineWorkerPool) -> None:
+    long = teacher_script(words_per_beat=40)
+    short = [
+        {"say": "Look, the **tank** fills.", "show": "the tank fills"},
+        {"say": "It rises.", "show": "x"},
+    ]
+    trim = {"scenes": [{"scene": k, "beats": short} for k in (1, 2, 3)]}
+    script = Teaching(
+        **{"lesson script": long, "script review": {"changes": [], "script": long}, "script timing": trim}
+    )
+    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    timing = call(script, "script timing")
+    assert timing.prompt_version == "trim.v1" and timing.stage == "reviewer" and timing.effort == "low"
+    assert "Scene 1 (concept, 'Scene 1'): 82 words, budget" in text_of(timing)
+    assert gen.teaching is not None and gen.teaching["depth"]["trimmed"] == 3
+    assert gen.teaching["depth"]["words_written"] == 3 * 6
+    assert [b.narration for b in gen.scenes[0].brief.beats] == ["Look, the **tank** fills.", "It rises."]
+
+
+async def test_a_failed_trim_keeps_the_script(pool: EngineWorkerPool) -> None:
+    long = teacher_script(words_per_beat=40)
+    script = Teaching(
+        **{
+            "lesson script": long,
+            "script review": {"changes": [], "script": long},
+            "script timing": LLMBadOutput("no"),
+        }
+    )
+    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    assert gen.teaching is not None and gen.teaching["depth"]["trimmed"] == 0
+    assert gen.scenes[0].brief.beats[0].narration.startswith("Look at the **tank** number 1")
+
+
 # ---------------------------------------------------------------------- the critic and the camera
 
 
@@ -203,9 +362,13 @@ class Frames:
 
     def __init__(self) -> None:
         self.calls = 0
+        self.finishes: list[str] = []
 
-    async def keyframes(self, scenes: list[dict[str, Any]], index: int, times: list[float]) -> list[bytes]:
+    async def keyframes(
+        self, scenes: list[dict[str, Any]], index: int, times: list[float], finish: str = "classic"
+    ) -> list[bytes]:
         self.calls += 1
+        self.finishes.append(finish)
         return [b"png"] * len(times)
 
 

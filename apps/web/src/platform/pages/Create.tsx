@@ -13,7 +13,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import type { ApiConfig } from "../../api";
+import { type ApiConfig, depthFor } from "../../api";
 import { type LessonLayout, type Visibility, v1 } from "../api";
 import { useAuth, useUser } from "../auth";
 import { credits, date } from "../format";
@@ -75,6 +75,8 @@ export function CreatePage() {
   const [visibility, setVisibility] = useState<Visibility>("private");
   const [style, setStyle] = useState("");
   const [layout, setLayout] = useState<LessonLayout | null>(prefs.layout);
+  // How the drawings are finished (ADR-064): rich unless the learner picks classic.
+  const [finish, setFinish] = useState<"rich" | "classic">("rich");
   const info = useResource("public-info", v1.info, 300_000);
   const [paced, setPaced] = useState(false);
   // Model trials (ADR-056): "" is the normal setup; otherwise an OpenRouter model to compare.
@@ -96,7 +98,12 @@ export function CreatePage() {
   const noCredits = wallet.blocked || wallet.exhausted;
   const blocked = left === 0 || noCredits || (user.limits.require_verified && !user.verified);
   const lengths = LENGTHS.filter((l) => l <= user.limits.max_minutes);
-  const scenes = useMemo(() => Math.max(2, Math.round((minutes * 60) / 22)), [minutes]);
+  // Lessons that fit their length (ADR-063): what this length teaches, and about one scene per 16 s.
+  const depth = useMemo(() => depthFor(config.data, minutes), [config.data, minutes]);
+  const scenes = useMemo(
+    () => (depth ? Math.max(3, Math.round((minutes * 60) / 16)) : Math.max(2, Math.round((minutes * 60) / 22))),
+    [depth, minutes],
+  );
   const notReady = config.data && !config.data.openai_key_configured;
   const trialModels = can("models:trial") ? (config.data?.trial_models ?? []) : [];
   const normalModels = useMemo(
@@ -123,6 +130,7 @@ export function CreatePage() {
         layout: layout ?? config.data?.layout_mode ?? null,
         visibility,
         trial_model: trialModels.includes(trialModel) ? trialModel : null,
+        finish,
       });
       refreshLessonLists();
       void reload();
@@ -279,6 +287,15 @@ export function CreatePage() {
                   onChange={setMinutes}
                   options={lengths.map((l) => ({ value: l, label: `${l}m` }))}
                 />
+                {depth ? (
+                  <p className="field-note depth-note">
+                    <b>{depth.name}:</b> {depth.summary}
+                  </p>
+                ) : (
+                  config.data?.depth?.enabled && (
+                    <p className="field-note depth-note">A long lesson, planned in chapters.</p>
+                  )
+                )}
               </div>
               <div>
                 <h2 className="card-h">
@@ -368,6 +385,23 @@ export function CreatePage() {
                     </p>
                   )}
                 </div>
+                <div>
+                  <span className="ui-label">Drawing style</span>
+                  <Segmented
+                    label="Drawing style"
+                    value={finish}
+                    onChange={(v) => setFinish(v)}
+                    options={[
+                      { value: "rich", label: "Rich" },
+                      { value: "classic", label: "Classic" },
+                    ]}
+                  />
+                  <p className="small muted">
+                    {finish === "rich"
+                      ? "Shaded shapes with depth, crisp outlines and soft shadows."
+                      : "Flat shapes with a light gradient, as lessons first looked."}
+                  </p>
+                </div>
                 <Checkbox checked={paced} onChange={setPaced}>
                   Save cost: make scenes just ahead of where I am watching
                 </Checkbox>
@@ -411,7 +445,7 @@ export function CreatePage() {
               <div>
                 <dt>Length</dt>
                 <dd>
-                  {minutes} min · about {scenes} scenes
+                  {minutes} min{depth ? ` · ${depth.name}` : ""} · about {scenes} scenes
                 </dd>
               </div>
               <div>

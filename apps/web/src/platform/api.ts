@@ -494,6 +494,8 @@ export interface CreateLesson {
   subject?: string | null;
   /** Model trials (ADR-056, admins): one of /api/config's trial_models; null: the normal models. */
   trial_model?: string | null;
+  /** How the drawings are finished (ADR-064); null: the server's default. */
+  finish?: "classic" | "rich" | null;
 }
 
 // ---------------------------------------------------------------------- saved drawings (ADR-055)

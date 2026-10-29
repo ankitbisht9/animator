@@ -3015,3 +3015,129 @@ done.
   unchanged, and nothing new moves there.
 
 **Rollback:** the tag `backup/before-rich-ui`.
+
+
+## ADR-063 Lessons that fit their length, and go deeper as they get longer (2026-10-29)
+
+**Asked.** After the research on other explainer tools (Vismo, NotebookLM, Code2Video and others), the
+user asked to start the suggested order with what adds little or no cost: a lesson's content must fit
+the time chosen and grow in depth with it (1 minute an overview, 2 minutes more detail, 3 to 4 minutes the
+concepts in depth), well prepared and holding attention. Plans T1 (depth by length), T2 (a coverage map
+before the teacher) and T3 (a time budget per section).
+
+**Backup first:** tag `backup/before-time-fit` (= e23f1e4), `.env.backup-before-time-fit`, and
+`D:\animation-backups\v2.10-before-time-fit` (a bundle of every git ref, the `.env`, a consistent copy of
+the platform database, the objects warehouse, the user's local `vite.config.ts`).
+
+**What was measured before** (114 finished teaching lessons in `var/generations`, 113 of them 1 minute):
+1-minute lessons ran **1.26x** the time asked (median 75 s; 0.92x to 1.80x). The teacher was asked for
+2.5 words a second and up to 10% more, and wrote 172 words for 150 (+15%); the 1.07 s that closes every
+scene was not budgeted. And 5 of the last 6 three-minute lessons **stopped** with "token budget reached":
+see the budget below.
+
+**Decision** (`ANIMATOR_TIME_FIT=true`, the default; `pipeline/depth.py`, `pipeline/pace.py`):
+- *Depth by length (T1).* Snapshot (up to 75 s): one core idea, one picture or case that makes it click, a
+  one-sentence takeaway. Essentials (up to 150 s): and why it works, a worked example with numbers, one
+  prediction. Deep dive (up to 270 s): from what the learner knows to the mechanism step by step, a worked
+  example, the misconception corrected, a real use, a check, a recap. Mastery (up to 450 s): chapters,
+  each a small lesson with its check, edge cases. Masterclass: also practice, common mistakes, a map of the
+  ideas. Quick checks: 1, 1, 2, 3, 4 at most (never in the first scene, never two in a row; extras are left
+  out by code). Lessons over `ANIMATOR_TEACHING_MAX_DURATION_S` (600 s) are planned in chapters as before.
+- *A coverage map first (T2).* One small call (`coverage.v1.md`, the teacher's model at
+  `ANIMATOR_EFFORT_COVERAGE`=low; about 6 to 9 s and $0.001) lists the topic's teaching units for this
+  learner: kind (prerequisite, intuition, core, mechanism, example, misconception, application,
+  extension, practice), the seconds each needs, what each builds on, and a priority that says which
+  length needs it (1: even a 1-minute lesson ... 5: only a masterclass). The code (`fit`) takes the units
+  the depth needs, most important first, while they fit (squeezing up to 30%; a thin map is stretched at
+  most 1.5x rather than padded), in teaching order (after what they build on), cuts them into scenes of
+  about 15 s, folds a short hook into the first scene and a short landing into the last, and gives every
+  scene its word budget. What does not fit is kept and shown as **Go deeper** on the lesson page (links to
+  Create with that topic). A failed or switched-off map (`ANIMATOR_COVERAGE_PLAN=false`) leaves the depth,
+  the scene count and the budgets.
+- *A time budget in words (T3).* Budgets are at the pace the lesson's voice really speaks: each narrated
+  scene records its caption words over the time from its first word to its last
+  (`<ANIMATOR_TTS_CACHE_DIR>/pace.json`, per provider, voice and language; the median of the latest 40 once
+  there are 3, else `ANIMATOR_SPEECH_WPS`=2.45), less 1.2 s per scene (a 0.1 s lead and the 1 s pause plus
+  the voice's tail), aimed 4% under (models write about 5% over a budget). The reviewer sees every scene's
+  words against its budget ("1: 52 of 37 (cut 15)"); a script still over 110% has its scenes over 112%
+  trimmed (`trim.v1.md`, one low-effort call with only those scenes, about $0.002), before anything is
+  voiced or drawn. A finished lesson records `teaching.timing` (asked, length, ratio).
+- *Prompts (new versions; the old ones stay for `ANIMATOR_TIME_FIT=false`):* `teacher.v2` (depth, the plan
+  and the time, a hook in the first sentence answered at the end, something new every few sentences, a
+  reason to keep watching at the end of each scene, distinct scene titles), `review.v2` (the plan and depth,
+  flow and attention, timing per scene), `director.v2` (quick checks as the message allows, a change on
+  screen with every beat).
+- *The token budget* (`LLM_BUDGET_TOKENS_PER_GENERATION`, 2M) counted cached input: the scene prompts'
+  shared reference (about 25k tokens, read from the provider's cache on almost every call at a tenth of the
+  price) made any lesson of over about 55 calls stop, so most 3-minute lessons failed. It now counts fresh
+  tokens (input not from the cache, and output); the cost budget ($5) is unchanged.
+- *App:* Create shows what each length teaches ("2 min · Essentials · about 8 scenes"); the lesson page's
+  Overview shows the depth and the Go deeper cards. `/api/config` has `depth` (the tiers).
+
+**Measured live** (real models and the ElevenLabs voice, in a scratch data folder):
+
+| Lesson | Depth | Scenes | Words (budget) | Length / asked | AI cost |
+|---|---|---|---|---|---|
+| Archimedes' principle, English, 1 min | Snapshot | 4 | 145 (136) | 64.5 s / 60 s = 1.08x (before the 4% aim) | $0.128 |
+| Binary search, Hinglish, 2 min | Essentials | 8 | 299 (287) | 125.2 s / 120 s = 1.04x | $0.257 |
+| Seasons, English, 3 min | Deep dive | 10 | 412 (414) | 172.7 s / 180 s = 0.96x | $0.332 |
+
+- Before: 1.26x median for 1 minute; the 2 and 3-minute lessons now complete (the first attempts stopped on
+  the token budget, which is how that bug was found).
+- The scripts read as the depths promise: the Snapshot stays on the buoyant force and displacement and
+  answers its hook; Essentials adds the halving mechanism, the boundaries and a worked search for 23 in nine
+  values; the Deep dive goes from the January puzzle through a lamp and a tilted globe, the tilt, sunlight
+  angle with numbers, opposite hemispheres, solstices and equinoxes, to the distance misconception and a
+  recap that answers the puzzle, with two quick checks.
+- Cost: the map and a trim add about $0.001 to $0.003; a 1-minute lesson's AI cost ($0.128) is in the usual
+  range ($0.098 to $0.132, p25 to p75). The voice costs less: lessons are no longer 26% long (874
+  characters against a median of 1,037 for 1-minute lessons, about $0.03 less at $200 per million).
+- Tests: Python 399 (25 new: `test_depth.py`, the planned flow, the switch-off flow, a failed map, a trim and a
+  failed trim, quick checks, the pace measured from a narrated lesson).
+
+**Rollback:** `ANIMATOR_TIME_FIT=false` (or `ANIMATOR_COVERAGE_PLAN=false` for the map only); the tag
+`backup/before-time-fit` for everything.
+
+## ADR-064 A rich finish: objects with light, edges and depth (2026-10-29)
+
+**Asked.** Plan V1 of the same order: sharper, higher-quality objects at no cost per lesson.
+
+**Decision.** A lesson's drawings have a *finish*, a property of rendering only (the scene, its layout,
+bounding boxes, checks and timing are the engine's and do not change): `classic` draws exactly as before;
+`rich` gives objects a fuller gradient lit from the top (radial on round shapes), a crisp darker outline
+where a shape had none, and a soft shadow that lifts it off the page, falling straight down whatever the
+object's turn (`packages/components/src/finish.ts`, `primitives.tsx`, diagram nodes in `diagram.tsx`).
+- Light belongs to objects: it fades with size (full up to 140 px on the larger side, the classic light
+  from 300 px), and only objects get the outline and shadow (opaque, fully drawn, between 24 and 360 px). A
+  first version lit every shape: a road built from three slabs showed seams and a halo line; a render of
+  eight stored scenes side by side found it and this rule removed it.
+- `GenerationRequest.finish` keeps a lesson's finish; a new lesson that does not choose gets
+  `ANIMATOR_FINISH` (rich); lessons made before stay classic. Create, Advanced options: **Drawing style**
+  (Rich or Classic). The player, the export (`lesson["finish"]`, part of each segment's cache key unless
+  classic) and the visual critic's keyframes (so the critic judges what learners see) all draw it.
+- Cost: none per lesson. Render cost measured on the busiest stored scene (28 shapes): about 1.4 to 1.5 ms a
+  frame either way, 2% more SVG.
+
+**Verified:** component tests 60 (5 new: classic unchanged and the default, light and shadow only on objects,
+none while drawing, no seams on panels, shadows down whatever the turn); the side-by-side renders; the player
+drawing a rich lesson in the browser.
+
+## ADR-065 Sound: effects on what happens, and a music bed under the voice (2026-10-29)
+
+**Asked.** Plan V5: sound design for a professional finish, at no cost.
+
+**Decision** (`apps/web/src/player/sound.ts`, the player only): everything is synthesized in the browser
+with the Web Audio API (no files, no licences, nothing to download).
+- *Effects from the scenes' own actions:* a pop as a thing appears, a softer one as it goes, a whoosh for a
+  move, turn or camera move of 0.35 s or more, a rising swish for a transform or morph, a chime for a
+  highlight, a tick for a write after the title, a swish between scenes, a two-note call just before a quick
+  check. A burst of actions makes one sound (at least 0.16 s between sounds, 0.4 s between two of one kind);
+  sounds play only as the clock passes them while playing, never on a seek.
+- *A music bed:* a slow, soft progression (four chords, 8 s each, filtered), which ducks under the voice and
+  stops when the lesson pauses.
+- *The viewer decides:* a Sound button by the voice button, and the S key: effects and music, effects only,
+  off (kept in this browser). Nothing is created until there is something to play.
+- Not in exported videos yet (they keep the voice): the same synthesis can render offline later.
+
+**Verified:** web tests 14 (2 new: which actions sound, a burst thinned to one, nothing on a seek or going
+back); the button and the S key cycling in the browser.

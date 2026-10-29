@@ -746,6 +746,62 @@
   color: var(--text);
 }
 
+/* Lessons that fit their length (ADR-063): the depth, and what a longer lesson would add. */
+.overview-depth {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.overview-depth b {
+  color: var(--ink);
+  margin-right: 6px;
+}
+
+.overview-deeper-intro {
+  margin: -4px 0 10px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.overview-deeper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.overview-deeper a {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.overview-deeper a:hover {
+  border-color: var(--brand);
+  background: var(--surface-2);
+}
+
+.overview-deeper-title {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.overview-deeper-teach {
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .overview-chapters {
   margin: 0;
   padding-left: 20px;

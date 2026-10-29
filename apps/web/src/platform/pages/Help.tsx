@@ -189,6 +189,7 @@ const SHORTCUTS: [string, string][] = [
   ["N", "Write a note at this moment"],
   ["C", "Captions on or off"],
   ["M", "Voice on or off"],
+  ["S", "Sound effects and music: both, effects only, off"],
   ["F", "Full screen"],
   ["Ctrl K or /", "Search lessons"],
   ["Esc", "Close a dialog or the doubt screen"],

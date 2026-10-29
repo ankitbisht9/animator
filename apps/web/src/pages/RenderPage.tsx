@@ -8,21 +8,24 @@
  * Every captured frame mounts a fresh <SceneView> subtree (key = frame) so paint
  * output never depends on the previously painted frame (ADR-006).
  */
-import { type SceneNarration, SceneView } from "@animator/components";
+import { type FinishId, isFinish, type SceneNarration, SceneView } from "@animator/components";
 import { DSL_VERSION, ENGINE_VERSION, evaluate } from "@animator/engine";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { fixtureLesson } from "../lesson/fixtures";
 import { buildLesson, type Lesson, locate } from "../lesson/lesson";
 
-/** `narration` (TTS on): per scene, the speech the captions follow in the exported video. */
+/** `narration` (TTS on): per scene, the speech the captions follow in the exported video. `finish`: how
+ * drawings are finished (ADR-064); absent: classic. */
 interface LessonPayload {
   title?: string;
   scenes: unknown[];
   narration?: (SceneNarration | null)[];
+  finish?: string;
 }
 
 interface RenderState {
   lesson: Lesson;
+  finish: FinishId;
   /** Global time (frame export) ... */
   t: number;
   /** ... or an explicit scene and local time (keyframes: a scene's end is not the next scene's start). */
@@ -65,7 +68,7 @@ export function RenderPage() {
   useEffect(() => {
     const load = (payload: LessonPayload) => {
       const lesson = buildLesson(payload.title ?? "Lesson", payload.scenes, undefined, payload.narration);
-      setState({ lesson, t: 0, key: "0" });
+      setState({ lesson, finish: isFinish(payload.finish) ? payload.finish : "classic", t: 0, key: "0" });
       return summary(lesson);
     };
     window.__loadLesson = load;
@@ -106,6 +109,7 @@ export function RenderPage() {
           compiled={compiled}
           frame={evaluate(compiled, loc.local)}
           narration={loc.scene.narration}
+          finish={state.finish}
           width="100%"
           height="100%"
         />

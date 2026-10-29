@@ -992,6 +992,11 @@
   color: var(--muted);
 }
 
+.depth-note b {
+  color: var(--ink);
+  font-weight: 650;
+}
+
 .advanced-toggle {
   display: inline-flex;
   align-items: center;

@@ -57,6 +57,7 @@ from animator.pipeline.models import (
     TeachingScript,
 )
 from animator.pipeline.narration import (
+    LAST_BEAT_PAD_S,
     Part,
     floors,
     narration_record,
@@ -70,10 +71,11 @@ from animator.pipeline.narration import (
     take_needs,
     take_record,
 )
+from animator.pipeline.pace import PaceBook
 from animator.pipeline.prompts import PromptPack, slug
-from animator.pipeline.stages import CriticIssue, CriticReport, Stages, format_issues
+from animator.pipeline.stages import WORDS_PER_SECOND, CriticIssue, CriticReport, Stages, format_issues
 from animator.pipeline.tidy import autofix, salvage, tidy
-from animator.tts import SpeechCache, Spoken, caption_words
+from animator.tts import SpeechCache, Spoken, caption_words, word_times
 from animator.tts.script import Script, SpeechScripter, wants_script
 from animator_contracts.protocol import CompileResult, SceneState, ValidationIssue
 
@@ -83,10 +85,11 @@ log = logging.getLogger("animator.pipeline")
 
 
 class KeyframeSource(Protocol):
-    """Renders PNG keyframes of scene `index` of a lesson (for the visual critic)."""
+    """Renders PNG keyframes of scene `index` of a lesson (for the visual critic), in the lesson's
+    finish (ADR-064), so the critic judges what learners see."""
 
     async def keyframes(
-        self, scenes: list[dict[str, Any]], index: int, times: list[float]
+        self, scenes: list[dict[str, Any]], index: int, times: list[float], finish: str = "classic"
     ) -> list[bytes]: ...
 
 
@@ -490,6 +493,37 @@ class Pipeline:
         self._plan_reports: dict[int, dict[str, Any]] = {}
         # Cost-saver lessons (ADR-055): the saved drawings; None when ANIMATOR_OBJECTS_ENABLED is off.
         self.objects = objects or (ObjectLibrary(settings) if settings.animator_objects_enabled else None)
+        # The pace each voice really speaks at (ADR-063): lessons are planned in words at that pace.
+        self.pace = PaceBook(
+            speech.directory / "pace.json" if speech is not None else None, settings.animator_speech_wps
+        )
+
+    def pace_for(self, gen: Generation) -> tuple[float, float]:
+        """How fast this lesson's narration goes (ADR-063): its voice's words per second (measured from
+        the lessons it narrated, or ANIMATOR_SPEECH_WPS), and the time each scene adds after its last
+        word. Without a voice, a scene lasts as its brief says (its words at 2.5 a second, plus 2 s)."""
+        if self.speech is None:
+            return WORDS_PER_SECOND, 2.0
+        language = gen.request.language
+        provider, voice = self.speech.provider_for(language), self.speech.voice_for(language)
+        wps = self.pace.wps(PaceBook.key(provider.name, voice, language))
+        # Measured: a scene's first word comes about 0.1 s in, and it ends its pause after its last word
+        # (1.07 to 1.4 s with the default 1 s pause).
+        if self.settings.animator_tts_one_take:
+            return wps, self.settings.animator_tts_scene_pause_s + 0.2
+        return wps, max(self.settings.animator_tts_pause_s, LAST_BEAT_PAD_S) + 0.2
+
+    def _measure(self, gen: Generation, take: Spoken, texts: list[str], provider: str, voice: str) -> None:
+        """One scene's pace (ADR-063): its caption words over the time from its first word to its last,
+        as recorded (pauses included). Untimed audio says nothing about the pace."""
+        words = [w for t in texts for w in caption_words(t)]
+        if take.marks is None or len(words) < 2:
+            return
+        times = word_times(words, take.marks, take.duration_s)
+        if len(times) == len(words):
+            self.pace.record(
+                PaceBook.key(provider, voice, gen.request.language), len(words), times[-1][1] - times[0][0]
+            )
 
     async def stages(self) -> Stages:
         if self._stages is None:
@@ -621,6 +655,7 @@ class Pipeline:
             if take is not None:
                 rec.narration = take_record(beats, parts, take, provider.name, voice)
                 audio_s = take.duration_s
+                self._measure(gen, take, [b.text for b in beats], provider.name, voice)
             else:
                 rec.narration = narration_record(beats, spoken, provider.name, voice)
                 audio_s = sum(s.duration_s for s in spoken.values())
@@ -1504,7 +1539,9 @@ class Pipeline:
             ends = [b.end - 0.1 for b in res.beats]
             step = max(1, len(ends) // k)
             times = [max(0.1, t) for t in ends[::step][:k]]
-            images = await self.keyframes.keyframes([*previous_scenes, dsl], len(previous_scenes), times)
+            images = await self.keyframes.keyframes(
+                [*previous_scenes, dsl], len(previous_scenes), times, finish=gen.request.finish or "classic"
+            )
             if gen.teaching is not None:
                 measured, poor = await self._composition(dsl, prev_state, times)
                 if measured:

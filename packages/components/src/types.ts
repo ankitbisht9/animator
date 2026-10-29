@@ -1,5 +1,6 @@
 import type { FrameObject, Theme } from "@animator/engine";
 import type { ReactNode } from "react";
+import type { FinishId } from "./finish";
 
 export interface RenderProps {
   o: FrameObject;
@@ -10,6 +11,8 @@ export interface RenderProps {
   seed: number;
   /** Compile-time prepared data for this object (e.g. typeset equation). */
   prep: unknown;
+  /** How drawings are finished (ADR-064); absent: classic. */
+  finish?: FinishId;
 }
 
 /** Draws an object in its local frame (the SceneView applies its matrix and opacity). */

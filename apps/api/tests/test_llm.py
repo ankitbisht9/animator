@@ -148,7 +148,9 @@ async def test_structured_call_returns_data_usage_and_cost() -> None:
     assert body["reasoning"] == {"effort": "high"}
     assert body["store"] is False
     assert records[0].status == "ok" and records[0].stage == "educational_planner"
-    assert budget.spent_tokens == 1300
+    assert (
+        budget.spent_tokens == 1100
+    )  # fresh tokens: 800 uncached in + 300 out (cached input is not counted)
     assert "sk-test" not in json.dumps([r.to_json() for r in records])
 
 

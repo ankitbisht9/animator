@@ -34,6 +34,8 @@ export interface GenerationSummary {
     language: string;
     paced: boolean;
     layout?: LayoutMode | null;
+    /** How the drawings are finished (ADR-064); absent or null: classic (lessons made before it). */
+    finish?: "classic" | "rich" | null;
   };
   status: GenerationStatus;
   error: string | null;
@@ -58,7 +60,31 @@ export interface GenerationSummary {
     tts_failures?: number;
     tts_error?: string | null;
   };
+  /** A lesson planned for its length (ADR-063): its depth, and what a longer lesson would add. */
+  depth?: LessonDepth | null;
   version: number;
+}
+
+export interface LessonDepth {
+  tier: string;
+  name: string;
+  summary: string;
+  deeper: { title: string; teach: string }[];
+}
+
+/** What a lesson of up to `upto_s` seconds teaches (ADR-063); null: any longer length. */
+export interface DepthTier {
+  id: string;
+  name: string;
+  upto_s: number | null;
+  summary: string;
+}
+
+/** The depth a lesson of `minutes` gets, when lessons of that length are planned for it. */
+export function depthFor(config: ApiConfig | undefined, minutes: number): DepthTier | null {
+  const depth = config?.depth;
+  if (!depth?.enabled || minutes * 60 > depth.max_s) return null;
+  return depth.tiers.find((t) => t.upto_s === null || minutes * 60 <= t.upto_s) ?? null;
 }
 
 export interface PlayableScene {
@@ -89,6 +115,8 @@ export interface ApiConfig {
   layout_mode?: LayoutMode;
   /** Model trials (ADR-056): OpenRouter models an admin may make a lesson with. */
   trial_models?: string[];
+  /** Lessons that fit their length (ADR-063); lessons longer than max_s are planned in chapters. */
+  depth?: { enabled: boolean; tiers: DepthTier[]; max_s: number };
   tts?: {
     enabled: boolean;
     provider: string | null;

@@ -181,6 +181,8 @@ async def start_export(gen_id: str, request: Request, body: ExportBody | None = 
         "title": gen.plan.title if gen.plan else gen.request.topic,
         "scenes": [s.dsl for s in gen.scenes],
     }
+    if gen.request.finish not in (None, "classic"):
+        lesson["finish"] = gen.request.finish  # the video looks as the lesson plays (ADR-064)
     audio = None
     speech = request.app.state.speech
     if speech is not None and any(s.narration for s in gen.scenes):

@@ -27,7 +27,7 @@ import {
   Users,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, api, type ExportJob } from "../../api";
+import { ApiError, api, type ExportJob, type LessonDepth } from "../../api";
 import { DoubtFeature } from "../../doubts/DoubtFeature";
 import { explain, progressLine, useLessonStream } from "../../lesson/useLessonStream";
 import { Player, type PlayerControl } from "../../player/Player";
@@ -364,6 +364,7 @@ function LessonBody({ id }: { id: string }) {
             generating={running}
             onTime={running && owner ? onTime : undefined}
             initial={prefs ? { rate: prefs.playback_rate, captions: prefs.captions, voice: prefs.voice } : undefined}
+            finish={summary.request.finish ?? "classic"}
             addon={(control) => {
               controlRef.current = control;
               // As before the platform: only the doubt add-on renders with every frame.
@@ -429,6 +430,8 @@ function LessonBody({ id }: { id: string }) {
           {tab === "overview" && (
             <Overview
               topic={info?.topic ?? summary?.request.topic ?? ""}
+              title={info?.title ?? title}
+              depth={summary?.depth ?? null}
               chapters={summary?.chapters ?? []}
               scenes={lesson.scenes.map((sc) => ({ title: sc.title, start: sc.start, duration: sc.duration }))}
               onSeek={seek}
@@ -484,6 +487,8 @@ function LessonBody({ id }: { id: string }) {
 
 function Overview({
   topic,
+  title,
+  depth,
   chapters,
   scenes,
   onSeek,
@@ -493,6 +498,9 @@ function Overview({
   myStars,
 }: {
   topic: string;
+  title: string;
+  /** A lesson planned for its length (ADR-063): its depth, and what a longer lesson would add. */
+  depth: LessonDepth | null;
   chapters: { id: string; title: string }[];
   scenes: { title: string; start: number; duration: number }[];
   onSeek: (t: number) => void;
@@ -510,6 +518,11 @@ function Overview({
       <div className="overview-main">
         <h3>What this lesson explains</h3>
         <p className="overview-topic">“{topic}”</p>
+        {depth && (
+          <p className="overview-depth">
+            <b>{depth.name}</b> {depth.summary}
+          </p>
+        )}
         {chapters.length > 0 && (
           <>
             <h3>Chapters</h3>
@@ -534,6 +547,22 @@ function Overview({
                 </li>
               ))}
             </ol>
+          </>
+        )}
+        {depth && depth.deeper.length > 0 && (
+          <>
+            <h3>Go deeper</h3>
+            <p className="overview-deeper-intro">A longer lesson on this topic would also cover:</p>
+            <ul className="overview-deeper">
+              {depth.deeper.map((d) => (
+                <li key={d.title}>
+                  <Link href={`/create?topic=${encodeURIComponent(`${d.title} (${title})`.slice(0, 480))}`}>
+                    <span className="overview-deeper-title">{d.title}</span>
+                    <span className="overview-deeper-teach">{d.teach}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </>
         )}
       </div>
@@ -610,6 +639,7 @@ const SHORTCUTS: [string, string][] = [
   ["N", "Write a note at this moment"],
   ["C", "Captions on or off"],
   ["M", "Voice on or off"],
+  ["S", "Sound effects and music: both, effects only, off"],
   ["F", "Full screen"],
   ["Ctrl K", "Search lessons"],
 ];

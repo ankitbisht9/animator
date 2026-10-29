@@ -137,6 +137,7 @@ export function GenerationPage({ id }: { id: string }) {
         lesson={lesson}
         pending={pending}
         generating={running}
+        finish={summary.request.finish ?? "classic"}
         onTime={running ? onTime : undefined}
         addon={(control) => (
           <DoubtFeature

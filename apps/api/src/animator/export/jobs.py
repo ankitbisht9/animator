@@ -97,7 +97,9 @@ class BrowserKeyframes:
         self._pool: BrowserPool | None = None
         self._lock = asyncio.Lock()
 
-    async def keyframes(self, scenes: list[dict[str, Any]], index: int, times: list[float]) -> list[bytes]:
+    async def keyframes(
+        self, scenes: list[dict[str, Any]], index: int, times: list[float], finish: str = "classic"
+    ) -> list[bytes]:
         async with self._lock:
             if self._pool is None:
                 await ensure_web_build(self.dist)
@@ -105,7 +107,7 @@ class BrowserKeyframes:
                 self._site = site.__enter__()
                 pool = BrowserPool(site.url, self.viewport, 1, build_id(self.dist))
                 self._pool = await pool.__aenter__()
-            await self._pool.load({"title": "critic", "scenes": scenes})
+            await self._pool.load({"title": "critic", "scenes": scenes, "finish": finish})
             return [await self._pool.renderers[0].at_png(index, t) for t in times]
 
     async def close(self) -> None:

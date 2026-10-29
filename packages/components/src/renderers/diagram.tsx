@@ -20,6 +20,7 @@ import {
   type Vec2,
 } from "@animator/engine";
 import type { ReactNode } from "react";
+import { liftShadow, lightFor, richStops } from "../finish";
 import type { RenderProps } from "../types";
 import { darken, drawAttrs, fmt, lighten, mixHex, withAlpha } from "../util";
 import { CenteredText, Pill } from "./common";
@@ -101,7 +102,7 @@ const unit = (v: Vec2): Vec2 => {
   return { x: v.x / len, y: v.y / len };
 };
 
-export function DiagramR({ o, theme, prep }: RenderProps) {
+export function DiagramR({ o, theme, prep, finish }: RenderProps) {
   const l = diagramLayoutOf(o.params, prep) as MorphingLayout;
   if (!l.nodes.length) return null;
   const k = diagramScale(o.params, l);
@@ -275,16 +276,41 @@ export function DiagramR({ o, theme, prep }: RenderProps) {
         ? `translate(${fmt(p.cx)} ${fmt(p.cy)}) scale(${fmt(scale, 4)}) translate(${fmt(-p.cx)} ${fmt(-p.cy)})`
         : undefined;
     const gradId = `a-${o.id}-dn-${n.id}`;
-    const useGrad = theme.effects.gradients && filled && !n.ghost;
+    // The rich finish (ADR-064): every solid node is lit and lifted off the page.
+    const rich = finish === "rich" && theme.effects.gradients && !n.ghost;
+    const useGrad = (theme.effects.gradients && filled && !n.ghost) || rich;
     return (
       <g key={`node-${n.id}`} opacity={f < 1 ? fmt(f, 3) : n.ghost ? 0.75 : undefined} transform={tf}>
         {useGrad && (
           <defs>
-            <radialGradient id={gradId} cx="0.38" cy="0.32" r="0.75">
-              <stop offset="0" stopColor={lighten(base, 0.1)} />
-              <stop offset="1" stopColor={darken(base, 0.05)} />
-            </radialGradient>
+            {rich ? (
+              filled ? (
+                <radialGradient id={gradId} cx="0.36" cy="0.3" r="0.8">
+                  {richStops(base, true, lightFor(p.w, p.h)).map(([at, c]) => (
+                    <stop key={at} offset={at} stopColor={c} />
+                  ))}
+                </radialGradient>
+              ) : (
+                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                  {richStops(fill, false, lightFor(p.w, p.h)).map(([at, c]) => (
+                    <stop key={at} offset={at} stopColor={c} />
+                  ))}
+                </linearGradient>
+              )
+            ) : (
+              <radialGradient id={gradId} cx="0.38" cy="0.32" r="0.75">
+                <stop offset="0" stopColor={lighten(base, 0.1)} />
+                <stop offset="1" stopColor={darken(base, 0.05)} />
+              </radialGradient>
+            )}
           </defs>
+        )}
+        {rich && f >= 1 && (
+          <path
+            d={shapeD(shape, p.cx, p.cy + 5)}
+            fill={liftShadow(theme.colors.shadow, theme.mode === "dark")}
+            stroke="none"
+          />
         )}
         {h > 0 && (
           <path

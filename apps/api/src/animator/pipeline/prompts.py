@@ -92,6 +92,13 @@ class PromptPack:
         self.teacher = load_prompt("teacher")
         self.review = load_prompt("review")
         self.director = load_prompt("director")
+        # Lessons that fit their length (ADR-063): the coverage map, the newest teaching prompts above and
+        # the trim. With ANIMATOR_TIME_FIT off, the teaching pipeline keeps the prompts of ADR-044.
+        self.coverage = load_prompt("coverage")
+        self.trim = load_prompt("trim")
+        self.teacher_v1 = load_prompt("teacher", 1)
+        self.review_v1 = load_prompt("review", 1)
+        self.director_v1 = load_prompt("director", 1)
         # The planned layout flow (ADR-047): its own scene and critic prompts, by name, so the classic
         # flow's prompts (`animation`, `critic`) are never affected.
         self.animation_planned = load_prompt("animation-planned")
@@ -213,11 +220,20 @@ class PromptPack:
             )
         return self._animation_text[prompt.version]
 
-    def teacher_instructions(self) -> str:
-        return self.teacher.text.replace("{capabilities}", self.capabilities())
+    def teacher_prompt(self, fit: bool = True) -> Prompt:
+        return self.teacher if fit else self.teacher_v1
 
-    def review_instructions(self) -> str:
-        return self.review.text
+    def review_prompt(self, fit: bool = True) -> Prompt:
+        return self.review if fit else self.review_v1
 
-    def director_instructions(self) -> str:
-        return self.director.text.replace("{capabilities}", self.capabilities())
+    def director_prompt(self, fit: bool = True) -> Prompt:
+        return self.director if fit else self.director_v1
+
+    def teacher_instructions(self, fit: bool = True) -> str:
+        return self.teacher_prompt(fit).text.replace("{capabilities}", self.capabilities())
+
+    def review_instructions(self, fit: bool = True) -> str:
+        return self.review_prompt(fit).text
+
+    def director_instructions(self, fit: bool = True) -> str:
+        return self.director_prompt(fit).text.replace("{capabilities}", self.capabilities())

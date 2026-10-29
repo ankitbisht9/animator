@@ -34,6 +34,7 @@ from animator.llm import (
     LLMRefusal,
 )
 from animator.llm.trials import trial_log
+from animator.pipeline.depth import Blueprint, apply_trim, fit, over_budget
 from animator.pipeline.generator import Pipeline, chapter_outline, scene_record, scene_records
 from animator.pipeline.models import (
     TERMINAL,
@@ -45,6 +46,7 @@ from animator.pipeline.models import (
     SceneRecord,
     StoryboardChapter,
     StoryboardScene,
+    TeachingScript,
 )
 from animator.pipeline.stages import Stages, script_brief, script_plan, script_words, target_words
 
@@ -117,6 +119,9 @@ class GenerationRunner:
         if request.trial_model is not None and request.trial_model not in self.settings.trial_models:
             # Model trials (ADR-056): only a configured trial model; anything else is the normal setup.
             request = request.model_copy(update={"trial_model": None})
+        if request.finish is None:
+            # A new lesson's look (ADR-064), kept with it so it always plays, exports and is judged so.
+            request = request.model_copy(update={"finish": self.settings.animator_finish})
         gen = Generation(request=request)
         trial = request.trial_model
         gen.models = {s: [trial] if trial else self._models_of(s) for s in STAGES}
@@ -287,7 +292,8 @@ class GenerationRunner:
             self.settings.llm_budget_usd_per_generation, self.settings.llm_budget_tokens_per_generation
         )
         budget.spent_usd = gen.metrics.cost_usd  # the budget spans resumes
-        budget.spent_tokens = gen.metrics.input_tokens + gen.metrics.output_tokens
+        m = gen.metrics
+        budget.spent_tokens = m.input_tokens - m.cached_input_tokens + m.output_tokens  # fresh tokens
         return CallContext(budget=budget, on_record=lambda r: self._on_call(gen, r))
 
     async def _generate(self, gen: Generation, prefetch: dict[str, asyncio.Task[StoryboardChapter]]) -> None:
@@ -305,10 +311,26 @@ class GenerationRunner:
             await self._generate_sequential(gen, stages, ctx, prefetch)
         gen.status = "complete"
         gen.metrics.generation_s = round(time.time() - gen.created_at, 1)
+        self._timing(gen)
         await self._save(gen)
         # Scene drafts that lost the race are still finishing: count their cost, then save again.
         await self.pipeline.settle(gen.id)
         await self._save(gen)
+
+    @staticmethod
+    def _timing(gen: Generation) -> None:
+        """A lesson planned for its length (ADR-063): how long it came out against the time asked."""
+        depth = (gen.teaching or {}).get("depth")
+        if not isinstance(depth, dict) or gen.teaching is None:
+            return
+        asked = gen.request.duration_min * 60
+        length = sum(s.duration or 0.0 for s in gen.scenes if s.playable)
+        gen.teaching["timing"] = {
+            "asked_s": round(asked, 1),
+            "length_s": round(length, 1),
+            "ratio": round(length / asked, 3) if asked else None,
+            "voiced": sum(1 for s in gen.scenes if s.narration),
+        }
 
     async def _generating(self, gen: Generation) -> None:
         gen.status = "generating"
@@ -443,17 +465,23 @@ class GenerationRunner:
         and what is seen), a reviewer checks and improves it, then a visual director plans every
         scene's picture. The director's reply streams: each scene is launched as soon as its plan
         (and every earlier scene's) is in. A failed review keeps the teacher's script; a failed or
-        incomplete direction draws the remaining scenes from the teacher's show notes."""
+        incomplete direction draws the remaining scenes from the teacher's show notes.
+
+        Lessons that fit their length (ADR-063, ANIMATOR_TIME_FIT): first the plan for the time asked
+        (its depth, and the scenes a coverage map fits into it, each with a word budget at the voice's
+        pace); the teacher writes those scenes, the reviewer sees each scene's words against its
+        budget, and a script still well over is trimmed before anything is voiced or drawn."""
         duration = gen.request.duration_min * 60
-        script = await stages.teach(gen, ctx)
+        plan = await self._blueprint(gen, stages, ctx, duration) if self.settings.animator_time_fit else None
+        script = await stages.teach(gen, ctx, plan)
         changes: list[str] = []
         if self.settings.animator_script_review:
             try:
-                reviewed = await stages.review(gen, script, ctx)
+                reviewed = await stages.review(gen, script, ctx, plan)
             except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
                 log.warning("script review for %s failed (%s): keeping the teacher's script", gen.id, e)
             else:
-                target = target_words(duration)
+                target = plan.words if plan is not None else target_words(duration)
                 if script_words(reviewed.script) <= target * 1.35 or script_words(
                     reviewed.script
                 ) <= script_words(script):
@@ -466,16 +494,28 @@ class GenerationRunner:
                         script_words(reviewed.script),
                         target,
                     )
-        plan = script_plan(script, gen.request.audience, duration)
+        trimmed = 0
+        if plan is not None:
+            script, trimmed = await self._fit_script(gen, stages, ctx, script, plan)
+        lesson = script_plan(script, gen.request.audience, duration)
         teaching: dict[str, Any] = {"script": script.model_dump(), "changes": changes, "look": None}
-        gen.plan, gen.teaching = plan, teaching
+        if plan is not None:
+            teaching["depth"] = {**plan.to_json(), "words_written": script_words(script), "trimmed": trimmed}
+        gen.plan, gen.teaching = lesson, teaching
         gen.status = "generating"
         await self._save(gen)
-        chapter = plan.chapters[0].id
+        chapter = lesson.chapters[0].id
         planned: dict[int, DirectedScene] = {}
+        checks: list[int] = []  # scenes with a quick check (ADR-063: as many as the plan has room for)
 
         def add(k: int) -> None:
-            rec = scene_record(gen, chapter, script_brief(script.scenes[k], planned.get(k)))
+            brief = script_brief(script.scenes[k], planned.get(k))
+            if plan is not None and brief.checkpoint is not None:
+                if k == 0 or len(checks) >= plan.checkpoints or (checks and checks[-1] == k - 1):
+                    brief = brief.model_copy(update={"checkpoint": None})
+                else:
+                    checks.append(k)
+            rec = scene_record(gen, chapter, brief)
             gen.scenes.append(rec)
             launch(rec)
 
@@ -492,7 +532,13 @@ class GenerationRunner:
 
         try:
             direction = await stages.direct(
-                gen, script, ctx, on_look, on_scene, library=self.pipeline.library_note(gen, script)
+                gen,
+                script,
+                ctx,
+                on_look,
+                on_scene,
+                library=self.pipeline.library_note(gen, script),
+                checkpoints=plan.checkpoints if plan is not None else None,
             )
             teaching["look"] = teaching["look"] or direction.look
             for directed in direction.scenes:
@@ -502,7 +548,36 @@ class GenerationRunner:
         while len(gen.scenes) < len(script.scenes):
             add(len(gen.scenes))
         gen.chapters_done.append(chapter)
-        return plan
+        return lesson
+
+    async def _blueprint(
+        self, gen: Generation, stages: Stages, ctx: CallContext, duration: float
+    ) -> Blueprint:
+        """The plan for the time asked (ADR-063): the coverage map (one small call; without it, the depth
+        and the time budget only), fitted at the pace of the lesson's voice."""
+        wps, overhead = self.pipeline.pace_for(gen)
+        coverage = None
+        if self.settings.animator_coverage_plan:
+            try:
+                coverage = await stages.coverage(gen, ctx)
+            except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
+                log.warning("coverage plan for %s failed (%s): planning by length only", gen.id, e)
+        return fit(coverage, duration, wps, overhead)
+
+    async def _fit_script(
+        self, gen: Generation, stages: Stages, ctx: CallContext, script: TeachingScript, plan: Blueprint
+    ) -> tuple[TeachingScript, int]:
+        """A script still well over its word budget, its longest scenes trimmed (ADR-063): the script and
+        how many scenes changed. A failed trim keeps the script (the lesson runs a little long)."""
+        scenes = over_budget(script, plan)
+        if not scenes:
+            return script, 0
+        try:
+            trim = await stages.trim(gen, script, plan, scenes, ctx)
+        except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
+            log.warning("trimming the script of %s failed (%s): it runs a little long", gen.id, e)
+            return script, 0
+        return apply_trim(script, trim, scenes)
 
     async def _generate_sequential(
         self,

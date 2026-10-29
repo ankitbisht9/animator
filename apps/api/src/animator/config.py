@@ -106,6 +106,19 @@ class Settings(BaseSettings):
     animator_script_review: bool = True
     # Longer lessons are planned in chapters by the fast pipeline's planner.
     animator_teaching_max_duration_s: float = 600.0
+    # Lessons that fit their length (ADR-063): the depth grows with the length (Snapshot, Essentials, Deep
+    # dive, Mastery, Masterclass); the teacher writes the scenes a coverage map fits into the time, each to
+    # a word budget at the pace the lesson's voice really speaks, and a script still well over its budget
+    # is trimmed before the voice is made. Off: the teaching pipeline as in ADR-044 (2.5 words a second,
+    # a scene per 14 s, the prompts teacher.v1, review.v1, director.v1).
+    animator_time_fit: bool = True
+    # The coverage map: one small model call before the teacher, at this effort. Off: the depth and the
+    # time budget only (the teacher chooses what each scene teaches).
+    animator_coverage_plan: bool = True
+    animator_effort_coverage: ReasoningEffort = "low"
+    # The narrator's pace (words a second, its pauses included) until a voice has been measured; the
+    # pace of each voice is measured from the lessons it narrates (<ANIMATOR_TTS_CACHE_DIR>/pace.json).
+    animator_speech_wps: float = Field(default=2.45, ge=1.0, le=4.0)
     # A teaching lesson's scene drafts think at this effort (medium: about twice as many valid,
     # glitch-free first drafts as low, at twice the time; ADR-041's benchmark). Corrections keep
     # ANIMATOR_EFFORT_CORRECTION.
@@ -133,6 +146,9 @@ class Settings(BaseSettings):
     # object library (exactly the thing the scene shows) instead of drawing them; it draws the rest.
     # A lesson can ask for any of them (its `layout` field); this is the default.
     animator_layout_mode: Literal["classic", "planned", "costsaver"] = "classic"
+    # How a new lesson's drawings are finished when it does not say (ADR-064): rich (shaded shapes with
+    # depth, crisp outlines, soft shadows) or classic. Render only: the scenes and their layout are the same.
+    animator_finish: Literal["classic", "rich"] = "rich"
     # Drafts per scene and per correction round in the planned flow (no racing: cheaper).
     animator_planned_scene_drafts: int = Field(default=1, ge=1, le=4)
     animator_planned_correction_drafts: int = Field(default=1, ge=1, le=4)
