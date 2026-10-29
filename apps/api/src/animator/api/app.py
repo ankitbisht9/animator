@@ -22,8 +22,7 @@ from animator.config import STAGES, Settings, get_settings
 from animator.doubts import DoubtService
 from animator.doubts import router as doubts_router
 from animator.engine_client import EngineClient, EngineWorkerPool, pool_from_settings
-from animator.export.jobs import BrowserKeyframes, ExportJobs
-from animator.export.site import WEB_DIST
+from animator.export.jobs import ExportJobs, keyframes_for
 from animator.jobs.runner import GenerationRunner
 from animator.jobs.store import FileStore, GenerationStore, MemoryStore
 from animator.llm import LLMClient, build_llm
@@ -69,12 +68,13 @@ def create_app(
             else MemoryStore()
         )
         frames = keyframes
-        owned_frames: BrowserKeyframes | None = None
+        owned_frames = None
         critic = s.animator_enable_visual_critic or (
             s.animator_pipeline == "teaching" and s.animator_teaching_visual_critic
         )
-        if frames is None and critic and (WEB_DIST / "index.html").exists():
-            owned_frames = BrowserKeyframes()
+        if frames is None and critic:
+            # In the browser, or drawn on the server without one (ADR-068).
+            owned_frames = keyframes_for(s)
             frames = owned_frames
         # Narration audio: None unless ANIMATOR_TTS_ENABLED (then nothing speaks anywhere).
         speech = build_speech(s, tts, env_file)

@@ -27,7 +27,7 @@ from typing import Any
 from animator.config import Settings, get_settings
 from animator.engine_client import EngineClient, pool_from_settings
 from animator.eval import generation_metrics, summarize
-from animator.export.jobs import BrowserKeyframes
+from animator.export.jobs import keyframes_for
 from animator.jobs.runner import GenerationRunner
 from animator.jobs.store import FileStore
 from animator.llm import LLMClient, ModelCatalog, PriceTable
@@ -116,7 +116,7 @@ async def run(args: argparse.Namespace) -> int:
 
     pool = pool_from_settings(settings)
     await pool.start()
-    frames = BrowserKeyframes() if args.critic else None
+    frames = keyframes_for(settings) if args.critic else None
     try:
         prices = PriceTable.load(settings.resolve(settings.animator_pricing_file))
         llm: LLMClient = OpenAILLM(

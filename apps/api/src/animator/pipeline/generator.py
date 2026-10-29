@@ -1603,9 +1603,16 @@ class Pipeline:
             ends = [b.end - 0.1 for b in res.beats]
             step = max(1, len(ends) // k)
             times = [max(0.1, t) for t in ends[::step][:k]]
-            images = await self.keyframes.keyframes(
-                [*previous_scenes, dsl], len(previous_scenes), times, finish=gen.request.finish or "classic"
-            )
+            try:
+                images = await self.keyframes.keyframes(
+                    [*previous_scenes, dsl],
+                    len(previous_scenes),
+                    times,
+                    finish=gen.request.finish or "classic",
+                )
+            except Exception as e:
+                # Pictures that cannot be drawn never fail a scene: the critic reads it as text.
+                log.warning("scene %s: no keyframes for the critic (%s)", rec.id, e)
             if gen.teaching is not None:
                 measured, poor = await self._composition(dsl, prev_state, times)
                 if measured:

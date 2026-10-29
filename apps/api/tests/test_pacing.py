@@ -398,9 +398,9 @@ async def test_with_a_voice_each_highlight_lands_as_its_thing_is_named(
     speech = SpeechCache(FakeTTS(seconds_per_word=0.5), tmp_path)
     fake = FakeLLM(script, usage=Usage(1000, 0, 500), cost=0.01)
     runner = GenerationRunner(MemoryStore(), Pipeline(EngineClient(pool), fake, s, None, speech), s)
-    gen = await runner.start(GenerationRequest(topic="Archimedes' principle", duration_min=0.5))
-    await asyncio.wait_for(runner._tasks[gen.id], timeout=120)
-    gen = await runner.get(gen.id)
+    started = await runner.start(GenerationRequest(topic="Archimedes' principle", duration_min=0.5))
+    await asyncio.wait_for(runner._tasks[started.id], timeout=120)
+    gen = await runner.get(started.id)
     assert gen is not None and gen.status == "complete", gen and gen.error
     for rec in gen.scenes:
         assert rec.dsl is not None and rec.narration is not None

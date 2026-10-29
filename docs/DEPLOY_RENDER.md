@@ -25,9 +25,14 @@ To fit, the free setup differs from a development machine:
 - one engine worker instead of four, one lesson made at a time, more time for each engine call;
 - the drawing pack (ADR-066) is read when a lesson first needs it: about 30 MB of memory, kept light on
   purpose (its drawings are made whole only where they are placed);
-- **no visual critic**: the image has no browser. The rest of the teaching pipeline, the models, the
-  ElevenLabs voice and doubts are as in your `.env`. Video export needs a browser too, so it is not
-  available.
+- **the visual critic is off** (it costs extra): the image has no browser, but the critic's pictures can
+  be drawn without one (ADR-068, `ANIMATOR_KEYFRAMES=svg`, already set). To turn it on, set
+  `ANIMATOR_TEACHING_VISUAL_CRITIC=true`: every teaching scene is then rendered and looked at by the vision
+  model, which asks for fixes where something is hidden, overlapping or badly framed. That costs about
+  1.5 cents per minute of lesson for its looks (measured with `gpt-6-luna`), plus some of the fixes it
+  asks for, and on 0.1 CPU each look takes a few seconds more. The rest of the teaching pipeline, the
+  models, the ElevenLabs voice and doubts are as in your `.env`. Video export needs a browser, so it is
+  not available.
 
 Lessons therefore take longer than on your computer, and after the service sleeps you sign up again.
 
@@ -77,9 +82,9 @@ For accounts and lessons that stay, change the service in `render.yaml` (or in t
       sizeGB: 5
 ```
 
-With 2 GB, also set `ENGINE_WORKER_POOL_SIZE=2` and `ANIMATOR_GENERATION_CONCURRENCY=2`. The visual critic
-needs a browser in the image (Playwright's Chromium, as in `docker/export.Dockerfile`), about 400 MB of
-memory more while it runs.
+With 2 GB, also set `ENGINE_WORKER_POOL_SIZE=2` and `ANIMATOR_GENERATION_CONCURRENCY=2`, and the visual
+critic (`ANIMATOR_TEACHING_VISUAL_CRITIC=true`) runs comfortably: it draws its pictures without a browser
+(`ANIMATOR_KEYFRAMES=svg`), about 130 MB for a second or so per look, released after each.
 
 ## When something goes wrong
 

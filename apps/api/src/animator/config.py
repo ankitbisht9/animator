@@ -130,6 +130,11 @@ class Settings(BaseSettings):
     # for one round of fixes (needs the built web app; ANIMATOR_ENABLE_VISUAL_CRITIC does the same
     # for every lesson).
     animator_teaching_visual_critic: bool = True
+    # How the visual critic's keyframes are drawn (ADR-068): browser (the built web app in headless
+    # Chromium, as the video export) or svg (the same scene components drawn on the server and rasterized
+    # by resvg, packages/engine-worker/dist/frames.cjs: no browser needed, as in the Render image).
+    animator_keyframes: Literal["browser", "svg"] = "browser"
+    animator_frames_script: Path = Path("packages/engine-worker/dist/frames.cjs")
     # How many times a teaching scene is reviewed (each review can ask for one round of fixes).
     animator_teaching_critic_rounds: int = Field(default=1, ge=1, le=3)
     # After the round of fixes the last review asked for, the critic looks once more (no further

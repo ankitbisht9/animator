@@ -29,7 +29,13 @@ RUNTIME_FILES = [
     "apps/api/src/animator/objects/library",
 ]
 # Built in the image's first stage and copied from it.
-BUILT_FILES = ["apps/web/dist", "packages/engine-worker/dist/worker.cjs"]
+BUILT_FILES = [
+    "apps/web/dist",
+    "packages/engine-worker/dist/worker.cjs",
+    # The visual critic's pictures without a browser (ADR-068).
+    "packages/engine-worker/dist/frames.cjs",
+    "packages/engine-worker/dist/resvg.wasm",
+]
 
 
 def _runtime_copies() -> tuple[list[tuple[str, str]], list[str]]:

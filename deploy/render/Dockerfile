@@ -2,7 +2,8 @@
 #
 # The platform on Render (docs/DEPLOY_RENDER.md, ADR-054): one container that serves the API, its engine
 # workers (Node) and the built web app from one origin. Built from docker/export.Dockerfile's pinned
-# Node, Python and uv, without a browser: the visual critic and video export are off in this image.
+# Node, Python and uv, without a browser: video export is off in this image, and the visual critic draws
+# its pictures without one (dist/frames.cjs and resvg's WebAssembly, ADR-068).
 
 ARG NODE_IMAGE=node:24.11.1-trixie-slim@sha256:4623e8ac1eb5f35b0a91b85424283c1b97a416a77375dfa6a2e9bfb0b2c351c9
 ARG PYTHON_IMAGE=python:3.14.7-slim-trixie@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2
@@ -56,6 +57,8 @@ RUN uv sync --frozen --no-dev --all-packages
 
 COPY --from=web /src/apps/web/dist apps/web/dist
 COPY --from=web /src/packages/engine-worker/dist/worker.cjs packages/engine-worker/dist/worker.cjs
+COPY --from=web /src/packages/engine-worker/dist/frames.cjs packages/engine-worker/dist/frames.cjs
+COPY --from=web /src/packages/engine-worker/dist/resvg.wasm packages/engine-worker/dist/resvg.wasm
 COPY contracts contracts
 COPY config config
 # The scene writer's prompts are built from the DSL and component references and a few example

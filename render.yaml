@@ -3,8 +3,8 @@
 # The free plan is a demo:
 # - the service sleeps after 15 minutes without visitors and takes about a minute to wake;
 # - its files are wiped on every sleep, restart and deploy: accounts, lessons and their audio go;
-# - 0.1 CPU and 512 MB: one engine worker and no visual critic (the image has no browser), so lessons
-#   take longer than on a development machine.
+# - 0.1 CPU and 512 MB: one engine worker, so lessons take longer than on a development machine; the
+#   visual critic is off (it costs extra; see ANIMATOR_TEACHING_VISUAL_CRITIC below).
 # For a lasting platform, docs/DEPLOY_RENDER.md shows the paid setup (more CPU and memory, a disk).
 services:
   - type: web
@@ -38,14 +38,19 @@ services:
       - key: PLATFORM_ALLOW_SIGNUP
         value: "false"
 
-      # The free instance (512 MB, 0.1 CPU): one engine worker, one lesson at a time, no visual critic,
-      # and more time for each engine call.
+      # The free instance (512 MB, 0.1 CPU): one engine worker, one lesson at a time, and more time for
+      # each engine call.
       - key: ENGINE_WORKER_POOL_SIZE
         value: "1"
       - key: ENGINE_WORKER_CALL_TIMEOUT_S
         value: "120"
       - key: ANIMATOR_GENERATION_CONCURRENCY
         value: "1"
+      # The visual critic draws its pictures without a browser here (ADR-068). It is off: "true" has a
+      # vision model look at every teaching scene and ask for fixes, about 1.5 cents per minute of lesson
+      # more (plus some of the fixes) and a few seconds per look on this CPU.
+      - key: ANIMATOR_KEYFRAMES
+        value: svg
       - key: ANIMATOR_TEACHING_VISUAL_CRITIC
         value: "false"
       # Saved drawings (ADR-055): the built-in library ships in the image; collecting from lessons only

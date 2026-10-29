@@ -3245,3 +3245,44 @@ a diagram node's ring; ids that never clash; in a lesson, with and without a voi
 its word is said), and switched off.
 
 **Rollback:** `ANIMATOR_KEEP_MOVING=false`.
+
+## ADR-068 The visual critic's pictures without a browser (2026-10-29)
+
+**Asked.** Plan V7 of the same order: a visual critic that needs no browser, so the deployed service (whose
+image has none, ADR-054) can have its scenes looked at too; opt-in there, as its looks cost money.
+
+**Decision.**
+- *Drawn on the server* (`packages/engine-worker/src/frames.ts`, built to `dist/frames.cjs` with resvg's
+  WebAssembly beside it as `dist/resvg.wasm`): the scenes before the one asked for are compiled first and
+  each starts from the one before's end state, as the player builds a lesson; the scene is evaluated at each
+  time and drawn by the same `<SceneView>` the player and the browser renderer use, written out as SVG
+  (React on the server) and rasterized by [resvg](https://github.com/linebender/resvg) (`@resvg/resvg-wasm`
+  2.6.2, MPL-2.0, used unmodified). Text is already glyph outlines (ADR-004): no fonts are needed. The
+  bundle needs no `node_modules` at run time.
+- *One drawing per process* (`export.jobs.SvgKeyframes`): `node dist/frames.cjs` reads the request on stdin
+  and writes the PNGs on stdout, one at a time; nothing stays in memory between the critic's looks. A
+  drawing that hangs is stopped (twice the engine call timeout, at least 60 s).
+- *Chosen by a setting* (`ANIMATOR_KEYFRAMES`): `browser` (the default, as before: the built web app in
+  headless Chromium) or `svg`. `keyframes_for(settings)` picks the source for the app and the evaluation
+  runner; a source that cannot run here (no web build, no frames bundle) is logged and the critic reads
+  scenes as text, as without a visual critic.
+- *Pictures that cannot be drawn never fail a scene:* the critic's keyframe call is now guarded; on a
+  failure the scene is reviewed as text (its summary and the engine's composition measures), as before
+  for lessons without keyframes.
+- *Render* (`deploy/render/Dockerfile`, `render.yaml`): the image carries `frames.cjs` and `resvg.wasm`
+  and sets `ANIMATOR_KEYFRAMES=svg`. The critic stays off there (`ANIMATOR_TEACHING_VISUAL_CRITIC=false`):
+  turning it on costs about 1.5 cents per minute of lesson for its looks (measured from two live lessons'
+  call logs with `gpt-6-luna`: $0.028 for 2 minutes, $0.048 for 3), plus some of the fixes it asks for,
+  and a few seconds per look on the free instance's 0.1 CPU.
+
+**Measured** (9 scenes of 7 stored lessons, classic and rich finish, the browser's keyframes against these):
+the same 1280x720 pictures, a mean absolute pixel difference of 0.1 to 0.6 out of 255 (anti-aliasing);
+0.5 to 1.2 s for three keyframes including Node's start (the browser: 0.3 s once running, 4 s to start);
+about 130 MB at the peak, released after each look (the browser keeps about 400 MB).
+
+**Tests:** 4 in the worker (the SVG is self-contained, PNGs at the asked width in the lesson's finish, a
+scene started from the one before, why a scene cannot be drawn) and 6 in Python (a scene drawn without a
+browser, a scene that cannot be drawn, a drawing that hangs, the setting, the critic seeing these pictures
+in a lesson, a broken renderer that never fails a scene); the Render image test checks both files.
+
+**Rollback:** `ANIMATOR_KEYFRAMES=browser` (the default); on Render, the critic is already off.

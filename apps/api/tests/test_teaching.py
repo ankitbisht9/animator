@@ -13,7 +13,7 @@ import pytest
 
 from animator.engine_client import EngineClient, EngineWorkerPool
 from animator.llm import LLMBadOutput, LLMRequest
-from animator.pipeline.generator import Pipeline
+from animator.pipeline.generator import KeyframeSource, Pipeline
 from animator.pipeline.models import DirectedScene, TeachingScript
 from animator.pipeline.stages import DirectionSink, length_note, script_brief, target_words
 from animator.pipeline.tidy import salvage, tidy
@@ -401,7 +401,7 @@ def corner_scene() -> dict[str, Any]:
 
 
 async def run_teaching(
-    pool: EngineWorkerPool, script: Teaching, frames: Frames | None, **kw: Any
+    pool: EngineWorkerPool, script: Teaching, frames: KeyframeSource | None, **kw: Any
 ) -> tuple[Any, Any]:
     from animator.jobs.runner import GenerationRunner
     from animator.jobs.store import MemoryStore
