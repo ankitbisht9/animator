@@ -73,6 +73,7 @@ from animator.pipeline.narration import (
     take_record,
 )
 from animator.pipeline.pace import PaceBook
+from animator.pipeline.pacing import keep_moving, kept_moving
 from animator.pipeline.prompts import PromptPack, slug
 from animator.pipeline.stages import WORDS_PER_SECOND, CriticIssue, CriticReport, Stages, format_issues
 from animator.pipeline.tidy import autofix, salvage, tidy
@@ -567,6 +568,8 @@ class Pipeline:
             await self._saved_used(gen, rec)
         if self.speech is not None and rec.playable:
             await self._narrate(gen, rec, prev_state, ctx)
+        if rec.status == "ready" and gen.teaching is not None and self.settings.animator_keep_moving:
+            await self._keep_moving(gen, rec, prev_state)
 
     async def _scripts(
         self, gen: Generation, texts: list[str], ctx: CallContext | None, cues: dict[str, str] | None = None
@@ -668,6 +671,44 @@ class Pipeline:
             gen.metrics.tts_failures += 1
             gen.metrics.tts_error = str(e)[:300]
             log.warning("scene %s: no narration audio (%s)", rec.id, e)
+
+    async def _keep_moving(self, gen: Generation, rec: SceneRecord, prev_state: SceneState | None) -> None:
+        """Keep it moving (ADR-067, `pipeline/pacing.py`): a long still stretch of narration gets a gentle
+        highlight. Kept only when the scene stays valid, shows no more glitches and keeps its beats' times
+        (the voice is timed to them). Never fails a scene."""
+        if rec.dsl is None:
+            return
+        try:
+            res = await self.engine.compile(rec.dsl, prev_state)
+            if not res.ok or res.compiled is None or not res.beats:
+                return
+            texts = {
+                str(b.get("id")): str(b.get("text", ""))
+                for b in (rec.dsl.get("narration") or {}).get("beats") or []
+            }
+            words: dict[str, list[tuple[str, float]]] = {}
+            for entry in (rec.narration or {}).get("beats") or []:
+                spoken = caption_words(texts.get(entry["id"], ""))
+                words[entry["id"]] = [
+                    (w, float(t[0])) for w, t in zip(spoken, entry.get("words") or [], strict=False)
+                ]
+            moved = keep_moving(rec.dsl, res.compiled, [b.model_dump() for b in res.beats], words)
+            if moved is None:
+                return
+            fixed, again, _ = await self._check(moved, prev_state)
+            starts = {b.id: b.start for b in res.beats}
+            same_beats = all(abs(b.start - starts.get(b.id, b.start)) < 0.01 for b in again.beats or [])
+            if (
+                again.ok
+                and again.endState is not None
+                and same_beats
+                and len(glitches_of(again)) <= len(glitches_of(res))
+            ):
+                gen.metrics.kept_moving += max(0, kept_moving(fixed) - kept_moving(rec.dsl))
+                warnings = [i.model_dump() for i in again.issues if i.severity == "warning"]
+                self._accept(rec, fixed, again, warnings, rec.status)
+        except Exception as e:
+            log.warning("scene %s: keep-moving pass skipped (%s)", rec.id, e)
 
     async def _sync_highlights(
         self, rec: SceneRecord, prev_state: SceneState | None, scripts: dict[str, Script], before: int

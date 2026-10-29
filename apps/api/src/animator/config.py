@@ -116,6 +116,9 @@ class Settings(BaseSettings):
     # time budget only (the teacher chooses what each scene teaches).
     animator_coverage_plan: bool = True
     animator_effort_coverage: ReasoningEffort = "low"
+    # Keep it moving (ADR-067): a stretch of narration longer than 5 s with nothing changing on screen
+    # gets a gentle highlight on what the narration names (or what was last shown); engine-checked, no model.
+    animator_keep_moving: bool = True
     # The narrator's pace (words a second, its pauses included) until a voice has been measured; the
     # pace of each voice is measured from the lessons it narrates (<ANIMATOR_TTS_CACHE_DIR>/pace.json).
     animator_speech_wps: float = Field(default=2.45, ge=1.0, le=4.0)

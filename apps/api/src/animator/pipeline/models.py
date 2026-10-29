@@ -406,6 +406,8 @@ class Metrics(BaseModel):
     # The critic's second look at a revision it asked for (ADR-061), and revisions it turned down.
     second_looks: int = 0
     revisions_turned_down: int = 0
+    # Highlights added where a picture sat still too long while the narrator talked (ADR-067).
+    kept_moving: int = 0
 
 
 class Generation(BaseModel):

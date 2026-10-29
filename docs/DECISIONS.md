@@ -3202,3 +3202,46 @@ the admin page with pack drawings).
 **Rollback:** `ANIMATOR_SAVED_IN_ALL_LESSONS=false` (drawings in cost-saver lessons only); deleting
 `objects/packs/bioicons.jsonl.gz` removes the pack (lessons that placed its drawings keep them: a scene carries
 its drawing).
+
+## ADR-067 Keep it moving: no long still picture while the narrator talks (2026-10-29)
+
+**Asked.** Plan V4 (motion polish and a rhythm check) and T4 (attention rules) of the same order, at no
+extra cost: learners drift when the picture sits still while the voice goes on.
+
+**Measured first.** Over the last 30 lessons (120 scenes), compiled by the engine: the longest stretch of
+narration with nothing changing on screen was 3.3 s at the median scene but 6.2 s at the 90th percentile
+(8.3 s at worst); a fifth of scenes (24) had one over 5 s.
+
+**Decision** (`pipeline/pacing.py`, after a scene has its voice; no model call):
+- *What is still:* the engine's compiled scene says when every action runs; moves, entrances, highlights,
+  solvers, flowing particles and bindings to time (`x = 900 + 40*sin(2*t)`) count as change, and the eye
+  still registers one 0.3 s after it ends. Waiting, grouping, following and bindings that do not depend on
+  time change nothing.
+- *What gets added:* a stretch over 5 s gets gentle highlights, one for each 5 s of stillness (two a scene
+  at most), each placed so the still parts on either side of it stay within 5 s:
+  - on the thing the narration names there, as its name is said (0.15 s before the word, as the voice sync
+    of ADR-045 does): its id, its name, or the text of a label that points at it (a label merely placed
+    beside a thing may be about something else). A pulse; a soft glow on large things (diagrams, axes,
+    graphs); a diagram's node, edge or lane gets its ring (the diagram itself stays still);
+  - else a soft glow on what the picture last showed: the newest thing on screen (a group with all its
+    parts), and of it the biggest part (a cart's body, not the wheel that popped in last).
+  - Never on words or pointers (text, labels, notes, arrows, cards), on a group (it draws nothing of its
+    own), on anything not fully on screen through the highlight, or over another highlight of the same
+    thing. Its ids never clash with the scene's own.
+- *Checked:* the engine compiles the result; it is kept only when the scene stays valid, keeps every beat's
+  time (the voice is timed to them) and shows no more visual glitches. Any failure leaves the scene as it
+  was. Teaching lessons only (classic, planned and cost-saver); the fast pipeline is unchanged.
+
+**Measured after** (the same 120 stored scenes, offline): scenes with a still stretch over 5 s 24 to 1; the
+longest per scene 6.2 s to 4.4 s at the 90th percentile (5.2 s at worst); all 23 changed scenes passed the
+engine's check; 13 of the 23 highlights land on a thing as it is named, 10 are soft glows. Rendered frames
+were looked at: V = I x R glowing as the narrator says "V equals I times R", the normal's ring as "normal"
+is said, a trolley's body (not a wheel).
+
+**Tests:** 12 new (`tests/test_pacing.py`): what counts as still (waiting does not, a binding to time does);
+the glow on what was last shown; a highlight as its thing is named; never words, pointers, groups or things
+gone; two at most, spread so nothing stays still over 5 s; nothing added while the picture keeps changing;
+a diagram node's ring; ids that never clash; in a lesson, with and without a voice (each highlight lands as
+its word is said), and switched off.
+
+**Rollback:** `ANIMATOR_KEEP_MOVING=false`.
