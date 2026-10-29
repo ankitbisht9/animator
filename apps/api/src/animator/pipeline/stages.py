@@ -124,6 +124,15 @@ class Stages:
             self.costsaver_patch_schema = with_saved(self.planned_patch_schema)
         except (ValueError, KeyError, TypeError):
             log.exception("cost-saver scene schema unavailable: cost-saver scenes are planned ones")
+        # Saved drawings in classic lessons (ADR-066): the classic schemas, whose objects may also be
+        # saved drawings. Without them, classic scenes are written as before.
+        self.saved_schema: dict[str, Any] | None = None
+        self.saved_patch_schema: dict[str, Any] | None = None
+        try:
+            self.saved_schema = with_saved(self.dsl_schema)
+            self.saved_patch_schema = with_saved(self.patch_schema)
+        except (ValueError, KeyError, TypeError):
+            log.exception("saved-drawing scene schema unavailable: classic scenes draw everything")
 
     def _request(
         self,
@@ -587,7 +596,9 @@ class Stages:
         (ADR-055, `saved`: the drawings it may use) is a planned one that may place saved drawings."""
         parts = [self.scene_context(gen, rec, prev_summary)]
         costsaver = saved is not None and self.costsaver_schema is not None and planned
-        if costsaver:
+        # A classic scene offered saved drawings (ADR-066) may place them too.
+        classic_saved = saved is not None and self.saved_schema is not None and not planned
+        if costsaver or classic_saved:
             parts.append(str(saved))
         patch = (
             attempt > 1
@@ -636,6 +647,11 @@ class Stages:
             version = self.pack.animation_planned.version
             instructions = self.pack.planned_animation_instructions()
             schema = self.planned_patch_schema if patch else self.planned_schema
+        elif classic_saved:
+            assert self.saved_schema is not None and self.saved_patch_schema is not None
+            version = self.pack.animation_saved.version
+            instructions = self.pack.saved_animation_instructions()
+            schema = self.saved_patch_schema if patch else self.saved_schema
         else:
             version = self.pack.animation_prompt(fast=not teaching).version
             instructions = self.pack.animation_instructions(fast=not teaching)

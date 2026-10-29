@@ -105,6 +105,9 @@ class PromptPack:
         self.critic_planned = load_prompt("critic-planned")
         # Cost-saver lessons (ADR-055): the planned flow's prompt plus saved drawings, its own file.
         self.animation_costsaver = load_prompt("animation-costsaver")
+        # Saved drawings in classic lessons (ADR-066): the classic prompt plus how to place them, for the
+        # scenes offered one; every other classic scene keeps `animation`.
+        self.animation_saved = load_prompt("animation-saved")
         # How scenes relate (parallel: each on a clean stage; sequential: each continues the last).
         self.continuity = {mode: load_prompt(f"continuity-{mode}") for mode in ("parallel", "sequential")}
         self._animation_text: dict[str, str] = {}
@@ -168,7 +171,13 @@ class PromptPack:
         return self.animation_fast if fast else self.animation
 
     def animation_instructions(self, fast: bool = False) -> str:
-        prompt = self.animation_prompt(fast)
+        return self._classic_reference(self.animation_prompt(fast))
+
+    def saved_animation_instructions(self) -> str:
+        """A classic scene offered saved drawings (ADR-066), with the classic reference material."""
+        return self._classic_reference(self.animation_saved)
+
+    def _classic_reference(self, prompt: Prompt) -> str:
         if prompt.version not in self._animation_text:
             head = prompt.text.replace("{layouts}", self.layouts()).replace("{solvers}", self.solvers())
             examples = "\n\n".join(

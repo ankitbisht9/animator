@@ -3141,3 +3141,64 @@ with the Web Audio API (no files, no licences, nothing to download).
 
 **Verified:** web tests 14 (2 new: which actions sound, a burst thinned to one, nothing on a seek or going
 back); the button and the S key cycling in the browser.
+
+
+## ADR-066 A thousand open-licensed drawings, in every lesson (2026-10-29)
+
+**Asked.** Plan V2 of the same order: many more quality drawings for lessons (the product had 31), from
+open-licensed libraries, named once by a model (a small one-time cost), and offered to every lesson type,
+not only cost-saver lessons.
+
+**Decision.**
+- *A drawing pack shipped with the code* (`objects/packs/bioicons.jsonl.gz`, 6.5 MB): 1,011 drawings from
+  [Bioicons](https://bioicons.com) (Servier Medical Art 587, DBCLS 168, 64 other authors; CC0, CC BY 3.0
+  and 4.0 only: share-alike and logo folders are left out). They are built-in (origin "library"): approved
+  by the pack's curation, renamed, retired or reset by admins like the product's own, never deleted. Each
+  keeps its pack, author, licence and the original's link.
+- *How it was made* (`scripts/vendor_drawings.py`, a developer's tool; the app downloads nothing): 1,867
+  files (one per drawing name in school-relevant categories) imported like an admin's SVG; 1,250 passed every
+  check (left out: over 400 shapes or 60,000 characters of path data, entities in the file, extreme
+  proportions). A vision model looked at each once (low detail, eight at a time: **$0.24 in all**) and wrote
+  its title, what it shows, its view, the names scripts use for it (plurals, scientific names), context
+  words, never-for phrases ("computer mouse" for a mouse) and whether to keep it (102 not: arrows, abstract
+  symbols, blank or unclear). Contact sheets of all of them were looked at: 64 left out (drawings whose text
+  the import drops, leaving empty label boxes or bare leader lines, skeletal formulas without their atom
+  letters, a black clip background, full naked figures and mating pairs, lab-animal colour coding such as a
+  blue mouse, Servier's empty-cell building pieces), and at most two drawings of one name and three colours
+  of one thing (73 near-repeats).
+- *Style sheets in SVG import* (`objects/svg.py`): a quarter of the files coloured their shapes through a
+  `<style>` sheet, which the importer ignored (every shape black). Simple rules now apply in CSS order
+  (`tag` < `.class` < `tag.class` < `#id`, the `style` attribute last; at-rules such as print are skipped).
+  Admins' own imports gain the same.
+- *Light in memory:* a thousand detailed drawings held whole took 123 MB (too much for Render's free 512 MB).
+  The store keeps pack drawings thin (names, words, size and proportions; shapes and checks compressed aside)
+  and makes one whole only where it is placed or shown to an admin (`packs.with_art`, 0.4 ms): 28 MB held,
+  29 MB at the peak of the first load (2.3 s, the pack read one drawing a line). Matching a scene against all
+  1,042 drawings takes about 65 ms (a quick word test before the exact one; parsed names cached).
+- *Every lesson type* (`ANIMATOR_SAVED_IN_ALL_LESSONS=true`): a teaching lesson's scene whose brief names a
+  saved drawing is offered it. A classic scene offered one is written with `animation-saved.v1` (the classic
+  prompt `animation.v8` plus the cost-saver prompt's section on placing drawings, without the stage plan) and
+  the scene schema with saved drawings; a planned scene as a cost-saver one; a scene offered none exactly as
+  before (`animation.v8`). The visual director hears of the drawings a classic lesson's script names, as a
+  cost-saver lesson's does. Among equally good matches, the product's own drawings (with named parts) come
+  first.
+- *Credits:* a lesson that places a drawing whose licence asks for credit lists it under **Drawing credits**
+  on its Overview (title linked to the original, author, pack, licence, "adapted"); `docs/CREDITS.md` lists
+  the pack's authors and licences. The Objects Warehouse shows a pack drawing's author, licence and original,
+  and counts drawings from packs.
+
+**Measured live** (two classic 1-minute lessons, real models and voice, scratch folders):
+- *How do the kidneys clean our blood?* (English): the nephron, a red blood cell and a protein from the pack
+  placed; 3/3 scenes ready; 59.9 s for 60 s asked; AI $0.152.
+- *How do vaccines train the immune system?* (Hinglish): the pack's vaccine vial and the product's antibody;
+  4/4 ready; 60.8 s; AI $0.120.
+- Only the CC BY drawings were credited (the CC0 ones need none).
+
+**Tests:** Python 406 (new: packs read and a bad drawing left out, pack drawings built-in, thin in lists and
+whole when asked, credits only where the licence asks, a lesson's credits gathered; style-sheet colours in CSS
+order; a classic scene placing the drawing its brief names; a classic scene offered none written as before;
+the admin page with pack drawings).
+
+**Rollback:** `ANIMATOR_SAVED_IN_ALL_LESSONS=false` (drawings in cost-saver lessons only); deleting
+`objects/packs/bioicons.jsonl.gz` removes the pack (lessons that placed its drawings keep them: a scene carries
+its drawing).

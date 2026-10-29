@@ -27,7 +27,7 @@ import {
   Users,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, api, type ExportJob, type LessonDepth } from "../../api";
+import { ApiError, api, type ExportJob, type LessonCredit, type LessonDepth } from "../../api";
 import { DoubtFeature } from "../../doubts/DoubtFeature";
 import { explain, progressLine, useLessonStream } from "../../lesson/useLessonStream";
 import { Player, type PlayerControl } from "../../player/Player";
@@ -432,6 +432,7 @@ function LessonBody({ id }: { id: string }) {
               topic={info?.topic ?? summary?.request.topic ?? ""}
               title={info?.title ?? title}
               depth={summary?.depth ?? null}
+              credits={summary?.credits ?? []}
               chapters={summary?.chapters ?? []}
               scenes={lesson.scenes.map((sc) => ({ title: sc.title, start: sc.start, duration: sc.duration }))}
               onSeek={seek}
@@ -489,6 +490,7 @@ function Overview({
   topic,
   title,
   depth,
+  credits,
   chapters,
   scenes,
   onSeek,
@@ -501,6 +503,8 @@ function Overview({
   title: string;
   /** A lesson planned for its length (ADR-063): its depth, and what a longer lesson would add. */
   depth: LessonDepth | null;
+  /** Drawings from open-licensed packs that ask for credit (ADR-066). */
+  credits: LessonCredit[];
   chapters: { id: string; title: string }[];
   scenes: { title: string; start: number; duration: number }[];
   onSeek: (t: number) => void;
@@ -565,6 +569,39 @@ function Overview({
             </ul>
           </>
         )}
+        {credits.length > 0 && (
+          <>
+            <h3>Drawing credits</h3>
+            <ul className="overview-credits">
+              {credits.map((c) => (
+                <li key={`${c.author}-${c.pack}-${c.license}`}>
+                  {c.drawings.map((d, i) => (
+                    <span key={d.title}>
+                      {i > 0 && ", "}
+                      {d.url ? (
+                        <a href={d.url} target="_blank" rel="noreferrer">
+                          {d.title}
+                        </a>
+                      ) : (
+                        d.title
+                      )}
+                    </span>
+                  ))}
+                  {c.author && <> by {c.author}</>}
+                  {c.pack && <> ({PACKS[c.pack] ?? c.pack})</>},{" "}
+                  {c.license_url ? (
+                    <a href={c.license_url} target="_blank" rel="noreferrer">
+                      {c.license}
+                    </a>
+                  ) : (
+                    c.license
+                  )}
+                  , adapted.
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
       <aside className="overview-side">
         {canRate && (
@@ -600,6 +637,9 @@ function Overview({
     </div>
   );
 }
+
+/** Display names of the drawing packs (ADR-066). */
+const PACKS: Record<string, string> = { bioicons: "Bioicons" };
 
 function Doubts({ lessonId }: { lessonId: string }) {
   const res = useResource(`doubts:${lessonId}`, () => v1.lessonDoubts(lessonId), 5000);

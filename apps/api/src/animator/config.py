@@ -266,6 +266,11 @@ class Settings(BaseSettings):
     animator_objects_harvest_every_s: float = Field(default=900.0, ge=60.0)
     # Saved drawings offered to one scene at most (the ones its brief names, best first).
     animator_objects_max_offers: int = Field(default=6, ge=1, le=12)
+    # Every teaching lesson's scenes are offered the saved drawings their briefs name (ADR-066), not only
+    # cost-saver ones: a classic scene offered one is written with `animation-saved` (the classic prompt
+    # plus how to place a drawing), a planned one as a cost-saver scene; scenes offered none are written as
+    # before. Off: only cost-saver lessons place saved drawings.
+    animator_saved_in_all_lessons: bool = True
 
     # --- Storage: no database for now (see ADR-003) ---
     animator_storage_backend: Literal["memory", "files"] = "files"

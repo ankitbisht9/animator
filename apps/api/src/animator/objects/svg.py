@@ -1,7 +1,9 @@
 """SVG drawings in (ADR-055): an admin's file, or a library source, as saved-object shapes.
 
 Only drawing is taken: paths and the basic shapes (rect, circle, ellipse, line, polyline, polygon),
-with their transforms, fill, stroke, stroke width, opacity and fill rule, inherited through groups.
+with their transforms, fill, stroke, stroke width, opacity and fill rule, inherited through groups, and
+set by attributes, by the `style` attribute or by a `<style>` sheet's simple rules (`.class`, `#id`, `tag`,
+`tag.class`: what drawing programs write; ADR-066).
 Everything else is dropped (text, images, links to other files, scripts, filters, masks), and a file
 with a DOCTYPE or entities is refused outright (no entity expansion, no external references).
 Gradients become their middle color.
@@ -141,28 +143,121 @@ def parse_color(value: str | None, gradients: dict[str, str]) -> str | None:
     return _NAMED.get(low)
 
 
-def _style(el: ET.Element) -> dict[str, str]:
-    """Presentation attributes, then the `style` attribute's declarations (which win)."""
+_PRESENTATION = (
+    "fill",
+    "stroke",
+    "stroke-width",
+    "opacity",
+    "fill-opacity",
+    "stroke-opacity",
+    "fill-rule",
+    "display",
+    "visibility",
+    "stop-color",
+)
+_CSS_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_CSS_RULE = re.compile(r"([^{}@;]+)\{([^{}]*)\}")
+_SELECTOR = re.compile(r"^(?:(?P<tag>[a-zA-Z][\w-]*)?(?:\.(?P<cls>[\w-]+))?|#(?P<id>[\w-]+))$")
+
+
+@dataclass
+class Sheet:
+    """A `<style>` sheet's simple rules: (specificity, order, declarations) per selector."""
+
+    rules: dict[tuple[str, str], list[tuple[int, int, dict[str, str]]]] = field(default_factory=dict)
+
+    def for_element(self, el: ET.Element) -> dict[str, str]:
+        if not self.rules:
+            return {}
+        tag = _local(el.tag)
+        keys = [("tag", tag)]
+        for cls in (_attr(el, "class") or "").split():
+            keys += [("class", cls), ("tagclass", f"{tag}.{cls}")]
+        if (eid := _attr(el, "id")) is not None:
+            keys.append(("id", eid))
+        found = [r for k in keys for r in self.rules.get(k, [])]
+        out: dict[str, str] = {}
+        for _, _, decls in sorted(found, key=lambda r: (r[0], r[1])):
+            out.update(decls)
+        return out
+
+
+def _declarations(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
-    for key in (
-        "fill",
-        "stroke",
-        "stroke-width",
-        "opacity",
-        "fill-opacity",
-        "stroke-opacity",
-        "fill-rule",
-        "display",
-        "visibility",
-        "stop-color",
-    ):
+    for decl in text.split(";"):
+        k, _, v = decl.partition(":")
+        k, v = k.strip().lower(), v.strip()
+        if k and v:
+            out[k] = v.removesuffix("!important").strip()
+    return out
+
+
+def _without_at_rules(text: str) -> str:
+    """The sheet without its at-rules (`@media print {...}`, `@font-face {...}`, `@import ...;`): rules
+    for print or other media are not the drawing's."""
+    out: list[str] = []
+    i = 0
+    while i < len(text):
+        if text[i] != "@":
+            out.append(text[i])
+            i += 1
+            continue
+        brace, semi = text.find("{", i), text.find(";", i)
+        if brace == -1 or (semi != -1 and semi < brace):
+            i = len(text) if semi == -1 else semi + 1  # `@import url(...);`
+            continue
+        depth, j = 0, brace
+        while j < len(text):
+            depth += {"{": 1, "}": -1}.get(text[j], 0)
+            j += 1
+            if depth == 0:
+                break
+        i = j
+    return "".join(out)
+
+
+def parse_sheet(root: ET.Element) -> Sheet:
+    """The simple rules of the document's `<style>` elements (anything more complex is ignored)."""
+    sheet = Sheet()
+    text = " ".join("".join(el.itertext()) for el in root.iter() if _local(el.tag) == "style")
+    if not text.strip():
+        return sheet
+    text = _CSS_COMMENT.sub(" ", text).replace("<![CDATA[", " ").replace("]]>", " ")
+    text = _without_at_rules(text)
+    order = 0
+    for rule in _CSS_RULE.finditer(text):
+        decls = {k: v for k, v in _declarations(rule.group(2)).items() if k in _PRESENTATION}
+        if not decls:
+            continue
+        for selector in rule.group(1).split(","):
+            m = _SELECTOR.match(selector.strip())
+            if not m or not any(m.groupdict().values()):
+                continue
+            order += 1
+            if m.group("id"):
+                key, spec = ("id", m.group("id")), 3
+            elif m.group("tag") and m.group("cls"):
+                key, spec = ("tagclass", f"{m.group('tag')}.{m.group('cls')}"), 2
+            elif m.group("cls"):
+                key, spec = ("class", m.group("cls")), 1
+            else:
+                key, spec = ("tag", str(m.group("tag"))), 0
+            sheet.rules.setdefault(key, []).append((spec, order, decls))
+    return sheet
+
+
+def _style(el: ET.Element, sheet: Sheet | None = None) -> dict[str, str]:
+    """Presentation attributes, then the style sheet's rules, then the `style` attribute's declarations
+    (which win)."""
+    out: dict[str, str] = {}
+    for key in _PRESENTATION:
         v = _attr(el, key)
         if v is not None:
             out[key] = v
-    for decl in (_attr(el, "style") or "").split(";"):
-        k, _, v = decl.partition(":")
-        if k.strip() and v.strip():
-            out[k.strip()] = v.strip()
+    if sheet is not None:
+        out.update(sheet.for_element(el))
+    for k, v in _declarations(_attr(el, "style") or "").items():
+        out[k] = v
     for key in ("data-fill", "data-stroke"):
         v = _attr(el, key)
         if v is not None:
@@ -234,7 +329,7 @@ def _shape_path(tag: str, el: ET.Element) -> str | None:
     return None
 
 
-def _gradients(root: ET.Element) -> dict[str, str]:
+def _gradients(root: ET.Element, sheet: Sheet | None = None) -> dict[str, str]:
     out: dict[str, str] = {}
     for el in root.iter():
         if _local(el.tag) not in ("linearGradient", "radialGradient"):
@@ -244,7 +339,7 @@ def _gradients(root: ET.Element) -> dict[str, str]:
         if not gid or not stops:
             continue
         mid = stops[len(stops) // 2]
-        color = parse_color(_style(mid).get("stop-color"), {})
+        color = parse_color(_style(mid, sheet).get("stop-color"), {})
         if color and color != "none":
             out[gid] = color
     return out
@@ -263,7 +358,8 @@ def parse_svg(text: str) -> Imported:
     if _local(root.tag) != "svg":
         raise ValueError("not an SVG file (its root is not <svg>)")
     out = Imported()
-    gradients = _gradients(root)
+    sheet = parse_sheet(root)
+    gradients = _gradients(root, sheet)
     dropped: dict[str, int] = {}
 
     def walk(el: ET.Element, m: A.Matrix, inherited: dict[str, str], part: str | None) -> None:
@@ -273,7 +369,7 @@ def parse_svg(text: str) -> Imported:
         if tag in _DROPPED:
             dropped[_DROPPED[tag]] = dropped.get(_DROPPED[tag], 0) + 1
             return
-        own = _style(el)
+        own = _style(el, sheet)
         if own.get("display") == "none" or own.get("visibility") == "hidden":
             return
         m = A.multiply(m, parse_transform(_attr(el, "transform")))

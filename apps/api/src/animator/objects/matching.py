@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 from animator.objects.models import SavedObject
 
@@ -54,6 +55,7 @@ IRREGULAR = {
 }
 
 
+@lru_cache(maxsize=65_536)
 def forms(word: str) -> frozenset[str]:
     """The word and the singular forms it may stand for ("leaves": leaf, leave; "cells": cell)."""
     out = {word}
@@ -80,11 +82,27 @@ def segments(text: str) -> list[list[str]]:
     return out
 
 
-def _phrase(text: str) -> list[frozenset[str]]:
-    return [forms(t) for t in _TOKEN.findall(text.lower().replace("_", " "))]
+@lru_cache(maxsize=65_536)
+def _phrase(text: str) -> tuple[frozenset[str], ...]:
+    return tuple(forms(t) for t in _TOKEN.findall(text.lower().replace("_", " ")))
 
 
-def _occurrences(phrase: list[frozenset[str]], sentence: Sequence[str]) -> list[tuple[int, int]]:
+def _vocabulary(texts: list[list[list[str]]]) -> frozenset[str]:
+    """Every form of every word the texts say: a name none of whose first word's forms is here cannot
+    be named by them (a quick test before the exact one, for a library of thousands of drawings)."""
+    out: set[str] = set()
+    for sentences in texts:
+        for sentence in sentences:
+            for word in sentence:
+                out |= forms(word)
+    return frozenset(out)
+
+
+def _may_be_named(obj: SavedObject, vocabulary: frozenset[str]) -> bool:
+    return any((ph := _phrase(a)) and not ph[0].isdisjoint(vocabulary) for a in obj.aliases)
+
+
+def _occurrences(phrase: Sequence[frozenset[str]], sentence: Sequence[str]) -> list[tuple[int, int]]:
     n = len(phrase)
     if n == 0 or n > len(sentence):
         return []
@@ -185,10 +203,13 @@ def offers_for(scene: SceneText, candidates: Sequence[SavedObject], limit: int =
     """The drawings a scene may use, best first (named in the brief's objects, then most named)."""
     texts = [segments(t) for t in scene.objects] + [segments(" . ".join(scene.body))]
     lesson = [s for t in scene.lesson for s in segments(t)]
+    vocabulary = _vocabulary(texts)
     mentions: list[Mention] = []
     for obj in candidates:
         # A drawing that is not built-in is used only with context words (approval asks for them).
         if obj.origin != "library" and not obj.context:
+            continue
+        if not _may_be_named(obj, vocabulary):
             continue
         found = _mentions(obj, texts)
         if not found or _meant_otherwise(obj, texts, found, lesson):
@@ -224,8 +245,15 @@ def offers_for(scene: SceneText, candidates: Sequence[SavedObject], limit: int =
                 offer.for_ids.append(oid)
     for offer in by_id.values():
         offer.preferred = sum(1 for p in offer.obj.prefer if _stem_in(p, all_text))
+    # Among equals, the product's own drawings (curated, with named parts) before pack drawings (ADR-066).
     ranked = sorted(
         by_id.values(),
-        key=lambda o: (-(1 if o.for_ids else 0), -o.preferred, -o.mentions, o.obj.id),
+        key=lambda o: (
+            -(1 if o.for_ids else 0),
+            -o.preferred,
+            -o.mentions,
+            1 if o.obj.source.pack else 0,
+            o.obj.id,
+        ),
     )
     return ranked[:limit]

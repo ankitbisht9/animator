@@ -8,6 +8,7 @@ import logging
 
 from animator.config import Settings
 from animator.objects.matching import Offer, SceneText, offers_for
+from animator.objects.packs import with_art
 from animator.objects.store import ObjectStore
 from animator.pipeline.models import Generation, SceneRecord
 
@@ -41,9 +42,12 @@ class ObjectLibrary:
         """The approved drawings a scene's brief names exactly, best first. Never fails a lesson: a
         broken library offers nothing and the scene is drawn as in a planned lesson."""
         try:
-            return offers_for(
+            offers = offers_for(
                 scene_text(gen, rec), self.store.approved(), self.settings.animator_objects_max_offers
             )
+            for o in offers:
+                o.obj = with_art(o.obj)  # a placed drawing travels whole with the lesson
+            return offers
         except Exception:
             log.exception("saved objects: no offers for scene %s", rec.id)
             return []

@@ -547,6 +547,12 @@ export interface SavedObjectSummary {
     object_id?: string;
     lesson_title?: string;
     file?: string;
+    /** A drawing from an open-licensed pack (ADR-066). */
+    pack?: string;
+    author?: string;
+    license?: string;
+    license_url?: string;
+    url?: string;
   };
   updated_at: number;
   reviewed_at: number | null;
@@ -599,6 +605,8 @@ export interface ObjectsPage {
 export interface ObjectStats {
   by_status: Record<ObjectStatus, number>;
   by_origin: Record<ObjectOrigin, number>;
+  /** Built-in drawings from open-licensed packs (ADR-066). */
+  from_packs?: number;
   placed: number;
   harvest: {
     background: boolean;

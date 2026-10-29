@@ -23,6 +23,8 @@ The Blueprint uses the **free** plan, which suits a demo:
 
 To fit, the free setup differs from a development machine:
 - one engine worker instead of four, one lesson made at a time, more time for each engine call;
+- the drawing pack (ADR-066) is read when a lesson first needs it: about 30 MB of memory, kept light on
+  purpose (its drawings are made whole only where they are placed);
 - **no visual critic**: the image has no browser. The rest of the teaching pipeline, the models, the
   ElevenLabs voice and doubts are as in your `.env`. Video export needs a browser too, so it is not
   available.

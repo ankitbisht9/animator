@@ -459,8 +459,26 @@ class Generation(BaseModel):
             ],
             "metrics": self.metrics.model_dump(),
             "depth": self.depth_summary(),
+            "credits": self.credits(),
             "version": self.version,
         }
+
+    def credits(self) -> list[dict[str, Any]]:
+        """The drawings from open-licensed packs the lesson places that ask for credit (ADR-066): one
+        entry per author, pack and licence, with the drawings it covers."""
+        merged: dict[tuple[str, str, str], dict[str, Any]] = {}
+        for s in self.scenes:
+            for c in (s.saved or {}).get("credits") or []:
+                if not isinstance(c, dict):
+                    continue
+                key = (str(c.get("author") or ""), str(c.get("pack") or ""), str(c.get("license") or ""))
+                entry = merged.setdefault(key, {**c, "drawings": []})
+                for d in c.get("drawings") or []:
+                    if isinstance(d, dict) and all(
+                        e.get("title") != d.get("title") for e in entry["drawings"]
+                    ):
+                        entry["drawings"].append(d)
+        return list(merged.values())
 
     def depth_summary(self) -> dict[str, Any] | None:
         """A lesson planned for its length (ADR-063): its depth, and what a longer lesson would add."""

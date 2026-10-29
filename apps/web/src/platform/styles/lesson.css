@@ -802,6 +802,19 @@
   color: var(--muted);
 }
 
+.overview-credits {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.overview-credits a {
+  color: var(--text);
+}
+
 .overview-chapters {
   margin: 0;
   padding-left: 20px;

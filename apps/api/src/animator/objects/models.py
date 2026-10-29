@@ -163,6 +163,20 @@ class Source(_Strict):
     lesson_title: str | None = None
     file: str | None = None
     by: str | None = None
+    # A drawing from an open-licensed pack (ADR-066): the pack, its author and licence, where it came
+    # from. Lessons that place a drawing whose licence asks for it credit it.
+    pack: str | None = None
+    author: str | None = Field(default=None, max_length=120)
+    license: str | None = Field(default=None, max_length=40)
+    license_url: str | None = Field(default=None, max_length=200)
+    url: str | None = Field(default=None, max_length=300)
+
+    @property
+    def credit(self) -> str | None:
+        """How the drawing is credited, when its licence asks for it ("Servier, CC BY 3.0")."""
+        if not self.license or self.license.startswith("CC0"):
+            return None
+        return f"{self.author or self.pack or 'unknown'}, {self.license}"
 
 
 def _phrases(v: list[str], limit: int, what: str) -> list[str]:

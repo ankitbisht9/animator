@@ -27,6 +27,7 @@ from animator.engine_client import EngineClient
 from animator.engine_client.errors import EngineError
 from animator.llm import CallContext, LLMBadOutput, LLMClient, LLMIncomplete, LLMRefusal, LLMResult
 from animator.objects.models import SavedObject
+from animator.objects.packs import credits
 from animator.objects.prompting import offer_text
 from animator.objects.resolve import Resolution, placed_refs
 from animator.objects.resolve import compact as compact_saved
@@ -722,14 +723,16 @@ class Pipeline:
         reviewed_majors = 0  # the major problems the critic found in it
         planned = self._planned(gen)
         plan: Any = None  # the planned flow's stage plan (ADR-047), carried into corrections
-        # Cost-saver lessons (ADR-055): the saved drawings this scene's brief names exactly.
+        # Saved drawings (ADR-055, ADR-066): the ones this scene's brief names exactly. A cost-saver scene
+        # always has its list; another lesson's scene only when something is offered (else as before).
         offered: dict[str, SavedObject] | None = None
         saved_text: str | None = None
-        if self._costsaver(gen) and self.objects is not None:
+        if self._offers_on(gen) and self.objects is not None:
             offers = self.objects.offers(gen, rec)
-            offered = {o.obj.id: o.obj for o in offers}
-            saved_text = offer_text(offers)
-            rec.saved = {"offered": [o.obj.ref for o in offers], "used": []}
+            if offers or self._costsaver(gen):
+                offered = {o.obj.id: o.obj for o in offers}
+                saved_text = offer_text(offers)
+                rec.saved = {"offered": [o.obj.ref for o in offers], "used": []}
 
         for n in range(1, max_attempts + 1):
             final = n == max_attempts and n > 1
@@ -1329,7 +1332,14 @@ class Pipeline:
     ) -> Draft:
         result = await call
         if not planned:
-            return (result, *await self._check(self._shape(result.data, rec), prev_state, relocate))
+            if offered is None:
+                return (result, *await self._check(self._shape(result.data, rec), prev_state, relocate))
+            # A classic scene offered saved drawings (ADR-066): each one it names becomes its drawing.
+            placed = resolve_saved(dict(result.data) if isinstance(result.data, dict) else {}, offered)
+            checked = await self._check(self._shape(placed.dsl, rec), prev_state, relocate)
+            if placed.problems:
+                checked = (checked[0], _with_problems(checked[1], placed), checked[2])
+            return (result, *checked)
         # The planned flow (ADR-047): the stage plan rides with the reply; the scene itself is the
         # engine's (the plan is never part of what is compiled or played).
         data = dict(result.data) if isinstance(result.data, dict) else {}
@@ -1372,10 +1382,18 @@ class Pipeline:
         mode = gen.request.layout or self.settings.animator_layout_mode
         return gen.teaching is not None and mode == "costsaver" and self.objects is not None
 
+    def _offers_on(self, gen: Generation) -> bool:
+        """Whether this lesson's scenes are offered saved drawings: cost-saver lessons (ADR-055), and every
+        teaching lesson with ANIMATOR_SAVED_IN_ALL_LESSONS (ADR-066)."""
+        if self.objects is None or gen.teaching is None:
+            return False
+        return self._costsaver(gen) or self.settings.animator_saved_in_all_lessons
+
     def library_note(self, gen: Generation, script: TeachingScript) -> str | None:
-        """For a cost-saver lesson's visual director (ADR-055): the saved drawings its script names, so
-        the scenes are planned around them, in their views, the same in every scene. None otherwise."""
-        if not self._costsaver(gen) or self.objects is None:
+        """For the visual director of a lesson offered saved drawings (ADR-055, ADR-066): the ones its
+        script names, so the scenes are planned around them, in their views, the same in every scene.
+        None otherwise (and when the script names none)."""
+        if not self._offers_on(gen) or self.objects is None:
             return None
         lines = [f"{sc.title}. {sc.goal}." for sc in script.scenes]
         lines += [f"{b.say} {b.show}" for sc in script.scenes for b in sc.beats]
@@ -1397,9 +1415,9 @@ class Pipeline:
     ) -> dict[str, Any] | None:
         """The scene a correction starts from: as drafted, with its stage plan (planned flow), and its
         saved drawings back as the short references the writer used (cost saver)."""
-        if dsl is None or not planned:
+        if dsl is None:
             return dsl
-        previous = {**dsl, "stage": plan}
+        previous = {**dsl, "stage": plan} if planned else dsl
         return compact_saved(previous) if costsaver else previous
 
     async def _saved_used(self, gen: Generation, rec: SceneRecord) -> None:
@@ -1409,6 +1427,11 @@ class Pipeline:
         gen.metrics.saved_objects = sum(len((s.saved or {}).get("used") or []) for s in gen.scenes)
         if refs and self.objects is not None:
             await self.objects.record_uses(gen.id, rec.id, refs)
+            # Drawings from open-licensed packs that ask for it are credited with the lesson (ADR-066).
+            placed = [self.objects.store.get(r.split("@")[0]) for r in refs]
+            found = credits(o for o in placed if o is not None)
+            if found:
+                rec.saved["credits"] = found
 
     def _draft_count(self, gen: Generation, attempt: int) -> int:
         if self._planned(gen):

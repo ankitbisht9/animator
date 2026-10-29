@@ -2,6 +2,8 @@
 
 - The library: drawings made for the product, shipped in the package (`library/*.json`, built from
   `library/src/` by `python -m animator.objects build`). Read-only.
+- Packs (ADR-066): open-licensed drawings shipped in the package (`packs/*.json.gz`), built-in like the
+  library's (each keeps its author and licence). Read-only.
 - The warehouse (`<objects dir>/warehouse/<id>.json`): drawings harvested from finished lessons or
   imported by an admin, each with its review status.
 - Decisions on library objects (`<objects dir>/overrides/<id>.json`): an admin's edits to their
@@ -25,6 +27,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from animator.objects.models import EDITABLE, SavedObject
+from animator.objects.packs import PACKS_DIR, load_packs, with_art
 
 LIBRARY_DIR = Path(__file__).parent / "library"
 log = logging.getLogger("animator.objects")
@@ -48,15 +51,18 @@ def _write(path: Path, text: str) -> None:
 
 
 class ObjectStore:
-    def __init__(self, root: Path, library: Path = LIBRARY_DIR) -> None:
+    def __init__(self, root: Path, library: Path = LIBRARY_DIR, packs: Path | None = PACKS_DIR) -> None:
         self.root = root
         self.library = library
+        # Packs ship beside the library (ADR-066); None: no packs.
+        self.packs = packs
         self.warehouse = root / "warehouse"
         self.overrides = root / "overrides"
         self._lock = threading.RLock()
         self._cache: dict[str, SavedObject] | None = None
         self._stamp: tuple[Any, ...] | None = None
         self._uses: tuple[tuple[int, int], dict[str, int]] | None = None
+        self._override_names: set[str] = set()
         # Files that could not be read, for the admin page (a bad file never stops the others).
         self.errors: list[str] = []
 
@@ -64,7 +70,10 @@ class ObjectStore:
 
     def _folder_stamp(self) -> tuple[Any, ...]:
         out: list[Any] = []
-        for d in (self.library, self.warehouse, self.overrides):
+        folders = [self.library, self.warehouse, self.overrides]
+        if self.packs is not None:
+            folders.append(self.packs)
+        for d in folders:
             try:
                 st = d.stat()
                 out.append((st.st_mtime_ns, sum(1 for _ in d.glob("*.json"))))
@@ -75,6 +84,9 @@ class ObjectStore:
     def _load(self) -> dict[str, SavedObject]:
         out: dict[str, SavedObject] = {}
         errors: list[str] = []
+        # Listed once: a thousand built-in drawings would otherwise each look for a file.
+        listed = self.overrides.glob("*.json") if self.overrides.is_dir() else []
+        self._override_names = {f.name for f in listed}
         for f in sorted(self.library.glob("*.json")):
             try:
                 obj = SavedObject.model_validate_json(f.read_text(encoding="utf-8"))
@@ -85,6 +97,14 @@ class ObjectStore:
                 errors.append(f"library/{f.name}: not a library object named {f.stem}")
                 continue
             out[obj.id] = self._overridden(obj, errors)
+        if self.packs is not None:
+            pack_objs, pack_errors = load_packs(self.packs)
+            errors += pack_errors
+            for obj in pack_objs:
+                if obj.id in out:
+                    errors.append(f"packs: '{obj.id}' is already a built-in drawing's id")
+                    continue
+                out[obj.id] = self._overridden(obj, errors)
         for f in sorted(self.warehouse.glob("*.json")):
             try:
                 obj = SavedObject.model_validate_json(f.read_text(encoding="utf-8"))
@@ -102,7 +122,7 @@ class ObjectStore:
 
     def _overridden(self, obj: SavedObject, errors: list[str]) -> SavedObject:
         path = self.overrides / f"{obj.id}.json"
-        if not path.exists():
+        if path.name not in self._override_names:
             return obj
         try:
             changes = json.loads(path.read_text(encoding="utf-8"))
@@ -121,12 +141,16 @@ class ObjectStore:
             return self._cache
 
     def all(self) -> list[SavedObject]:
+        """Every object; pack drawings thin (their shapes left aside: see `packs.with_art`)."""
         return list(self._all().values())
 
     def get(self, obj_id: str) -> SavedObject | None:
-        return self._all().get(obj_id)
+        """One object, whole."""
+        obj = self._all().get(obj_id)
+        return with_art(obj) if obj is not None else None
 
     def approved(self) -> list[SavedObject]:
+        """The objects lessons may use; pack drawings thin (matching needs no shapes)."""
         return [o for o in self._all().values() if o.status == "approved"]
 
     def fingerprints(self) -> set[str]:
@@ -140,7 +164,8 @@ class ObjectStore:
         obj = SavedObject.model_validate(obj.model_dump())
         with self._lock:
             if obj.origin == "library":
-                if not (self.library / f"{obj.id}.json").exists():
+                current = self.get(obj.id)
+                if current is None or current.origin != "library":
                     raise ValueError(f"no built-in object '{obj.id}'")
                 data = obj.model_dump(include=set(EDITABLE) | set(_REVIEW))
                 _write(self.overrides / f"{obj.id}.json", json.dumps(data, ensure_ascii=False, indent=1))

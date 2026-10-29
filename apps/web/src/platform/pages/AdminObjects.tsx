@@ -279,8 +279,18 @@ export function AdminObjects() {
             sub={`${s.by_origin.harvest} from lessons · ${s.by_origin.import} imported`}
             tone={s.by_status.candidate ? "warning" : "neutral"}
           />
-          <Stat icon={Shapes} label="Built-in" value={s.by_origin.library} sub="drawn for the product" tone="brand" />
-          <Stat icon={Check} label="Placed in scenes" value={s.placed} sub="by cost-saver lessons" tone="info" />
+          <Stat
+            icon={Shapes}
+            label="Built-in"
+            value={s.by_origin.library}
+            sub={
+              s.from_packs
+                ? `${s.by_origin.library - s.from_packs} drawn for the product · ${s.from_packs} from open packs`
+                : "drawn for the product"
+            }
+            tone="brand"
+          />
+          <Stat icon={Check} label="Placed in scenes" value={s.placed} sub="by lessons" tone="info" />
           <Stat
             icon={Sparkles}
             label="Lessons read"
@@ -557,6 +567,28 @@ function ObjectDetail({
               <p className="small muted">
                 Drawn in <Link href={`/lessons/${o.source.generation_id}`}>{o.source.lesson_title || "a lesson"}</Link>{" "}
                 ({o.source.scene_id}, {o.source.object_id})
+              </p>
+            )}
+            {o.source.pack && (
+              <p className="small muted">
+                From the {o.source.pack === "bioicons" ? "Bioicons" : o.source.pack} pack
+                {o.source.author ? `, by ${o.source.author}` : ""},{" "}
+                {o.source.license_url ? (
+                  <a href={o.source.license_url} target="_blank" rel="noreferrer">
+                    {o.source.license}
+                  </a>
+                ) : (
+                  o.source.license
+                )}
+                {o.source.url && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <a href={o.source.url} target="_blank" rel="noreferrer">
+                      original
+                    </a>
+                  </>
+                )}
               </p>
             )}
             {o.quality && (

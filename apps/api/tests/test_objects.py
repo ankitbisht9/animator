@@ -125,6 +125,31 @@ def test_part_names_come_from_meaningful_ids_only() -> None:
     assert part_name("center") is None  # a box anchor
 
 
+def test_colours_from_a_style_sheet_follow_css_order() -> None:
+    """Drawing programs colour shapes through `<style>` classes (ADR-066): without them every shape would
+    be black."""
+    got = parse_svg(
+        """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><style>
+        /* a comment */ .cls-1, .cls-2 {fill:#f15a24;} .cls-2 {opacity:.5} #big {fill:#123456}
+        path.dark {fill:#000000} @media print { .cls-1 {fill:#00ff00} } rect {stroke:#111111}
+        g .nested {fill:#abcdef}
+        </style></defs>
+        <rect class="cls-1" x="0" y="0" width="50" height="50"/>
+        <rect class="cls-2" x="50" y="0" width="50" height="50"/>
+        <rect id="big" class="cls-1" x="0" y="50" width="50" height="50"/>
+        <path class="dark cls-1" d="M50 50h50v50z"/>
+        <rect class="cls-1" style="fill:#ffffff" x="10" y="10" width="5" height="5"/>
+        <circle class="nested" cx="5" cy="5" r="2"/>
+        </svg>"""
+    )
+    fills = [s.fill for s in got.shapes]
+    # A class; a class with its opacity; an id over a class; tag.class over a class; the style attribute
+    # over everything; a descendant selector is beyond the simple rules (the default black).
+    assert fills == ["#f15a24", "#f15a24", "#123456", "#000000", "#ffffff", "#000000"]  # no print rules
+    assert [round(s.opacity, 2) for s in got.shapes][:2] == [1.0, 0.5]
+    assert got.shapes[0].stroke == "#111111" and got.shapes[3].stroke == "none"
+
+
 # ---------------------------------------------------------------------- the stored drawing
 
 
@@ -653,12 +678,18 @@ def heart_teacher() -> dict[str, Any]:
 
 
 async def test_a_cost_saver_lessons_director_hears_of_the_drawings(pool: EngineWorkerPool) -> None:
-    for layout, told in (("costsaver", True), ("planned", False)):
-        scene = heart_scene() if layout == "costsaver" else _drawn()
+    # ADR-066: every teaching lesson is offered the drawings its scenes name; with
+    # ANIMATOR_SAVED_IN_ALL_LESSONS off, only cost-saver lessons are (ADR-055).
+    for layout, told, everywhere in (
+        ("costsaver", True, False),
+        ("planned", False, False),
+        ("planned", True, True),
+    ):
+        scene = heart_scene() if layout == "costsaver" or everywhere else _drawn()
         script = heart_script(lambda i, a, r, scene=scene: copy.deepcopy(scene))
         script.overrides["lesson script"] = heart_teacher()
         script.overrides["script review"] = {"changes": [], "script": heart_teacher()}
-        gen = await run_lesson(pool, script, layout=layout)
+        gen = await run_lesson(pool, script, layout=layout, animator_saved_in_all_lessons=everywhere)
         assert gen.status == "complete", gen.error
         director = next(r for r in script.calls if r.label == "visual direction")
         text = director.messages[0].parts[0].text  # type: ignore[union-attr]
@@ -667,15 +698,62 @@ async def test_a_cost_saver_lessons_director_hears_of_the_drawings(pool: EngineW
         assert ("outside, from the front" in heart and "cut open from the front" in heart) is told, layout
 
 
-async def test_planned_and_classic_lessons_never_see_saved_drawings(pool: EngineWorkerPool) -> None:
+async def test_with_drawings_for_cost_saver_lessons_only_the_others_never_see_them(
+    pool: EngineWorkerPool,
+) -> None:
     for layout in ("planned", "classic"):
         script = heart_script(lambda i, a, r: _drawn())
-        gen = await run_lesson(pool, script, layout=layout)
+        gen = await run_lesson(pool, script, layout=layout, animator_saved_in_all_lessons=False)
         assert gen.status == "complete", gen.error
         draft = next(r for r in script.calls if r.label == "scene 1 attempt 1")
         assert "Object_saved" not in draft.schema["$defs"]
         assert "Saved drawings" not in draft.instructions and draft.prompt_version != "animation-costsaver.v2"
         assert all(s.saved is None for s in gen.scenes) and gen.metrics.saved_objects == 0
+
+
+def _classic(scene: dict[str, Any]) -> dict[str, Any]:
+    """A planned scene as a classic one writes it (no stage plan)."""
+    out = copy.deepcopy(scene)
+    out.pop("stage", None)
+    return out
+
+
+async def test_a_classic_lessons_scene_places_the_drawing_its_brief_names(pool: EngineWorkerPool) -> None:
+    script = heart_script(lambda i, a, r: _classic(heart_scene()))
+    script.overrides["lesson script"] = heart_teacher()
+    script.overrides["script review"] = {"changes": [], "script": heart_teacher()}
+    gen = await run_lesson(pool, script, layout="classic")
+    assert gen.status == "complete", gen.error
+    draft = next(r for r in script.calls if r.label == "scene 1 attempt 1")
+    # Written with the classic prompt plus how to place a drawing; no stage plan in its schema.
+    assert draft.prompt_version == "animation-saved.v1"
+    assert "Object_saved" in draft.schema["$defs"] and "stage" not in draft.schema["properties"]
+    assert (
+        "## Saved drawings" in draft.instructions
+        and "stage plan" not in draft.instructions.split("# Scene DSL")[0]
+    )
+    message = draft.messages[0].parts[1].text  # type: ignore[union-attr]
+    assert "Saved drawings for this scene" in message and "`heart_exterior`" in message
+    first = gen.scenes[0]
+    assert first.status == "ready" and first.dsl is not None
+    heart = next(o for o in first.dsl["objects"] if o["id"] == "heart")
+    assert heart["type"] == "figure" and heart["params"]["ref"] == "heart_exterior@1"
+    assert first.saved is not None and first.saved["used"] == ["heart_exterior@1"]
+    assert "credits" not in first.saved  # the product's own drawing needs no credit
+    # The lesson's director heard of it too.
+    director = next(r for r in script.calls if r.label == "visual direction")
+    assert "Saved drawings this lesson can use" in director.messages[0].parts[0].text  # type: ignore[union-attr]
+
+
+async def test_a_classic_scene_whose_brief_names_no_drawing_is_written_as_before(
+    pool: EngineWorkerPool,
+) -> None:
+    script = Teaching()  # the brief is about a tank and a block: nothing in the library
+    gen = await run_lesson(pool, script, layout="classic")
+    assert gen.status == "complete", gen.error
+    draft = next(r for r in script.calls if r.label == "scene 1 attempt 1")
+    assert draft.prompt_version == "animation.v8" and "Object_saved" not in draft.schema["$defs"]
+    assert all(s.saved is None for s in gen.scenes)
 
 
 async def test_with_the_library_off_a_cost_saver_lesson_is_a_planned_one(pool: EngineWorkerPool) -> None:
@@ -883,9 +961,11 @@ def test_admins_review_import_and_try_saved_drawings(tmp_path: Path, worker_scri
         tried = a.post(
             "/api/v1/admin/objects/match", json={"brief": brief, "lesson": "Road safety"}, headers=h
         )
-        assert [o["id"] for o in tried.json()["offered"]] == [oid]
+        # The admin's drawing first; the drawing packs' traffic lights after it (ADR-066).
+        offered = [o["id"] for o in tried.json()["offered"]]
+        assert offered[0] == oid and all("traffic_light" in o for o in offered)
         nerves = a.post("/api/v1/admin/objects/match", json={"brief": "A nerve sends a signal."}, headers=h)
-        assert nerves.json()["offered"] == []
+        assert oid not in [o["id"] for o in nerves.json()["offered"]]
         # Built-in drawings are retired, never deleted; warehouse ones can go.
         assert a.delete("/api/v1/admin/objects/heart_exterior", headers=h).status_code == 422
         r = a.post("/api/v1/admin/objects/heart_exterior/review", json={"decision": "retire"}, headers=h)

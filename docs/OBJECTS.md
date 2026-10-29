@@ -1,15 +1,25 @@
 # Saved drawings and cost-saver lessons
 
-A **cost-saver** lesson is made like a planned one (ADR-047), with one difference: where a scene shows
-exactly a thing the drawing library has (a human heart, a plant cell, a light bulb), the scene writer
-places that ready-made drawing instead of drawing it from shapes. The drawing is detailed, checked and
-labelled by parts; placing it is one short object in the scene writer's reply instead of dozens of
-shapes, and scenes built around it need fewer corrections. Everything else is drawn as usual. Classic and
-planned lessons are exactly as before. Decisions and measurements: ADR-055.
+Where a scene shows exactly a thing the drawing library has (a human heart, a plant cell, a light bulb,
+a kidney, a frog), the scene writer places that ready-made drawing instead of drawing it from shapes. The
+drawing is detailed and checked; placing it is one short object in the scene writer's reply instead of
+dozens of shapes, and scenes built around it need fewer corrections. Everything else is drawn as usual.
 
-The drawings come from two places:
+Since ADR-066 every teaching lesson is offered the drawings its scenes name
+(`ANIMATOR_SAVED_IN_ALL_LESSONS=true`): a classic scene offered one is written with `animation-saved.v1`
+(the classic prompt plus how to place a drawing), a planned one as a cost-saver scene, and a scene offered
+none exactly as before. The **cost-saver** lesson type (ADR-055) is the planned flow with drawings always
+on. Decisions and measurements: ADR-055, ADR-066.
+
+The drawings come from three places:
 - **The built-in library**: 31 drawings made for the product (biology, chemistry, physics), each passing
-  every check, shipped with the code.
+  every check, with named parts, shipped with the code.
+- **Drawing packs** (ADR-066): open-licensed drawings shipped with the code (`objects/packs/*.json.gz`),
+  built-in like the library's. The first is a curated part of [Bioicons](https://bioicons.com): science
+  drawings (organs, cells, microbes, animals, plants, lab equipment, everyday things), mostly by Servier
+  Medical Art (CC BY 3.0) and DBCLS (CC BY 4.0), some CC0. Each keeps its author and licence; a lesson that
+  places one whose licence asks for credit lists it under **Drawing credits** on the lesson page. Pack
+  drawings have no named parts (labels point at the whole drawing).
 - **The warehouse**: drawings the harvest collected from finished lessons (built from shapes by the scene
   writer) and SVG drawings an admin imported. Each is used only once an admin approves it.
 
@@ -102,8 +112,10 @@ from and how many scenes placed it.
   objects) to see which drawings it would be offered, and which waiting ones would also match once
   approved.
 - **Import SVG**: shapes only (text, images, scripts and links are left out; a file with a DOCTYPE is
-  refused). `data-part="left_ventricle"` names a part, `data-fill="red.dark"` / `data-stroke` give a
-  theme color, `data-anchor="apex"` on a circle marks a named point.
+  refused). Colours may come from attributes, the `style` attribute or a `<style>` sheet's simple rules
+  (`.class`, `#id`, `tag`, `tag.class`; print and other at-rules are ignored). `data-part="left_ventricle"`
+  names a part, `data-fill="red.dark"` / `data-stroke` give a theme color, `data-anchor="apex"` on a
+  circle marks a named point.
 - **Collect from lessons**: reads finished lessons not read before.
 
 ## The harvest
@@ -127,6 +139,33 @@ Every drawing, built-in or not: valid path data and known colors; it fills its b
 no empty margins); every part can be seen and has its anchor on it; anchors inside the drawing;
 proportions between 1:5 and 5:1; something filled; enough detail; every part labelled; compact path data.
 Harvested drawings also: from an accepted scene. The score (0-1) orders the review queue.
+
+## Drawing packs
+
+A pack is made once, by a developer, with `scripts/vendor_drawings.py` (nothing in the app downloads):
+
+```
+uv run python scripts/vendor_drawings.py scan   <bioicons/static/icons> var/packs-build/bioicons
+uv run python scripts/vendor_drawings.py thumbs var/packs-build/bioicons
+uv run python scripts/vendor_drawings.py label  var/packs-build/bioicons   # about $0.0002 a drawing, cached
+uv run python scripts/vendor_drawings.py sheets var/packs-build/bioicons   # contact sheets to review
+uv run python scripts/vendor_drawings.py write  var/packs-build/bioicons
+```
+
+- *Scan:* licences CC0, CC BY 3.0 and 4.0 only (share-alike and logo folders are left out), science and
+  everyday categories, one file per drawing name; each is imported like an admin's SVG and must pass every
+  check; files with entities, too much detail (over 60,000 characters of path data or 400 shapes) or
+  extreme proportions are left out.
+- *Label:* a vision model looks at each drawing once (low detail, eight at a time, the file name as a hint)
+  and writes what a library drawing needs: a title, what it is and shows, its view, the names a lesson
+  script uses for it (with plurals and scientific names), context words, never-for phrases ("computer
+  mouse" for a mouse), and whether it is worth keeping (blank, unclear, chart, text or logo: no).
+- *Review:* `reject.txt` in the work folder (one id per line) leaves drawings out after looking at the
+  contact sheets.
+- *Write:* the kept drawings, approved, as `objects/packs/bioicons.json.gz`.
+
+Admins rename, retire or reset pack drawings like built-in ones (Administration → Objects Warehouse →
+Built-in; the detail shows the pack, author, licence and the original).
 
 ## The built-in library
 

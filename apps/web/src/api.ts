@@ -62,7 +62,17 @@ export interface GenerationSummary {
   };
   /** A lesson planned for its length (ADR-063): its depth, and what a longer lesson would add. */
   depth?: LessonDepth | null;
+  /** Drawings from open-licensed packs the lesson places that ask for credit (ADR-066). */
+  credits?: LessonCredit[];
   version: number;
+}
+
+export interface LessonCredit {
+  author: string | null;
+  pack: string | null;
+  license: string | null;
+  license_url: string | null;
+  drawings: { title: string; url: string | null }[];
 }
 
 export interface LessonDepth {

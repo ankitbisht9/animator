@@ -26,6 +26,7 @@ from pydantic import ValidationError
 from animator.objects.harvest import REQUIRED, Harvester
 from animator.objects.matching import SceneText, offers_for
 from animator.objects.models import SavedObject, Source
+from animator.objects.packs import with_art
 from animator.objects.quality import check, to_art, with_anchors
 from animator.objects.service import ObjectLibrary
 from animator.objects.svg import parse_svg
@@ -168,7 +169,7 @@ async def list_objects(
     offset = max(0, offset)
     page = items[offset : offset + limit]
     return {
-        "items": [_out(o, uses) for o in page],
+        "items": [_out(with_art(o), uses) for o in page],
         "total": len(items),
         "has_more": offset + limit < len(items),
         "counts": counts,
@@ -189,6 +190,8 @@ async def stats(request: Request, p: ObjectsReader) -> dict[str, Any]:
             for s in ("approved", "candidate", "rejected", "retired")
         },
         "by_origin": {s: sum(1 for o in every if o.origin == s) for s in ("library", "harvest", "import")},
+        # Built-in drawings from open-licensed packs (ADR-066).
+        "from_packs": sum(1 for o in every if o.source.pack),
         "placed": sum(uses.values()),
         "harvest": {
             "background": bool(harvester is not None and getattr(harvester, "_task", None) is not None),
