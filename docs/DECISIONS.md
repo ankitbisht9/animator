@@ -3286,3 +3286,39 @@ browser, a scene that cannot be drawn, a drawing that hangs, the setting, the cr
 in a lesson, a broken renderer that never fails a scene); the Render image test checks both files.
 
 **Rollback:** `ANIMATOR_KEYFRAMES=browser` (the default); on Render, the critic is already off.
+
+## ADR-069 A presenter beside the captions, who talks with the voice (2026-10-30)
+
+**Asked.** Plan V3 of the same order: a character with lip-sync from the word timings, at no extra cost.
+
+**Decision** (`packages/components/src/Host.tsx`; nothing in the pipeline, the prompts or the scenes changes):
+- *Where:* a round window, 128 px on the 1600 x 900 frame, in its bottom-left corner beside the captions.
+  Every layout leaves that corner empty (the stage ends at y = 736, the caption bar starts at x = 150): it
+  never covers the picture or the captions. It is drawn above the transitions between scenes, so it stays
+  as the scenes change.
+- *Two presenters* (Asha and Arjun): head and shoulders in the product's calm, flat style; the window
+  takes the scene theme's accent and surface colours (light and dark themes).
+- *Alive, and always the same:* the mouth opens on each syllable of the word the voice is saying (from the
+  narration's word timings; shaped by its vowels, closed on m, b, p; without a voice, while the caption is
+  read); it blinks every 3 to 5 seconds at times fixed by the scene's seed; it breathes and nods a little
+  while talking; when something is highlighted it raises its brows; it looks at what is highlighted, else
+  at what is being drawn or written, else at the learner, which draws the learner's eye there too (a
+  gaze cue). Everything follows from the frame's time (ADR-006).
+- *The viewer's choice:* off by default. The player's presenter button and the H key cycle off, Asha,
+  Arjun; the choice is kept in the browser, for every lesson (old ones too: it is drawn, not generated).
+  The help page lists the key. `SceneView` draws it only when given `host`; the critic's keyframes, the
+  video export and the render page do not, so they are as before (the browserless renderer of ADR-068
+  draws it when asked, with the narration, which is how its frames were looked at).
+- *Not yet:* exported videos (the render page would take the choice), and matching the presenter to the
+  voice by itself (the lessons' one ElevenLabs voice does not say whose it is; the viewer chooses).
+
+**Checked in a browser** (the built app on a throwaway server and database, a stored Hinglish lesson): no
+presenter by default; H and the button cycle off, Asha, Arjun; the mouth is open at some moments and
+closed at others while the lesson plays; the choice survives a reload; no errors but the signed-out
+session check.
+
+**Tests:** 6 in the components (clear of every layout's regions, drawn only when asked for, talks on each
+word and is quiet between words, mouth shapes by syllable and vowel, blinks deterministically and rarely,
+looks at and reacts to a highlight).
+
+**Rollback:** nothing to switch off: the presenter is off unless a viewer turns it on.

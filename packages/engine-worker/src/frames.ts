@@ -4,7 +4,14 @@
  * Text is already glyph outlines (ADR-004), so no fonts are needed. Used by the visual critic where no
  * browser is installed (the Render image).
  */
-import { type FinishId, isFinish, SceneView } from "@animator/components";
+import {
+  type FinishId,
+  type HostLook,
+  isFinish,
+  isHostLook,
+  type SceneNarration,
+  SceneView,
+} from "@animator/components";
 import {
   CANVAS,
   type CompiledScene,
@@ -30,6 +37,10 @@ export interface FramesRequest {
   finish?: string;
   /** Width of the PNGs in pixels (the height follows the stage, 16:9). */
   width?: number;
+  /** The presenter beside the captions (ADR-069), talking with `narration`; absent: none (the critic). */
+  host?: string;
+  /** The scene's spoken narration (word times), for the captions and the host. */
+  narration?: SceneNarration | null;
 }
 
 let ready: Promise<void> | null = null;
@@ -70,10 +81,16 @@ export function compiledAt(scenes: unknown[], index: number): CompiledScene {
 }
 
 /** The scene's picture at `t` as an SVG document. */
-export function sceneSvg(compiled: CompiledScene, t: number, finish: FinishId): string {
+export function sceneSvg(
+  compiled: CompiledScene,
+  t: number,
+  finish: FinishId,
+  host: HostLook | null = null,
+  narration: SceneNarration | null = null,
+): string {
   const frame = evaluate(compiled, Math.max(0, Math.min(t, compiled.duration)));
   return renderToStaticMarkup(
-    createElement(SceneView, { compiled, frame, finish, width: CANVAS.width, height: CANVAS.height }),
+    createElement(SceneView, { compiled, frame, finish, host, narration, width: CANVAS.width, height: CANVAS.height }),
   );
 }
 
@@ -85,7 +102,7 @@ export async function renderFrames(req: FramesRequest): Promise<string[]> {
   const finish: FinishId = isFinish(req.finish) ? req.finish : "classic";
   const width = Math.max(64, Math.min(3840, Math.round(req.width ?? 1280)));
   return req.times.map((t) => {
-    const svg = sceneSvg(compiled, t, finish);
+    const svg = sceneSvg(compiled, t, finish, isHostLook(req.host) ? req.host : null, req.narration ?? null);
     const png = new Resvg(svg, { fitTo: { mode: "width", value: width } }).render().asPng();
     return Buffer.from(png).toString("base64");
   });

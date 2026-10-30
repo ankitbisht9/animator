@@ -7,7 +7,7 @@
  * as pending. Reaching the end of what is ready holds the last frame with a "preparing the
  * next scene" overlay and resumes by itself when the next scene arrives (spec Section 13).
  */
-import { type FinishId, SceneView } from "@animator/components";
+import { type FinishId, HOST_LOOKS, type HostLook, isHostLook, SceneView } from "@animator/components";
 import { CANVAS, cameraMatrix, evaluate, type FrameObject, stripMarkup } from "@animator/engine";
 import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Lesson, locate } from "../lesson/lesson";
@@ -70,6 +70,19 @@ function savedSoundMode(): SoundMode {
   }
 }
 
+// The host (ADR-069): a presenter beside the captions, the viewer's choice, kept in this browser.
+type HostChoice = "off" | HostLook;
+const HOST_KEY = "animator.host";
+const HOST_CHOICES: HostChoice[] = ["off", ...HOST_LOOKS];
+function savedHost(): HostChoice {
+  try {
+    const v = window.localStorage.getItem(HOST_KEY);
+    return v === "off" || isHostLook(v) ? v : "off";
+  } catch {
+    return "off";
+  }
+}
+
 function prettyId(id: string): string {
   return id
     .replace(/_\d+$/, "")
@@ -121,6 +134,7 @@ export function Player({
   const [captions, setCaptions] = useState(initial?.captions ?? true);
   const [voiceOn, setVoiceOn] = useState(initial?.voice ?? true);
   const [sound, setSound] = useState<SoundMode>(savedSoundMode);
+  const [host, setHost] = useState<HostChoice>(savedHost);
   const [hover, setHover] = useState<string | null>(null);
   const [question, setQuestion] = useState<{ sceneIndex: number; id: string } | null>(null);
   const [answered, setAnswered] = useState<Record<string, number>>({});
@@ -250,6 +264,18 @@ export function Player({
       return next;
     });
   }, []);
+  const cycleHost = useCallback(() => {
+    setHost((h) => {
+      const next = HOST_CHOICES[(HOST_CHOICES.indexOf(h) + 1) % HOST_CHOICES.length] ?? "off";
+      try {
+        window.localStorage.setItem(HOST_KEY, next);
+      } catch {
+        /* private window: kept for this page only */
+      }
+      return next;
+    });
+  }, []);
+  const hostLook = host === "off" ? null : host;
   useEffect(() => {
     // Fetch this scene's speech and the start of the next scene's ahead of time.
     if (!hasVoice || !scene) return;
@@ -282,9 +308,10 @@ export function Player({
       else if (e.key === "c") setCaptions((c) => !c);
       else if (e.key === "m") setVoiceOn((v) => !v);
       else if (e.key === "s" && !e.ctrlKey && !e.metaKey && !e.altKey) cycleSound();
+      else if (e.key === "h" && !e.ctrlKey && !e.metaKey && !e.altKey) cycleHost();
       else if (e.key === "f") void stageRef.current?.requestFullscreen?.();
     },
-    [clock, cycleSound],
+    [clock, cycleSound, cycleHost],
   );
   useEffect(() => {
     window.addEventListener("keydown", onKey);
@@ -329,6 +356,7 @@ export function Player({
                       captions={captions}
                       narration={scene.narration}
                       finish={finish}
+                      host={hostLook}
                     />
                     <div className="render-warning">This part could not be drawn; showing the last good frame.</div>
                   </>
@@ -343,6 +371,7 @@ export function Player({
                 captions={captions}
                 narration={scene.narration}
                 finish={finish}
+                host={hostLook}
                 interactive={!playing}
                 hoverId={playing ? null : hover}
                 onHover={setHover}
@@ -452,6 +481,8 @@ export function Player({
           onVoice={() => setVoiceOn((v) => !v)}
           sound={sound}
           onSound={cycleSound}
+          host={host}
+          onHost={cycleHost}
           onToggle={() => !question && !empty && clock.toggle()}
           onSeek={(x) => {
             setBuffering(false);
@@ -519,6 +550,12 @@ export function Player({
   );
 }
 
+const HOST_LABEL: Record<HostChoice, string> = {
+  off: "Presenter: off",
+  asha: "Presenter: Asha",
+  arjun: "Presenter: Arjun",
+};
+
 const SOUND_LABEL: Record<SoundMode, string> = {
   all: "Sound: effects and music",
   effects: "Sound: effects only",
@@ -560,6 +597,9 @@ function Controls(props: {
   /** Sound effects and music (ADR-065). */
   sound: SoundMode;
   onSound: () => void;
+  /** The presenter beside the captions (ADR-069). */
+  host: HostChoice;
+  onHost: () => void;
   onToggle: () => void;
   onSeek: (t: number) => void;
   onRate: (r: number) => void;
@@ -676,6 +716,20 @@ function Controls(props: {
           <circle cx="6.5" cy="17" r="2.5" fill="currentColor" />
           {props.sound !== "effects" && <circle cx="16.5" cy="15" r="2.5" fill="currentColor" />}
           {props.sound === "off" && <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}
+        </svg>
+      </button>
+      <button
+        type="button"
+        className={`icon-btn ${props.host !== "off" ? "on" : ""}`}
+        onClick={props.onHost}
+        aria-label={HOST_LABEL[props.host]}
+        title={`${HOST_LABEL[props.host]} (h)`}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+          <circle cx="12" cy="10" r="3.2" fill="currentColor" />
+          <path d="M6.5 18.5c1.2-2.6 3.2-3.8 5.5-3.8s4.3 1.2 5.5 3.8" fill="currentColor" />
+          {props.host === "off" && <path d="M4 4l16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}
         </svg>
       </button>
       <button

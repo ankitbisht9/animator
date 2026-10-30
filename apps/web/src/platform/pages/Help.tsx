@@ -190,6 +190,7 @@ const SHORTCUTS: [string, string][] = [
   ["C", "Captions on or off"],
   ["M", "Voice on or off"],
   ["S", "Sound effects and music: both, effects only, off"],
+  ["H", "Presenter beside the captions: off, Asha, Arjun"],
   ["F", "Full screen"],
   ["Ctrl K or /", "Search lessons"],
   ["Esc", "Close a dialog or the doubt screen"],

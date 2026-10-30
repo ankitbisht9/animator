@@ -17,6 +17,7 @@ import { Background } from "./Background";
 import { CaptionBar } from "./Caption";
 import { EmphasisBehind, EmphasisFront } from "./Emphasis";
 import type { FinishId } from "./finish";
+import { Host, type HostLook } from "./Host";
 import { FRONT_RENDERERS, RENDERERS } from "./renderers";
 import type { SceneNarration } from "./types";
 import { fmt, matrixAttr, withAlpha } from "./util";
@@ -37,6 +38,8 @@ export interface SceneViewProps {
   narration?: SceneNarration | null;
   /** How drawings are finished (ADR-064): classic (as before, the default) or rich. */
   finish?: FinishId;
+  /** A presenter beside the captions who talks with the voice (ADR-069); absent: none. */
+  host?: HostLook | null;
 }
 
 function SceneDefs({ theme }: { theme: Theme }) {
@@ -188,6 +191,7 @@ export function SceneView({
   className,
   narration,
   finish = "classic",
+  host,
 }: SceneViewProps) {
   const theme = getTheme(compiled.themeId);
   const prepById = useMemo(() => new Map(compiled.objects.map((o) => [o.id, o.prep])), [compiled]);
@@ -252,6 +256,8 @@ export function SceneView({
         />
       )}
       {frame.overlay && <Overlay overlay={frame.overlay} />}
+      {/* Above the transitions between scenes: the presenter stays as the scenes change. */}
+      {host && <Host look={host} compiled={compiled} frame={frame} narration={narration} theme={theme} />}
     </svg>
   );
 }
