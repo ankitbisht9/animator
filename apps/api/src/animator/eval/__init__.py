@@ -58,6 +58,7 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     video_min = sum(r["video_s"] for r in done) / 60
     cost = sum(r["cost_usd"] for r in rows)
     ttfp = sorted(r["first_play_s"] for r in done if r["first_play_s"] is not None)
+    quiz = [r["teachquiz"] for r in rows if r.get("teachquiz") is not None]
     return {
         "topics": len(rows),
         "completed": sum(1 for r in rows if r["status"] == "complete"),
@@ -70,4 +71,6 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "median_first_play_s": ttfp[len(ttfp) // 2] if ttfp else None,
         "cost_usd": round(cost, 4),
         "cost_per_video_min": round(cost / video_min, 4) if video_min else None,
+        # TeachQuiz (ADR-070), when the lessons were scored.
+        **({"teachquiz": round(sum(quiz) / len(quiz), 1)} if quiz else {}),
     }

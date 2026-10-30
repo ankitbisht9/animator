@@ -3322,3 +3322,47 @@ word and is quiet between words, mouth shapes by syllable and vowel, blinks dete
 looks at and reacts to a highlight).
 
 **Rollback:** nothing to switch off: the presenter is off unless a viewer turns it on.
+
+## ADR-070 TeachQuiz: how much a lesson teaches, as a number (2026-10-30)
+
+**Asked.** Plan T5 of the same order: a TeachQuiz-style measure of teaching (after Code2Video, whose
+study found code-drawn lessons with a planner scoring 72 to 86 and AI video models 0 to 2.5), so changes
+and paid model upgrades can be judged by what learners would learn, not only by cost and errors. It costs
+only when it is run.
+
+**Decision** (`eval/quiz.py`, the evaluation runner; never called while a lesson is made):
+- *A quiz on what the length must teach:* one call (`teachquiz.v1`) writes multiple-choice questions on the
+  ideas a good lesson of this length must teach (the depth tiers of ADR-063): 4 for a Snapshot (1 minute),
+  6 for Essentials, 8 for a Deep dive, 10 for Mastery, 12 for a Masterclass. Understanding, not trivia: why
+  and how, applying the idea to a new case, telling it from a common mistake; four choices, one right, the
+  right one in a different place each time. Checked by code (count, four different choices, an answer in
+  range) and asked for again once.
+- *A student who knows only the lesson:* one call (`student.v1`) answers from the lesson alone (its
+  narration scene by scene and, with `--pictures`, one small picture of each scene), choosing -1 when the
+  lesson does not teach it.
+- *Only answers the lesson backs count:* right, and backed by the narrator's own words (80% of the quote's
+  word pairs said in the lesson; Hinglish quotes too) or by the picture of a scene that was shown. A model's
+  own knowledge does not inflate the score. TeachQuiz = the share of questions so answered, 0 to 100.
+- *The same quiz for every run of a topic:* kept in `var/eval/quizzes` (by topic, audience, length and
+  number of questions), so lessons made with other settings or models are judged on the same questions.
+- *How to run it:* `python -m animator.eval --quiz` scores each new lesson (a TeachQuiz column and mean in
+  the report); `--score DIR` scores the lessons already stored in a data folder; `--pictures` adds the
+  pictures (drawn as `ANIMATOR_KEYFRAMES` says; `svg` needs no browser). `ANIMATOR_MODEL_QUIZ` chooses the
+  model (default the storyboard model), so a stronger, independent model can mark the lessons.
+
+**Measured** (the default model, `gpt-6-luna`, with pictures, real stored lessons): eight lessons scored
+for $0.010 in all ($0.001 to $0.002 each). The two lessons made with ADR-063 (binary search, 2 minutes;
+the seasons, 3 minutes) scored 100 (6/6, 8/8); five of six older 1-minute lessons 100 (4/4) and Ohm's law
+75: it never says that doubling the voltage doubles the current, and its last scene's caveat ("current
+does not always rise with voltage") led the student away: a real weakness, found for a tenth of a cent.
+With six questions on every length, two older 1-minute lessons missed ideas beyond a minute's reach (a
+book at rest on a table; reflection and refraction at once): hence questions by depth. Every quote was the
+narrator's own words and backed its answer. A single student answer can vary from run to run: compare
+means over several topics, not one lesson.
+
+**Tests:** 8 (a quiz sized and pitched by the length, the model setting; a quiz that breaks the rules asked
+for again; an answer counts only when right and backed; a quote must be the narrator's words; the student
+reads every scene and sees the pictures, small; a student that keeps failing; a real lesson's score and
+cost; stored lessons scored on one kept quiz, and the report's column and mean).
+
+**Rollback:** nothing runs unless asked.

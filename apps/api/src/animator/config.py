@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     animator_effort_visual_critic: ReasoningEffort = "medium"
     animator_model_lightweight: str = ""
     animator_effort_lightweight: ReasoningEffort = "low"
+    # TeachQuiz (ADR-070; the evaluation runner only, never while a lesson is made): the model that writes
+    # a lesson's quiz and answers it from the lesson alone (empty: the storyboard model).
+    animator_model_quiz: str = ""
+    animator_effort_quiz: ReasoningEffort = "low"
     animator_pricing_file: Path = Path("config/pricing.json")
     # Tried in order when a stage's model is unavailable to this API key (404/403).
     animator_model_fallbacks: str = ""

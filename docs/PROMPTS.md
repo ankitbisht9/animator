@@ -57,6 +57,23 @@ The outline and storyboard packs have a `{continuity}` slot, filled from `contin
 `continuity-sequential.v1.md` depending on `ANIMATOR_SCENE_MODE`. In parallel mode (the default), every scene
 starts on a clean stage (ADR-033).
 
+### TeachQuiz (the evaluation runner only, ADR-070)
+
+Never called while a lesson is made: `python -m animator.eval --quiz` (each new lesson) or `--score DIR`
+(lessons already made) measures how much a lesson teaches.
+
+| Step | File | Output (strict JSON schema) | Model setting |
+|---|---|---|---|
+| Quiz | `teachquiz.v1.md` | `Quiz` (multiple-choice questions on what a lesson of this length must teach: 4 for a Snapshot, 6, 8, 10, 12 for a Masterclass; four choices, one right) | `ANIMATOR_MODEL_QUIZ` (else the storyboard model), `ANIMATOR_EFFORT_QUIZ` (low) |
+| Student | `student.v1.md` | `QuizAnswers` (a choice, or -1 "not taught", with the narrator's words or the scene picture that backs it) | the same |
+
+- The quiz's message gives the topic, the audience, the length and its depth (the tier's brief), and the
+  number of questions. A topic's quiz is kept (`var/eval/quizzes`), so lessons made with other settings are
+  judged on the same questions.
+- The student's message gives the lesson scene by scene (the narration) and the quiz; with `--pictures`,
+  one keyframe of each scene follows as a small image. Code counts an answer only when it is right and the
+  quote is the narrator's own words (80% of its word pairs) or the picture named was shown.
+
 ## Assembly (static first, dynamic last)
 
 - **`instructions`: static.** The rules, then for stage 3 the generated `docs/DSL.md` and `docs/COMPONENTS.md`, then
