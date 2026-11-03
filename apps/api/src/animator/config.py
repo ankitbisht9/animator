@@ -120,6 +120,12 @@ class Settings(BaseSettings):
     # time budget only (the teacher chooses what each scene teaches).
     animator_coverage_plan: bool = True
     animator_effort_coverage: ReasoningEffort = "low"
+    # Lessons that flow (ADR-071, needs ANIMATOR_TIME_FIT): the coverage map first reads what the learner
+    # asked for (a process, a comparison, a problem, a procedure or a concept) and the one path through it;
+    # every lesson walks that whole path in numbered steps on one running example, each scene continuing
+    # the last (its picture too), asks few questions (1 in a 1-2 minute lesson) and stops for fewer quick
+    # checks. Off: the prompts and plan of ADR-063 (coverage.v1, teacher.v2, review.v2, director.v2, trim.v1).
+    animator_lesson_flow: bool = True
     # Keep it moving (ADR-067): a stretch of narration longer than 5 s with nothing changing on screen
     # gets a gentle highlight on what the narration names (or what was last shown); engine-checked, no model.
     animator_keep_moving: bool = True

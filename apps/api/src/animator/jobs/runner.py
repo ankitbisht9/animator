@@ -34,7 +34,14 @@ from animator.llm import (
     LLMRefusal,
 )
 from animator.llm.trials import trial_log
-from animator.pipeline.depth import Blueprint, apply_trim, fit, over_budget
+from animator.pipeline.depth import (
+    Blueprint,
+    apply_trim,
+    extra_questions,
+    fit,
+    over_budget,
+    questions_in,
+)
 from animator.pipeline.generator import Pipeline, chapter_outline, scene_record, scene_records
 from animator.pipeline.models import (
     TERMINAL,
@@ -501,6 +508,8 @@ class GenerationRunner:
         teaching: dict[str, Any] = {"script": script.model_dump(), "changes": changes, "look": None}
         if plan is not None:
             teaching["depth"] = {**plan.to_json(), "words_written": script_words(script), "trimmed": trimmed}
+            if plan.flow:
+                teaching["depth"]["questions_asked"] = len(questions_in(script))
         gen.plan, gen.teaching = lesson, teaching
         gen.status = "generating"
         await self._save(gen)
@@ -539,6 +548,7 @@ class GenerationRunner:
                 on_scene,
                 library=self.pipeline.library_note(gen, script),
                 checkpoints=plan.checkpoints if plan is not None else None,
+                plan=plan,
             )
             teaching["look"] = teaching["look"] or direction.look
             for directed in direction.scenes:
@@ -562,22 +572,25 @@ class GenerationRunner:
                 coverage = await stages.coverage(gen, ctx)
             except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
                 log.warning("coverage plan for %s failed (%s): planning by length only", gen.id, e)
-        return fit(coverage, duration, wps, overhead)
+        return fit(coverage, duration, wps, overhead, flow=self.settings.animator_lesson_flow)
 
     async def _fit_script(
         self, gen: Generation, stages: Stages, ctx: CallContext, script: TeachingScript, plan: Blueprint
     ) -> tuple[TeachingScript, int]:
-        """A script still well over its word budget, its longest scenes trimmed (ADR-063): the script and
-        how many scenes changed. A failed trim keeps the script (the lesson runs a little long)."""
+        """A script still well over its word budget, its longest scenes trimmed (ADR-063), and in a
+        flowing lesson (ADR-071) the questions over its budget turned into statements, in the same call:
+        the script and how many scenes changed. A failed edit keeps the script (the lesson runs a little
+        long, or asks a question more)."""
         scenes = over_budget(script, plan)
-        if not scenes:
+        restate = extra_questions(script, plan)
+        if not scenes and not restate:
             return script, 0
         try:
-            trim = await stages.trim(gen, script, plan, scenes, ctx)
+            trim = await stages.trim(gen, script, plan, scenes, ctx, restate)
         except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
-            log.warning("trimming the script of %s failed (%s): it runs a little long", gen.id, e)
+            log.warning("editing the script of %s failed (%s): it is kept as reviewed", gen.id, e)
             return script, 0
-        return apply_trim(script, trim, scenes)
+        return apply_trim(script, trim, sorted(set(scenes) | set(restate)), restate)
 
     async def _generate_sequential(
         self,

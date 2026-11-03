@@ -3366,3 +3366,107 @@ reads every scene and sees the pictures, small; a student that keeps failing; a 
 cost; stored lessons scored on one kept quiz, and the report's column and mean).
 
 **Rollback:** nothing runs unless asked.
+
+
+## ADR-071 Lessons that flow: what was asked, one path, few questions (2026-11-03)
+
+**Asked.** The user found the teaching unstructured: no sequential, step-by-step flow; new content that does
+not build on what the same video just taught (a data-packet lesson jumped from the transport layer to
+something unrelated); 3 to 4 questions in a 1-minute video ("the user is here to learn, not for senseless
+interactions"); pictures that do not continue from scene to scene; a request to *differentiate* two things
+answered by explaining each separately; problems presented but not solved with their reasoning; few
+practical examples. Their reference: a DeepManim video in which one packet never leaves the screen and
+passes through the layers one by one, like a factory, each adding something to it (port, IP, frame). They
+asked for the teaching prompts to be updated accordingly, and any other correction teaching delivery needs.
+
+**Found** (8 test topics through the planning stages, before the change; `D:\animation-bench\before-report.txt`):
+- *Questions came from five places at once:* the teacher prompt (an opening question, predictions, a "what
+  if" check, a cliffhanger question ending every scene), the script schema ("the opening question or
+  surprise"), the Essentials brief ("one question the learner predicts"), the director ("a prediction
+  question in a speech bubble"), and a quick check (it stops playback until answered) in every lesson,
+  1-minute ones included. TCP vs UDP (1 minute) asked 4 questions and a quick check; 16 questions in all.
+- *The plan cut paths in half:* the length planner (ADR-063) chose units one by one by priority and ordered
+  them by kind. The user's own 2-minute packet lesson (g_3861588926b1) kept "layers add headers" and "the
+  first hop" and left out the routers, the worked route and the receiver: the packet never reached the
+  other computer, and its opening question (about routes) was never answered. In the bench, routers came
+  before the sender's layers.
+- *The request's intent was not read:* "Docker Vs Kubernetes" explained Kubernetes, then Docker; the ball
+  problem gave its answer first and derived it after; "where does the p50/p99 gap come from?" defined
+  percentiles and never named the causes.
+
+**Decision** (`ANIMATOR_LESSON_FLOW`, default on, with `ANIMATOR_TIME_FIT`):
+- *Understand the request first* (`coverage.v2`, schema `LessonMap`, the same small call): `asked` (what the
+  learner wants), `shape` (process, comparison, problem, procedure, concept), `through_line` (the one concrete
+  example every scene follows: one packet carrying "Hi", the same app run with Docker and with Kubernetes,
+  the problem itself), `opening` (a statement; a question only when the request is one), the units (new
+  kinds `step` and `difference`; a difference is named by the feature compared, both sides in it) and the
+  `spine`: the complete path through the request, in order.
+- *Walk the whole path at every length* (`depth.fit`, code): the spine is always taught in its order; a
+  short lesson tells each step briefly (at least 7 s); beyond one step per 20 seconds, neighbouring steps
+  share a scene (cut between steps, never inside one); other units go where they teach best (what is needed
+  first before the path, a misconception right after its step, uses after the path). Steps are numbered in
+  the plan ("Step 2 of 6"; a comparison numbers only its differences, shared ground is taught unnumbered).
+  Openings and landings by shape (a process retraces its path; a comparison closes with the differences side
+  by side and when to choose which; a problem with the checked answer and the method).
+- *The teacher* (`teacher.v3`): teach what was asked, in its shape (a comparison side by side, one
+  difference at a time, never one after the other; a problem read, the idea that solves it and why, each
+  step with its reason, every symbol said, the numbers, the answer checked and connected to real use, a
+  "why" problem with its real causes; a process stage by stage to the end; a procedure on one thing); one
+  path: map then walk, the step's number said ("Step two", never "of four") and in the title, each scene
+  bridged once from where the last ended, one example throughout, one everyday analogy where it helps,
+  nothing off the path; attention from visible progress, not questions. Show notes keep the through-line's
+  look and text, start where the last scene left it, and show stages in sequence. Hinglish signposts.
+- *Few questions, enforced:* the narration may ask at most 1 question up to 2.5 minutes, 2 up to 4.5, 3 up
+  to 7.5, then 4, the opening included. The reviewer (`review.v3`, which also checks intent, the path, the
+  bridges and continuity) sees the questions counted; any still over are turned into statements by the
+  edit call (`trim.v2`, the trim plus questions; a scene's edit is kept only when it asks fewer and is at
+  most 15% longer). Quick checks: none in a 1-minute lesson, then 1, 1, 2, 3; with one, in the last scene.
+  The script schema describes the opening as a statement.
+- *Pictures that continue each other* (`director.v3`): a process gets one small set that stays (about four
+  or five objects) and the through-line travels through it, each stage adding to it, the closing scene
+  replaying the path on the same set; a comparison is `split`, the same feature on both sides; a problem is
+  `stage_with_equation`, the working written down the panel; a map of the steps is one `card` or `diagram`.
+  The look pins the through-line's exact text ("Meet at 6" in every scene). Every scene's plan begins
+  "Opens with:" and keeps only the set and the through-line from the scene before (never its labels), and
+  the scene writer is told to create those at 0 s, in place. No caption bars (captions are automatic), no
+  question bubbles the narration does not ask. The scene prompts themselves are unchanged.
+
+**Measured.**
+- *Planning* (the same 8 requests, before and after; `D:\animation-bench\`): questions in the narration
+  16 to 0 (each lesson 1 to 4, now 0); quick checks 8 to 3 (none in the five 1-minute lessons); every
+  lesson on one through-line in numbered steps; TCP vs UDP and Docker vs Kubernetes compared side by side,
+  difference by difference; the ball problem read, solved in steps with formulas and checked; the packet
+  journey complete from the app to the receiver's app; p99 names its causes and how to find the slow one.
+  Planning cost $0.102 to $0.109 for the 8 (the map's few more fields), the same time (61 to 85 s).
+- *Full lessons* (the evaluation runner, no voice, visual critic on; `var/eval/flow-*`): with the final
+  prompts, the packet journey (2 minutes, Hinglish, planned layout) and TCP vs UDP (1 minute, classic) made
+  7 and 3 scenes, none simplified, for $0.181 and $0.131; the same topics with the switch off $0.195 and
+  $0.147. Earlier rounds found three things, fixed in the prompts before the final run: each scene wrote its
+  own message ("Hi", "Hello", "See you soon"; now pinned by the look); a closing scene building a new
+  picture was simplified; carrying the last scene's labels too made scenes busier (23 to 29 objects against
+  17 to 18, a simplified scene, 15 to 30% more cost). 2 of 52 flowing scenes were simplified, both before the last fix;
+  none of the 10 made after it (a small sample). Contact sheets: one set and one message across the scenes, a step map with the current
+  step lit, headers added at the sender and removed at the receiver.
+- *TeachQuiz* (with pictures): Docker vs Kubernetes 100 (twice); TCP vs UDP 75 (the switch off: 100): the
+  one miss asks for an everyday analogy, which the new lessons replaced with their running example (the
+  teacher now adds one where it helps). The packet journey 0 (the switch off: 33): the independently
+  written quiz tests packet switching (splitting, reassembly, loss recovery), the user asked for the
+  layer-by-layer journey (their DeepManim reference), which the quiz never asks about; the old lesson
+  scored on two packet-switching facts. TeachQuiz measures overlap with the quiz writer's reading of a
+  topic: a weak signal when the request's intent is what changed.
+- *Also fixed:* the evaluation runner's `--set` passed values as text, so `ANIMATOR_LESSON_FLOW=false` (any
+  true/false or number) arrived as a string and counted as true; values now take their setting's type, and
+  an unknown setting stops the run.
+- Measuring cost about $2.70 in all (planning benches $0.54, 12 full lessons $2.15, TeachQuiz $0.01).
+
+**Tests:** test_depth (the whole path at every length, steps sharing scenes and cut between steps, where the
+rest of the map goes, a comparison numbering only its differences, quick checks and questions by depth,
+what the teacher is told, as before without the flow, a flowing lesson without a map, questions counted and
+turned into statements); test_teaching (a flowing lesson end to end: prompts, messages, schema, no quick
+check in 30 s, the scenes told to continue each other; questions over the budget made statements before
+anything is drawn; without the flow nothing of this; ADR-063's own test pinned to the switch off; the trim
+both ways); test_eval (`--set` types). 459 passed, 1 skipped.
+
+**Rollback:** `ANIMATOR_LESSON_FLOW=false`: the prompts and plan of ADR-063 (`coverage.v1`, `teacher.v2`,
+`review.v2`, `director.v2`, `trim.v1`, its quick checks); proven end to end (two lessons made so). Backup:
+tag `backup/before-lesson-flow` (= v2.16) and `.env.backup-before-lesson-flow`.

@@ -5,6 +5,7 @@ LLMClient and validates the result. Scene DSL is only shaped here; the engine wo
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import json
 import logging
@@ -27,7 +28,7 @@ from animator.llm import (
     Message,
 )
 from animator.objects.prompting import with_saved
-from animator.pipeline.depth import Blueprint, budget_note, teacher_lines, trim_lines
+from animator.pipeline.depth import SHAPES, Blueprint, budget_note, edit_lines, teacher_lines, trim_lines
 from animator.pipeline.language import language_line
 from animator.pipeline.layout_plan import planned_patch_schema, planned_scene_schema
 from animator.pipeline.models import (
@@ -38,6 +39,7 @@ from animator.pipeline.models import (
     Direction,
     EducationalPlan,
     Generation,
+    LessonMap,
     LessonOutline,
     OutlinePlan,
     SceneRecord,
@@ -78,9 +80,38 @@ REVIEW_SCHEMA = strict_schema(ScriptReview)
 DIRECTION_SCHEMA = strict_schema(Direction)
 COVERAGE_SCHEMA = strict_schema(CoveragePlan)
 TRIM_SCHEMA = strict_schema(ScriptTrim)
+# Lessons that flow (ADR-071): the lesson map, and a script whose opening is described as what it is now
+# (a statement that starts the through-line), not as "the opening question or surprise".
+LESSON_MAP_SCHEMA = strict_schema(LessonMap)
+FLOW_HOOK = (
+    "How the lesson opens: the start of the through-line and the path ahead, as a statement (a question "
+    "only when the learner's request is itself one)"
+)
+
+
+def _opening_as_statement(schema: dict[str, Any]) -> dict[str, Any]:
+    """A script schema (or one holding a script) whose `hook` is described for a flowing lesson."""
+    out = copy.deepcopy(schema)
+    for node in (out, *(out.get("$defs") or {}).values()):
+        hook = (node.get("properties") or {}).get("hook")
+        if isinstance(hook, dict):
+            hook["description"] = FLOW_HOOK
+    return out
+
+
+SCRIPT_SCHEMA_FLOW = _opening_as_statement(SCRIPT_SCHEMA)
+REVIEW_SCHEMA_FLOW = _opening_as_statement(REVIEW_SCHEMA)
 
 WORDS_PER_SECOND = 2.5  # a teacher's pace (130 to 160 words a minute)
 CHECKS = " (never in the first scene, never in two scenes in a row)."
+FLOW_CHECKS = " (never in the first scene, never in two scenes in a row; with one, in the last scene)."
+# A flowing lesson's scenes are drawn apart but continue each other (ADR-071): what the scene writer is told.
+CARRY_OVER = (
+    "This lesson's scenes continue each other. When the brief's visual plan says what the scene opens with "
+    '("Opens with: ..."), create exactly those objects at the very start of this scene (at 0 s, already in '
+    "their places and states) and build on them. Keep the through-line object's id, look, size and any "
+    "text it shows exactly as the lesson's look gives them."
+)
 
 
 def _validated[M: BaseModel](model: type[M], result: LLMResult) -> M:
@@ -347,8 +378,9 @@ class Stages:
         (ADR-063), or, without one, a word count and a number of scenes (ADR-044)."""
         r = gen.request
         duration = round(r.duration_min * 60)
+        flow = plan is not None and plan.flow
         lines = [
-            f"Topic: {r.topic}",
+            f"The learner's request, in their words: {r.topic}" if flow else f"Topic: {r.topic}",
             f"Audience: {r.audience}",
             f"Duration: {duration} seconds",
             f"Language: {language_line(r.language)}",
@@ -363,19 +395,23 @@ class Stages:
             f"{scenes} scenes of about {round(words / scenes)} words each.",
         ]
 
-    async def coverage(self, gen: Generation, ctx: CallContext) -> CoveragePlan:
+    async def coverage(self, gen: Generation, ctx: CallContext) -> CoveragePlan | LessonMap:
         """What there is to teach about the topic for this learner (ADR-063): the units a lesson of any
-        length chooses from, each with its priority (which depth needs it) and the time it needs."""
+        length chooses from, each with its priority (which depth needs it) and the time it needs. A
+        flowing lesson (ADR-071) gets a lesson map: first what the learner asked for, the lesson's shape
+        and the example it follows, then the units and the one path through them."""
         r = gen.request
         minutes = r.duration_min
+        flow = self.settings.animator_lesson_flow
+        prompt = self.pack.coverage_prompt(flow)
         req = self._request(
             "teacher",
-            self.pack.coverage.version,
-            self.pack.coverage.text,
+            prompt.version,
+            prompt.text,
             Message.user(
                 "\n".join(
                     [
-                        f"Topic: {r.topic}",
+                        f"The learner's request, in their words: {r.topic}" if flow else f"Topic: {r.topic}",
                         f"Audience: {r.audience}",
                         f"Lesson length: {round(minutes * 60)} seconds ({minutes:g} minutes); map at least "
                         f"{round(minutes * 90)} seconds of teaching.",
@@ -384,26 +420,30 @@ class Stages:
                     ]
                 )
             ),
-            "CoveragePlan",
-            COVERAGE_SCHEMA,
+            "LessonMap" if flow else "CoveragePlan",
+            LESSON_MAP_SCHEMA if flow else COVERAGE_SCHEMA,
             12_000,
             gen,
             "coverage plan",
             self.settings.animator_effort_coverage,
         )
+        if flow:
+            return await self._retrying(req, LessonMap, ctx, tries=2)
         return await self._retrying(req, CoveragePlan, ctx, tries=2)
 
     async def teach(self, gen: Generation, ctx: CallContext, plan: Blueprint | None = None) -> TeachingScript:
         """The teacher: the whole lesson's explanation, every spoken word and what is seen; with a plan
-        for its length (ADR-063), the scenes that plan lists, each to its word budget."""
-        prompt = self.pack.teacher_prompt(plan is not None)
+        for its length (ADR-063), the scenes that plan lists, each to its word budget; a flowing one
+        (ADR-071) walks its one path in numbered steps."""
+        flow = plan is not None and plan.flow
+        prompt = self.pack.teacher_prompt(plan is not None, flow)
         req = self._request(
             "teacher",
             prompt.version,
-            self.pack.teacher_instructions(plan is not None),
+            self.pack.teacher_instructions(plan is not None, flow),
             Message.user("\n".join(self._lesson_lines(gen, plan))),
             "TeachingScript",
-            SCRIPT_SCHEMA,
+            SCRIPT_SCHEMA_FLOW if flow else SCRIPT_SCHEMA,
             24_000,
             gen,
             "lesson script",
@@ -414,8 +454,10 @@ class Stages:
         self, gen: Generation, script: TeachingScript, ctx: CallContext, plan: Blueprint | None = None
     ) -> ScriptReview:
         """The head of teaching: checks the script (facts, depth, flow, delivery, timing) and returns
-        it improved. With a plan (ADR-063) it sees every scene's words against its budget."""
-        prompt = self.pack.review_prompt(plan is not None)
+        it improved. With a plan (ADR-063) it sees every scene's words against its budget, and in a
+        flowing lesson (ADR-071) the questions the narration asks against the most it may."""
+        flow = plan is not None and plan.flow
+        prompt = self.pack.review_prompt(plan is not None, flow)
         note = (
             budget_note(script, plan)
             if plan is not None
@@ -424,7 +466,7 @@ class Stages:
         req = self._request(
             "reviewer",
             prompt.version,
-            self.pack.review_instructions(plan is not None),
+            self.pack.review_instructions(plan is not None, flow),
             Message.user(
                 "\n".join(self._lesson_lines(gen, plan))
                 + "\n\n"
@@ -433,7 +475,7 @@ class Stages:
                 + compact(script.model_dump())
             ),
             "ScriptReview",
-            REVIEW_SCHEMA,
+            REVIEW_SCHEMA_FLOW if flow else REVIEW_SCHEMA,
             24_000,
             gen,
             "script review",
@@ -441,20 +483,31 @@ class Stages:
         return await self._retrying(req, ScriptReview, ctx)
 
     async def trim(
-        self, gen: Generation, script: TeachingScript, plan: Blueprint, scenes: list[int], ctx: CallContext
+        self,
+        gen: Generation,
+        script: TeachingScript,
+        plan: Blueprint,
+        scenes: list[int],
+        ctx: CallContext,
+        restate: dict[int, list[str]] | None = None,
     ) -> ScriptTrim:
         """The scenes of a script still well over their word budgets, shortened (ADR-063): only those
-        scenes go out and come back, before any voice or drawing is paid for."""
+        scenes go out and come back, before any voice or drawing is paid for. In a flowing lesson
+        (ADR-071) also the scenes whose questions (`restate`) are over its budget, turned into statements."""
+        prompt = self.pack.trim_prompt(plan.flow)
+        lines = (
+            edit_lines(script, plan, scenes, restate or {}) if plan.flow else trim_lines(script, plan, scenes)
+        )
         req = self._request(
             "reviewer",
-            self.pack.trim.version,
-            self.pack.trim.text,
+            prompt.version,
+            prompt.text,
             Message.user(
                 "\n".join(
                     [
                         f"Lesson: {script.title}. Audience: {gen.request.audience}. "
                         f"Narration language: {gen.request.language}.",
-                        *trim_lines(script, plan, scenes),
+                        *lines,
                     ]
                 )
             ),
@@ -476,13 +529,18 @@ class Stages:
         on_scene: Callable[[DirectedScene], None] | None = None,
         library: str | None = None,
         checkpoints: int | None = None,
+        plan: Blueprint | None = None,
     ) -> Direction:
         """The visual director: every scene's picture, planned together so the lesson looks
         consistent. Streamed: each scene's plan is handed over as soon as it is complete. A cost-saver
         lesson (ADR-055) also tells it which saved drawings the lesson can use (`library`), in the
         message: its instructions stay those of every lesson. A lesson planned for its length (ADR-063)
-        says how many quick checks it has room for (`checkpoints`; None: at most one, as in ADR-044)."""
+        says how many quick checks it has room for (`checkpoints`; None: at most one, as in ADR-044). A
+        flowing lesson (ADR-071, `plan`) says its shape, the example it follows and its path, so the
+        pictures continue each other the way the narration does."""
         r = gen.request
+        flow = plan is not None and plan.flow
+        checks = FLOW_CHECKS if flow else CHECKS
         scenes = [
             {
                 "scene": i + 1,
@@ -501,11 +559,12 @@ class Stages:
                     f"Core idea: {script.core_idea}",
                     f"Intuition: {script.intuition}",
                     f"Worked example: {script.worked_example or 'none'}",
+                    *(direction_lines(plan) if plan is not None and flow else []),
                     "",
                     "The script, scene by scene:",
                     compact(scenes),
                     *(
-                        ["", f"Quick checks: up to {checkpoints} in the lesson{CHECKS}"]
+                        ["", f"Quick checks: up to {checkpoints} in the lesson{checks}"]
                         if checkpoints
                         else ["", "Quick checks: none in this lesson."]
                         if checkpoints is not None
@@ -521,8 +580,8 @@ class Stages:
         fit = checkpoints is not None
         req = self._request(
             "director",
-            self.pack.director_prompt(fit).version,
-            self.pack.director_instructions(fit),
+            self.pack.director_prompt(fit, flow).version,
+            self.pack.director_instructions(fit, flow),
             msg,
             "Direction",
             DIRECTION_SCHEMA,
@@ -557,6 +616,7 @@ class Stages:
             f"Storyboard brief:\n{compact(rec.brief.model_dump())}",
             f"Target duration: about {round(rec.brief.duration_s)} seconds.",
             self._stage_start(prev_summary),
+            *([CARRY_OVER] if flowing(gen) else []),
             "Object ids used earlier in the lesson (keep their meaning): " + (", ".join(used) or "none"),
         ]
         if gen.teaching is not None:
@@ -823,6 +883,31 @@ class DirectionSink:
 
 
 LOOK = re.compile(r'"look"\s*:\s*("(?:[^"\\]|\\.)*")')
+
+
+def flowing(gen: Generation) -> bool:
+    """A lesson planned to flow (ADR-071): its scenes continue each other."""
+    return bool(((gen.teaching or {}).get("depth") or {}).get("flow"))
+
+
+def direction_lines(plan: Blueprint) -> list[str]:
+    """What the visual director is told of a flowing lesson (ADR-071): its shape, the example every
+    scene follows and the path, so the pictures continue each other the way the narration does."""
+    lines = [
+        f"Lesson shape: {plan.shape}: {SHAPES.get(plan.shape, '')}."
+        if plan.shape
+        else "Lesson shape: read it from the script (process, comparison, problem, procedure or concept)."
+    ]
+    if plan.through_line:
+        lines.append(
+            f"Through-line (on screen in every scene it takes part in, where the last scene left it): "
+            f"{plan.through_line}"
+        )
+    if plan.spine:
+        titles = {u.id: u.title for u in plan.units}
+        steps = "; ".join(f"{k}. {titles.get(i, i)}" for k, i in enumerate(plan.spine, 1))
+        lines.append(f"The path, in order: {steps}.")
+    return lines
 
 
 def target_words(duration_s: float) -> int:

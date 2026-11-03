@@ -34,6 +34,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from pydantic import TypeAdapter, ValidationError
+
 from animator.config import Settings, get_settings
 from animator.engine_client import EngineClient, pool_from_settings
 from animator.eval import generation_metrics, summarize
@@ -54,12 +56,22 @@ QUIZZES = Path("var/eval/quizzes")
 
 
 def parse_sets(items: list[str]) -> dict[str, Any]:
+    """`--set KEY=VALUE` overrides, each converted to its setting's type ("false" is False, "2" is 2):
+    the settings are copied without validation, so a string would pass as it is (any non-empty one is
+    true). An unknown setting stops the run."""
     out: dict[str, Any] = {}
     for item in items:
         key, sep, value = item.partition("=")
         if not sep:
             raise SystemExit(f"--set expects KEY=VALUE, got '{item}'")
-        out[key.strip().lower()] = value.strip()
+        name = key.strip().lower()
+        field = Settings.model_fields.get(name)
+        if field is None:
+            raise SystemExit(f"--set: no setting named {key.strip()}")
+        try:
+            out[name] = TypeAdapter(field.annotation).validate_python(value.strip())
+        except ValidationError as e:
+            raise SystemExit(f"--set {key.strip()}: {e.errors()[0]['msg']}") from None
     return out
 
 
@@ -245,6 +257,9 @@ async def run(args: argparse.Namespace) -> int:
                 audience=t.get("audience", "high-school student"),
                 duration_min=args.duration_min or t.get("duration_min", 2),
                 trial_model=args.trial_model or None,
+                # A topic may name the lesson's language and layout, as the Create page does.
+                language=t.get("language", "English"),
+                layout=t.get("layout"),
             )
             print(f"[eval] {t['id']}: {req.topic} ({req.duration_min} min)", flush=True)
             gen = await runner.start(req)

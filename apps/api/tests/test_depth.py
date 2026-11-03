@@ -13,15 +13,19 @@ from animator.pipeline.depth import (
     AIM,
     LEAST_SCENE_WORDS,
     apply_trim,
+    asks,
     budget_note,
+    edit_lines,
+    extra_questions,
     fit,
     over_budget,
+    questions_in,
     script_words,
     teacher_lines,
     tier_for,
     tiers_json,
 )
-from animator.pipeline.models import CoveragePlan, ScriptTrim, TeachingScript
+from animator.pipeline.models import CoveragePlan, LessonMap, ScriptBeat, ScriptTrim, TeachingScript
 from animator.pipeline.pace import LEAST, PaceBook
 
 WPS, QUIET = 2.45, 1.1
@@ -280,3 +284,178 @@ def test_a_broken_or_missing_pace_book_is_the_default(tmp_path: Path) -> None:
     for _ in range(LEAST):
         memory.record("k", 30, 10.0)
     assert memory.wps("k") == 3.0  # kept in memory when there is no file
+
+
+# ---------------------------------------------------------------------- lessons that flow (ADR-071)
+
+PATH = ["app_data", "transport", "network", "link", "routers", "receiver"]
+
+
+def journey() -> LessonMap:
+    """A packet's journey: a process whose six stages are the path, with more to teach around it."""
+    return LessonMap.model_validate(
+        {
+            "asked": "how one packet travels from one computer to another",
+            "shape": "process",
+            "through_line": "one packet carrying 'Hi' from Riya's laptop to Aman's phone",
+            "opening": "Riya taps send, and we follow that one message to Aman's phone.",
+            "big_idea": "Data is wrapped layer by layer, carried hop by hop and unwrapped at the other end.",
+            "units": [
+                unit("app_data", "step", 1, 10),
+                unit("transport", "step", 1, 12, ["app_data"]),
+                unit("network", "step", 1, 12, ["transport"]),
+                unit("link", "step", 1, 12, ["network"]),
+                unit("routers", "step", 1, 14, ["link"]),
+                unit("receiver", "step", 1, 14, ["routers"]),
+                unit("layers_idea", "intuition", 2, 15),
+                unit("same_ip", "misconception", 3, 18, ["routers"]),
+                unit("whatsapp", "application", 3, 15, ["receiver"]),
+                unit("tcp_vs_udp", "extension", 4, 25, ["transport"]),
+            ],
+            "spine": PATH,
+        }
+    )
+
+
+@pytest.mark.parametrize("minutes", [1, 2, 3, 5])
+def test_a_flowing_lesson_walks_the_whole_path_whatever_its_length(minutes: float) -> None:
+    bp = fit(journey(), minutes * 60, WPS, QUIET, flow=True)
+    assert [u for u in bp.chosen if u in PATH] == PATH  # every stage, in order: never stops halfway
+    assert bp.flow and bp.shape == "process" and bp.spine == tuple(PATH)
+    steps = [p for s in bp.scenes for p in s.points]
+    assert steps == [1, 2, 3, 4, 5, 6]  # each step taught once, scene after scene, in order
+    speech = minutes * 60 - len(bp.scenes) * QUIET
+    assert bp.words <= speech * WPS * 1.02  # and the lesson still fits its time
+
+
+def test_a_short_lesson_gives_its_steps_fewer_scenes_not_fewer_steps() -> None:
+    one = fit(journey(), 60, WPS, QUIET, flow=True)
+    assert len(one.scenes) <= 4 and all(len(s.points) <= 2 for s in one.scenes)
+    assert any(len(s.points) == 2 for s in one.scenes)  # neighbouring steps share a scene
+    first = one.scenes[0]
+    assert first.step == "hook" and first.teach.startswith("first the opening: start the through-line")
+    assert "Step 1 of 6, App data" in first.teach
+    assert "land the lesson: retrace the whole path" in one.scenes[-1].teach
+    assert all("(part " not in s.teach for s in one.scenes)  # cut between steps, never inside one
+    two = fit(journey(), 120, WPS, QUIET, flow=True)
+    assert all(len(s.points) <= 1 for s in two.scenes)  # two minutes give every step its own scene
+
+
+def test_the_rest_of_the_map_goes_where_it_teaches_best() -> None:
+    order = list(fit(journey(), 180, WPS, QUIET, flow=True).chosen)
+    assert order.index("layers_idea") < order.index("app_data")  # the picture that makes it click, first
+    assert order.index("same_ip") == order.index("routers") + 1  # the misconception where it arises
+    assert order.index("whatsapp") > order.index("receiver")  # the real use after the journey
+    assert "tcp_vs_udp" not in order  # left for a longer lesson
+
+
+def test_a_comparison_numbers_only_its_differences() -> None:
+    versus = LessonMap.model_validate(
+        {
+            "asked": "the differences between Docker and Kubernetes",
+            "shape": "comparison",
+            "through_line": "the same food-delivery app",
+            "opening": "One food-delivery app, two tools that are easy to mix up.",
+            "big_idea": "Docker packs and runs a container; Kubernetes runs many across machines.",
+            "units": [
+                unit("common", "intuition", 1, 12),
+                unit("purpose", "difference", 1, 15),
+                unit("scale", "difference", 1, 15),
+            ],
+            "spine": ["common", "purpose", "scale"],
+        }
+    )
+    bp = fit(versus, 90, WPS, QUIET, flow=True)
+    teach = " | ".join(s.teach for s in bp.scenes)
+    assert "Difference 1 of 2, Purpose" in teach and "Difference 2 of 2, Scale" in teach
+    assert "Common:" in teach and "Difference 1 of 2, Common" not in teach  # taught, not numbered
+    assert bp.chosen.index("common") < bp.chosen.index("purpose") and bp.point_name == "Difference"
+    assert "compare them side by side" in "\n".join(teacher_lines(bp))
+
+
+def test_quick_checks_and_questions_by_depth() -> None:
+    for minutes, budget in {1: (0, 1), 2: (1, 1), 3: (1, 2), 5: (2, 3), 10: (3, 4)}.items():
+        bp = fit(journey(), minutes * 60, WPS, QUIET, flow=True)
+        assert (bp.checkpoints, bp.questions) == budget, minutes
+    assert fit(journey(), 60, WPS, QUIET).checkpoints == 1  # without the flow: as in ADR-063
+
+
+def test_the_teacher_is_told_what_was_asked_the_shape_and_the_path() -> None:
+    bp = fit(journey(), 120, WPS, QUIET, flow=True)
+    lines = "\n".join(teacher_lines(bp))
+    assert "Depth: Essentials, a 2-minute lesson: the whole path with the why of each step" in lines
+    assert "What the learner asked for: how one packet travels" in lines
+    assert "Lesson shape: process: follow the through-line through every stage" in lines
+    assert "Through-line (the one example every scene follows): one packet carrying 'Hi'" in lines
+    assert "Opening: Riya taps send" in lines and "Hook:" not in lines
+    assert "The path, in order (6 steps): 1. App data; 2. Transport;" in lines
+    assert "Questions: at most 1 in the whole narration" in lines
+    data = bp.to_json()
+    assert data["flow"] and data["shape"] == "process" and data["spine"] == PATH and data["questions"] == 1
+    assert [s["points"] for s in data["scenes"] if "points" in s] == [[k] for k in range(1, 7)]
+
+
+def test_without_the_flow_a_lesson_map_plans_as_before() -> None:
+    bp = fit(journey(), 60, WPS, QUIET)
+    assert not bp.flow and bp.spine == () and bp.shape is None and "flow" not in bp.to_json()
+    assert not any(s.points for s in bp.scenes) and not any("Step 1 of" in s.teach for s in bp.scenes)
+    lines = "\n".join(teacher_lines(bp))
+    assert "Hook: Riya taps send" in lines and "Questions:" not in lines
+
+
+def test_without_a_map_a_flowing_lesson_still_opens_and_lands_on_one_path() -> None:
+    bp = fit(None, 120, WPS, QUIET, flow=True)
+    assert bp.flow and bp.scenes[0].teach.startswith("the opening") and "retrace" in bp.scenes[-1].teach
+    lines = "\n".join(teacher_lines(bp))
+    assert "What the learner asked for: read it from the request" in lines
+    assert "Lesson shape: choose it from the request" in lines and "Questions: at most 1" in lines
+
+
+def said(*scenes: list[str]) -> TeachingScript:
+    """A script whose scenes say these beats."""
+    script = script_of([10] * len(scenes))
+    return script.model_copy(
+        update={
+            "scenes": [
+                sc.model_copy(update={"beats": [ScriptBeat(say=s, show="x") for s in says]})
+                for sc, says in zip(script.scenes, scenes, strict=True)
+            ]
+        }
+    )
+
+
+def test_questions_over_the_budget_are_counted_and_turned_into_statements() -> None:
+    bp = fit(journey(), 60, WPS, QUIET, flow=True)  # a Snapshot asks at most one
+    script = said(
+        ["Why does it **slow** down? Gravity pulls it.", "Look at the arrow."],
+        ["What happens at the **router**?? It reads the address.", "Kya yeh **sahi** hai?"],
+        ["The **packet** arrives."],
+    )
+    assert questions_in(script) == [
+        (0, "Why does it **slow** down?"),
+        (1, "What happens at the **router**??"),
+        (1, "Kya yeh **sahi** hai?"),
+    ]
+    note = budget_note(script, bp)
+    assert "Questions: the narration asks 3 questions (in scenes 1, 2); at most 1 may stay" in note
+    extra = extra_questions(script, bp)
+    assert extra == {1: ["What happens at the **router**??", "Kya yeh **sahi** hai?"]}  # the first stays
+    lines = "\n".join(edit_lines(script, bp, [], extra))
+    assert "may ask at most 1 questions" in lines and "Shorten" not in lines
+    assert 'keep about its length; turn into statements: "What happens at the **router**??"' in lines
+    assert extra_questions(script, fit(journey(), 60, WPS, QUIET)) == {}  # not without the flow
+    calm = [
+        {"say": "Next, the packet reaches the **router**.", "show": "x"},
+        {"say": "Yeh **sahi** hai.", "show": "y"},
+    ]
+    same = [
+        {"say": "What happens at the **router**?", "show": "x"},
+        {"say": "Kya yeh **sahi** hai?", "show": "y"},
+    ]
+    wordy = [{"say": " ".join(["more"] * 40) + " **router**.", "show": "x"}]
+    for beats, kept in ((calm, True), (same, False), (wordy, False)):
+        trim = ScriptTrim.model_validate({"scenes": [{"scene": 2, "beats": beats}]})
+        out, changed = apply_trim(script, trim, [1], extra)
+        assert changed == int(kept) and (asks(out.scenes[1]) == 0) == kept
+    calm_script = said(["A **calm** one."], ["Two."], ["Three."])
+    assert "Questions: the narration asks 0 (at most 1). Keep it so." in budget_note(calm_script, bp)

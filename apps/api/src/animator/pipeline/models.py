@@ -239,6 +239,10 @@ CoverageKind = Literal[
     "application",
     "extension",
     "practice",
+    # Lessons that flow (ADR-071): a stage of a process, a step of a procedure or of a solution; and one
+    # way the things a comparison compares differ.
+    "step",
+    "difference",
 ]
 
 
@@ -268,6 +272,40 @@ class CoveragePlan(_Strict):
         if not v:
             raise ValueError("the coverage plan needs at least one unit")
         return v
+
+
+LessonShape = Literal["process", "comparison", "problem", "procedure", "concept"]
+
+
+class LessonMap(_Strict):
+    """What the learner asked for and the one path a lesson walks through it (ADR-071), with what there
+    is to teach: every lesson walks the whole spine, a longer one adds the other units."""
+
+    asked: str = Field(description="What the learner wants to understand or be able to do, in one sentence")
+    shape: LessonShape = Field(description="The form of lesson that answers the request")
+    through_line: str = Field(description="The one concrete thing the whole lesson follows, in every scene")
+    opening: str = Field(
+        description="How the lesson begins: the start of the through-line and what the learner will "
+        "understand, as a statement"
+    )
+    big_idea: str = Field(description="The one sentence the learner must remember, in English")
+    units: list[CoverageUnit]
+    spine: list[str] = Field(
+        description="Ids of the units the lesson walks through, in order: the complete path through what "
+        "was asked, from its start to its end"
+    )
+
+    @field_validator("units")
+    @classmethod
+    def _has_units(cls, v: list[CoverageUnit]) -> list[CoverageUnit]:
+        if not v:
+            raise ValueError("the lesson map needs at least one unit")
+        return v
+
+    @property
+    def hook(self) -> str:
+        """How the lesson opens (where a coverage plan has its hook)."""
+        return self.opening
 
 
 class TrimmedScene(_Strict):

@@ -8,15 +8,15 @@ recordings depend on: replay fixtures are keyed by the full prompt text.
 `load_prompt` picks the newest version of each pack, except where a pipeline pins one. There are two
 pipelines (`ANIMATOR_PIPELINE`).
 
-### The teaching pipeline (the default, ADR-044; lessons that fit their length, ADR-063)
+### The teaching pipeline (the default, ADR-044; lessons that fit their length, ADR-063; lessons that flow, ADR-071)
 
 | Stage | File | Output (strict JSON schema) | Model setting |
 |---|---|---|---|
-| Coverage map | `coverage.v1.md` | `CoveragePlan` (the big idea, a hook, and the topic's teaching units: kind, priority = which lesson length needs it, seconds, what each builds on) | the teacher's model, at `ANIMATOR_EFFORT_COVERAGE` (low) |
-| Teacher | `teacher.v2.md` | `TeachingScript` (the whole explanation: every spoken sentence and what is seen, with the core idea, intuition, misconception and worked example) | `ANIMATOR_MODEL_TEACHER` (medium) |
-| Reviewer | `review.v2.md` | `ScriptReview` (what was fixed, and the improved script) | `ANIMATOR_MODEL_REVIEWER` (low) |
-| Trim (only a script still well over its budget) | `trim.v1.md` | `ScriptTrim` (the long scenes' beats, shortened) | the reviewer's model, low |
-| Visual director | `director.v2.md` | `Direction` (the lesson's look, then each scene's composition and what each beat shows), streamed | `ANIMATOR_MODEL_DIRECTOR` (medium) |
+| Lesson map | `coverage.v2.md` | `LessonMap` (what the learner asked for, the lesson's shape: process, comparison, problem, procedure or concept, the one example every scene follows, the opening, the big idea, the teaching units, and the spine: the units of the one path through the request, in order) | the teacher's model, at `ANIMATOR_EFFORT_COVERAGE` (low) |
+| Teacher | `teacher.v3.md` | `TeachingScript` (the whole explanation: every spoken sentence and what is seen, with the core idea, intuition, misconception and worked example) | `ANIMATOR_MODEL_TEACHER` (medium) |
+| Reviewer | `review.v3.md` | `ScriptReview` (what was fixed, and the improved script) | `ANIMATOR_MODEL_REVIEWER` (low) |
+| Edit (only a script still well over its budget, or asking more questions than it may) | `trim.v2.md` | `ScriptTrim` (those scenes' beats, shortened, the extra questions turned into statements) | the reviewer's model, low |
+| Visual director | `director.v3.md` | `Direction` (the lesson's look and the set that stays, then each scene's composition, opening with the picture the last scene ended on, and what each beat shows), streamed | `ANIMATOR_MODEL_DIRECTOR` (medium) |
 | Scenes | `animation.v8.md` + DSL reference + component catalog + exemplars | the engine's LLM-facing Scene schema | `ANIMATOR_MODEL_ANIMATION_PLANNER`, at `ANIMATOR_EFFORT_TEACHING_SCENE` (medium) |
 | Correction | same instructions as the scenes | `ScenePatch` | `ANIMATOR_MODEL_CORRECTION`, final attempt `..._CORRECTION_FINAL` |
 | Visual critic | `critic.v2.md` | `CriticReport` | `ANIMATOR_MODEL_VISUAL_CRITIC` |
@@ -29,6 +29,20 @@ pipelines (`ANIMATOR_PIPELINE`).
 - The teacher's message gives that plan: the depth, the hook, the one idea to land, every scene's step, what
   it teaches and its word budget, and what is left for a longer lesson. Without a coverage map (switched
   off, or the call failed) the plan has the depth, the number of scenes and their budgets only.
+- Lessons that flow (ADR-071, `ANIMATOR_LESSON_FLOW`, on by default): the plan keeps the lesson map's whole
+  spine at every length, in its order (one step a scene up to one every 20 s; further steps share scenes
+  with a neighbour, cut between steps), numbers its steps ("Step 2 of 6"; a comparison numbers only its
+  differences), and puts the other units where they teach best (what is needed first before the path, a
+  misconception right after its step, uses after the path). The teacher's and reviewer's messages add what
+  the learner asked for, the shape, the through-line, the opening (instead of the hook), the path and the
+  most questions the narration may ask (1 up to 2.5 minutes, 2 up to 4.5, 3, then 4); the reviewer sees
+  the questions counted. Questions still over the budget are turned into statements by the edit call.
+  The director's message adds the shape, the through-line and the path; quick checks are fewer (none
+  in a 1-minute lesson, then 1, 1, 2, 3; with one, in the last scene). Each scene's message says that
+  the scenes continue each other: what the brief's plan "Opens with" is created at 0 s, in place.
+  The script schema describes the opening as a statement (not "the opening question or surprise").
+- With `ANIMATOR_LESSON_FLOW=false` the teaching pipeline is as in ADR-063: `coverage.v1`, `teacher.v2`,
+  `review.v2`, `director.v2`, `trim.v1`.
 - The reviewer's message gives every scene's measured word count against its budget. Models cannot count
   words. A script still over 110% of its budget has its scenes that are over 112% of theirs trimmed.
 - The director's message says how many quick checks the lesson has room for (never in the first scene,
@@ -94,7 +108,11 @@ Never called while a lesson is made: `python -m animator.eval --quiz` (each new 
 
 The packs ask for lessons that work for every learner, including ones who struggle:
 - one idea at a time, a picture for every idea, everyday words, and terms defined on first use;
-- a hook, predictions and quick checks, with misconceptions named and corrected;
+- what the learner asked for, in its shape (a process followed stage by stage, a comparison side by side, a
+  problem solved step by step with the reason for each step), on one running example, in numbered steps
+  that each start from where the last one ended (ADR-071);
+- few questions (statements explain; a question only for a real prediction) and few quick checks, with
+  misconceptions named and corrected where they arise;
 - engagement devices in every scene: faces on bodies, speech bubbles, badges, bursts on "aha" moments, live
   readouts;
 - numbers never typed by the model: every number on screen is bound to a solver or computed value, which the engine

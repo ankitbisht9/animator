@@ -15,7 +15,14 @@ from animator.engine_client import EngineClient, EngineWorkerPool
 from animator.llm import LLMBadOutput, LLMRequest
 from animator.pipeline.generator import KeyframeSource, Pipeline
 from animator.pipeline.models import DirectedScene, TeachingScript
-from animator.pipeline.stages import DirectionSink, length_note, script_brief, target_words
+from animator.pipeline.stages import (
+    CARRY_OVER,
+    FLOW_HOOK,
+    DirectionSink,
+    length_note,
+    script_brief,
+    target_words,
+)
 from animator.pipeline.tidy import salvage, tidy
 from tests.test_pipeline import SCENES, Script, run, settings, text_of
 
@@ -84,6 +91,20 @@ def coverage() -> dict[str, Any]:
     }
 
 
+def lesson_map() -> dict[str, Any]:
+    """The same map as a flowing lesson's (ADR-071): what was asked, its shape, the example it follows
+    and its path first."""
+    return {
+        "asked": "why a heavy steel ship floats",
+        "shape": "concept",
+        "through_line": "a 2 kg block lowered into a glass tank of water",
+        "opening": "We lower a 2 kg block into a tank and watch the water push back.",
+        "big_idea": coverage()["big_idea"],
+        "units": coverage()["units"],
+        "spine": ["push", "buoyancy"],
+    }
+
+
 def direction(scenes: int = 3) -> dict[str, Any]:
     return {
         "look": "A glass tank centred on the stage; blue water; the block is orange.",
@@ -118,7 +139,7 @@ class Teaching(Script):
             return out(req) if callable(out) else copy.deepcopy(out)
         if label == "coverage plan":
             self.calls.append(req)
-            return coverage()
+            return lesson_map() if req.prompt_version == "coverage.v2" else coverage()
         if label == "script timing":
             self.calls.append(req)
             return {"scenes": []}
@@ -252,8 +273,9 @@ def call(script: Teaching, label: str) -> LLMRequest:
 
 
 async def test_a_lesson_is_planned_for_its_length_before_it_is_taught(pool: EngineWorkerPool) -> None:
+    """ADR-063 as it was (the lesson flow of ADR-071 switched off)."""
     script = Teaching(**{"visual direction": checked_direction()})
-    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    gen, _ = await run(pool, script, teaching(animator_lesson_flow=False), duration_min=0.5)
     assert gen.status == "complete", gen.error
     cover = call(script, "coverage plan")
     assert cover.stage == "teacher" and cover.effort == "low" and cover.prompt_version == "coverage.v1"
@@ -319,7 +341,10 @@ async def test_a_coverage_map_can_be_switched_off(pool: EngineWorkerPool) -> Non
     assert "Depth: Snapshot" in text_of(call(script, "lesson script"))
 
 
-async def test_a_script_well_over_its_budget_is_trimmed_before_it_is_drawn(pool: EngineWorkerPool) -> None:
+@pytest.mark.parametrize("flow", [True, False])
+async def test_a_script_well_over_its_budget_is_trimmed_before_it_is_drawn(
+    pool: EngineWorkerPool, flow: bool
+) -> None:
     long = teacher_script(words_per_beat=40)
     short = [
         {"say": "Look, the **tank** fills.", "show": "the tank fills"},
@@ -329,10 +354,11 @@ async def test_a_script_well_over_its_budget_is_trimmed_before_it_is_drawn(pool:
     script = Teaching(
         **{"lesson script": long, "script review": {"changes": [], "script": long}, "script timing": trim}
     )
-    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    gen, _ = await run(pool, script, teaching(animator_lesson_flow=flow), duration_min=0.5)
     assert gen.status == "complete", gen.error
     timing = call(script, "script timing")
-    assert timing.prompt_version == "trim.v1" and timing.stage == "reviewer" and timing.effort == "low"
+    assert timing.prompt_version == ("trim.v2" if flow else "trim.v1")
+    assert timing.stage == "reviewer" and timing.effort == "low"
     assert "Scene 1 (concept, 'Scene 1'): 82 words, budget" in text_of(timing)
     assert gen.teaching is not None and gen.teaching["depth"]["trimmed"] == 3
     assert gen.teaching["depth"]["words_written"] == 3 * 6
@@ -352,6 +378,106 @@ async def test_a_failed_trim_keeps_the_script(pool: EngineWorkerPool) -> None:
     assert gen.status == "complete", gen.error
     assert gen.teaching is not None and gen.teaching["depth"]["trimmed"] == 0
     assert gen.scenes[0].brief.beats[0].narration.startswith("Look at the **tank** number 1")
+
+
+# ------------------------------------------------------------------------- lessons that flow (ADR-071)
+
+
+async def test_a_flowing_lesson_answers_what_was_asked_along_one_path(pool: EngineWorkerPool) -> None:
+    script = Teaching(**{"visual direction": checked_direction()})
+    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    cover = call(script, "coverage plan")
+    assert cover.prompt_version == "coverage.v2" and cover.schema_name == "LessonMap"
+    assert "The learner's request, in their words: " in text_of(cover)
+    teacher = call(script, "lesson script")
+    assert teacher.prompt_version == "teacher.v3"
+    told = text_of(teacher)
+    assert "What the learner asked for: why a heavy steel ship floats" in told
+    assert (
+        "Lesson shape: concept" in told and "Opening: We lower a 2 kg block" in told and "Hook:" not in told
+    )
+    assert "Through-line (the one example every scene follows): a 2 kg block lowered" in told
+    assert "Part 1 of 2, Pushing a ball under water" in told and "Part 2 of 2, The buoyant force" in told
+    assert "Questions: at most 1 in the whole narration" in told
+    # The script's opening is described as what it now is: a statement, not "the opening question".
+    assert teacher.schema["properties"]["hook"]["description"] == FLOW_HOOK
+    review = call(script, "script review")
+    assert review.prompt_version == "review.v3"
+    assert "Questions: the narration asks 0 (at most 1). Keep it so." in text_of(review)
+    assert review.schema["$defs"]["TeachingScript"]["properties"]["hook"]["description"] == FLOW_HOOK
+    director = call(script, "visual direction")
+    seen = text_of(director)
+    assert director.prompt_version == "director.v3" and "Lesson shape: concept" in seen
+    assert "The path, in order: 1. Pushing a ball under water; 2. The buoyant force." in seen
+    assert "Through-line (on screen in every scene it takes part in" in seen
+    # A 30-second lesson stops for no quick check, though the director wrote one in every scene.
+    assert "Quick checks: none in this lesson." in seen
+    assert all(s.brief.checkpoint is None for s in gen.scenes)
+    assert gen.teaching is not None
+    depth = gen.teaching["depth"]
+    assert depth["flow"] and depth["shape"] == "concept" and depth["spine"] == ["push", "buoyancy"]
+    assert depth["chosen"] == ["push", "buoyancy"] and depth["questions_asked"] == 0  # the whole path
+    # Every scene is drawn knowing the lesson's scenes continue each other.
+    draft = call(script, "scene 2 attempt 1")
+    assert CARRY_OVER in text_of(draft) and draft.prompt_version == "animation.v8"
+
+
+async def test_questions_over_the_budget_become_statements_before_anything_is_drawn(
+    pool: EngineWorkerPool,
+) -> None:
+    asking = teacher_script()
+    asking["scenes"][0]["beats"][0]["say"] = "What does the **tank** hold? Water."
+    asking["scenes"][1]["beats"][1]["say"] = "Why does the **block** sink? It is heavy."
+    asking["scenes"][2]["beats"][0]["say"] = "Can you guess the **tank** number? It is three."
+    stated = {
+        "scenes": [
+            {
+                "scene": 2,
+                "beats": [
+                    {"say": "Look at the **tank** number 2 energy energy.", "show": "x"},
+                    {"say": "Here is why the **block** sinks, it is heavy.", "show": "y"},
+                ],
+            },
+            {
+                "scene": 3,
+                "beats": [
+                    {"say": "The **tank** number is three.", "show": "x"},
+                    {"say": "Now the **block** sinks energy energy.", "show": "y"},
+                ],
+            },
+        ]
+    }
+    script = Teaching(
+        **{
+            "lesson script": asking,
+            "script review": {"changes": [], "script": asking},
+            "script timing": stated,
+        }
+    )
+    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    note = text_of(call(script, "script review"))
+    assert "Questions: the narration asks 3 questions (in scenes 1, 2, 3); at most 1 may stay" in note
+    edit = call(script, "script timing")
+    told = text_of(edit)
+    assert edit.prompt_version == "trim.v2" and "Scene 1 (" not in told  # the one question allowed stays
+    assert 'turn into statements: "Why does the **block** sink?"' in told
+    assert 'turn into statements: "Can you guess the **tank** number?"' in told
+    said = [b.narration for s in gen.scenes for b in s.brief.beats]
+    assert "Here is why the **block** sinks, it is heavy." in said and "The **tank** number is three." in said
+    assert "What does the **tank** hold? Water." in said
+    assert gen.teaching is not None and gen.teaching["depth"]["questions_asked"] == 1
+    assert gen.teaching["depth"]["trimmed"] == 2
+
+
+async def test_without_the_flow_scenes_are_not_told_to_continue_each_other(pool: EngineWorkerPool) -> None:
+    script = Teaching()
+    gen, _ = await run(pool, script, teaching(animator_lesson_flow=False), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    assert CARRY_OVER not in text_of(call(script, "scene 2 attempt 1"))
+    assert gen.teaching is not None and "flow" not in gen.teaching["depth"]
+    assert call(script, "lesson script").schema["properties"]["hook"]["description"] != FLOW_HOOK
 
 
 # ---------------------------------------------------------------------- the critic and the camera

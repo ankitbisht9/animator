@@ -89,13 +89,20 @@ class PromptPack:
         self.critic = load_prompt("critic")
         self.animation_fast = load_prompt("animation", FAST_ANIMATION)
         self.critic_fast = load_prompt("critic", FAST_CRITIC)
+        # Lessons that flow (ADR-071): the newest teaching prompts (what was asked, one path in numbered
+        # steps, few questions, pictures that continue each other).
         self.teacher = load_prompt("teacher")
         self.review = load_prompt("review")
         self.director = load_prompt("director")
-        # Lessons that fit their length (ADR-063): the coverage map, the newest teaching prompts above and
-        # the trim. With ANIMATOR_TIME_FIT off, the teaching pipeline keeps the prompts of ADR-044.
         self.coverage = load_prompt("coverage")
         self.trim = load_prompt("trim")
+        # Lessons that fit their length (ADR-063) with ANIMATOR_LESSON_FLOW off: the prompts they were
+        # tuned with. With ANIMATOR_TIME_FIT off too, the teaching pipeline keeps those of ADR-044.
+        self.teacher_v2 = load_prompt("teacher", 2)
+        self.review_v2 = load_prompt("review", 2)
+        self.director_v2 = load_prompt("director", 2)
+        self.coverage_v1 = load_prompt("coverage", 1)
+        self.trim_v1 = load_prompt("trim", 1)
         self.teacher_v1 = load_prompt("teacher", 1)
         self.review_v1 = load_prompt("review", 1)
         self.director_v1 = load_prompt("director", 1)
@@ -229,20 +236,27 @@ class PromptPack:
             )
         return self._animation_text[prompt.version]
 
-    def teacher_prompt(self, fit: bool = True) -> Prompt:
-        return self.teacher if fit else self.teacher_v1
+    # `fit`: a lesson planned for its length (ADR-063); `flow`: a flowing one (ADR-071, planned too).
+    def teacher_prompt(self, fit: bool = True, flow: bool = False) -> Prompt:
+        return self.teacher if flow else self.teacher_v2 if fit else self.teacher_v1
 
-    def review_prompt(self, fit: bool = True) -> Prompt:
-        return self.review if fit else self.review_v1
+    def review_prompt(self, fit: bool = True, flow: bool = False) -> Prompt:
+        return self.review if flow else self.review_v2 if fit else self.review_v1
 
-    def director_prompt(self, fit: bool = True) -> Prompt:
-        return self.director if fit else self.director_v1
+    def director_prompt(self, fit: bool = True, flow: bool = False) -> Prompt:
+        return self.director if flow else self.director_v2 if fit else self.director_v1
 
-    def teacher_instructions(self, fit: bool = True) -> str:
-        return self.teacher_prompt(fit).text.replace("{capabilities}", self.capabilities())
+    def coverage_prompt(self, flow: bool = False) -> Prompt:
+        return self.coverage if flow else self.coverage_v1
 
-    def review_instructions(self, fit: bool = True) -> str:
-        return self.review_prompt(fit).text
+    def trim_prompt(self, flow: bool = False) -> Prompt:
+        return self.trim if flow else self.trim_v1
 
-    def director_instructions(self, fit: bool = True) -> str:
-        return self.director_prompt(fit).text.replace("{capabilities}", self.capabilities())
+    def teacher_instructions(self, fit: bool = True, flow: bool = False) -> str:
+        return self.teacher_prompt(fit, flow).text.replace("{capabilities}", self.capabilities())
+
+    def review_instructions(self, fit: bool = True, flow: bool = False) -> str:
+        return self.review_prompt(fit, flow).text
+
+    def director_instructions(self, fit: bool = True, flow: bool = False) -> str:
+        return self.director_prompt(fit, flow).text.replace("{capabilities}", self.capabilities())
