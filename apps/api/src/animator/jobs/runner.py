@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import logging
 import time
 from collections.abc import AsyncIterator, Callable
@@ -34,6 +35,7 @@ from animator.llm import (
     LLMRefusal,
 )
 from animator.llm.trials import trial_log
+from animator.pipeline.content import long_by_scene
 from animator.pipeline.depth import (
     Blueprint,
     apply_trim,
@@ -46,6 +48,7 @@ from animator.pipeline.generator import Pipeline, chapter_outline, scene_record,
 from animator.pipeline.models import (
     TERMINAL,
     Chapter,
+    ContentBrief,
     DirectedScene,
     EducationalPlan,
     Generation,
@@ -477,14 +480,22 @@ class GenerationRunner:
         Lessons that fit their length (ADR-063, ANIMATOR_TIME_FIT): first the plan for the time asked
         (its depth, and the scenes a coverage map fits into it, each with a word budget at the voice's
         pace); the teacher writes those scenes, the reviewer sees each scene's words against its
-        budget, and a script still well over is trimmed before anything is voiced or drawn."""
+        budget, and a script still well over is trimmed before anything is voiced or drawn.
+
+        Content first (ADR-072, ANIMATOR_TEACHING_CONTENT, with the lesson flow): before the teacher, a
+        subject expert prepares the content brief for exactly the planned scenes; the teacher, the
+        reviewer and the director work from it. A failed brief leaves the teacher to prepare the content."""
         duration = gen.request.duration_min * 60
         plan = await self._blueprint(gen, stages, ctx, duration) if self.settings.animator_time_fit else None
-        script = await stages.teach(gen, ctx, plan)
+        brief: ContentBrief | None = None
+        if plan is not None and plan.flow and self.settings.animator_teaching_content:
+            plan = dataclasses.replace(plan, content=True)
+            brief = await self._content(gen, stages, ctx, plan)
+        script = await stages.teach(gen, ctx, plan, brief)
         changes: list[str] = []
         if self.settings.animator_script_review:
             try:
-                reviewed = await stages.review(gen, script, ctx, plan)
+                reviewed = await stages.review(gen, script, ctx, plan, brief)
             except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
                 log.warning("script review for %s failed (%s): keeping the teacher's script", gen.id, e)
             else:
@@ -510,6 +521,8 @@ class GenerationRunner:
             teaching["depth"] = {**plan.to_json(), "words_written": script_words(script), "trimmed": trimmed}
             if plan.flow:
                 teaching["depth"]["questions_asked"] = len(questions_in(script))
+        if brief is not None:
+            teaching["content"] = brief.model_dump()
         gen.plan, gen.teaching = lesson, teaching
         gen.status = "generating"
         await self._save(gen)
@@ -549,6 +562,7 @@ class GenerationRunner:
                 library=self.pipeline.library_note(gen, script),
                 checkpoints=plan.checkpoints if plan is not None else None,
                 plan=plan,
+                brief=brief,
             )
             teaching["look"] = teaching["look"] or direction.look
             for directed in direction.scenes:
@@ -559,6 +573,17 @@ class GenerationRunner:
             add(len(gen.scenes))
         gen.chapters_done.append(chapter)
         return lesson
+
+    async def _content(
+        self, gen: Generation, stages: Stages, ctx: CallContext, plan: Blueprint
+    ) -> ContentBrief | None:
+        """The content brief (ADR-072): one call before the teacher. A failed call leaves the teacher to
+        prepare the content itself (the lesson goes on)."""
+        try:
+            return await stages.content(gen, plan, ctx)
+        except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
+            log.warning("content brief for %s failed (%s): the teacher prepares the content", gen.id, e)
+            return None
 
     async def _blueprint(
         self, gen: Generation, stages: Stages, ctx: CallContext, duration: float
@@ -583,14 +608,15 @@ class GenerationRunner:
         long, or asks a question more)."""
         scenes = over_budget(script, plan)
         restate = extra_questions(script, plan)
-        if not scenes and not restate:
+        split = long_by_scene(script) if plan.content else {}
+        if not scenes and not restate and not split:
             return script, 0
         try:
-            trim = await stages.trim(gen, script, plan, scenes, ctx, restate)
+            trim = await stages.trim(gen, script, plan, scenes, ctx, restate, split)
         except (LLMRefusal, LLMIncomplete, LLMBadOutput) as e:
             log.warning("editing the script of %s failed (%s): it is kept as reviewed", gen.id, e)
             return script, 0
-        return apply_trim(script, trim, sorted(set(scenes) | set(restate)), restate)
+        return apply_trim(script, trim, sorted(set(scenes) | set(restate) | set(split)), restate, split)
 
     async def _generate_sequential(
         self,

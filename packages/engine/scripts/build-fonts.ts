@@ -1,8 +1,10 @@
 /**
  * Extracts glyph outlines, advances and kerning from the bundled Lexend WOFF files
  * into compact JSON tables used for deterministic text layout and rendering
- * (ADR-004). Symbols Lexend lacks (Greek, arrows, relations) are taken from
- * MathJax's TeX fonts. Run with `pnpm --filter @animator/engine fonts`; output is committed.
+ * (ADR-004). Characters outside the Latin subset that lessons for Indian learners need (the rupee
+ * sign, ADR-072) come from Lexend's Latin Extended subset. Symbols Lexend lacks (Greek, arrows,
+ * relations) are taken from MathJax's TeX fonts. Run with `pnpm --filter @animator/engine fonts`;
+ * output is committed.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -20,8 +22,8 @@ const outDir = resolve(here, "../src/text/fonts");
 
 const WEIGHTS = [400, 600, 700] as const;
 
-// Printable ASCII plus the typographic characters explainers need.
-const EXTRA = "°×÷·−–—‘’“”…•±²³¹½¼¾µé€";
+// Printable ASCII plus the typographic characters explainers need (₹: lessons for Indian learners).
+const EXTRA = "°×÷·−–—‘’“”…•±²³¹½¼¾µé€₹";
 const CANDIDATES = [...new Set([...Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)), ...EXTRA])];
 
 interface GlyphOut {
@@ -56,24 +58,36 @@ function glyphPathData(commands: PathCommand[]): string {
   return d;
 }
 
+function loadFont(file: string): opentype.Font {
+  const buf = readFileSync(resolve(fontDir, file));
+  return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+}
+
 for (const weight of WEIGHTS) {
-  const buf = readFileSync(resolve(fontDir, `lexend-latin-${weight}-normal.woff`));
-  const font = opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+  const font = loadFont(`lexend-latin-${weight}-normal.woff`);
+  const extended = loadFont(`lexend-latin-ext-${weight}-normal.woff`);
   const upm = font.unitsPerEm;
   const glyphs: Record<string, GlyphOut> = {};
+  const fromLatin = new Set<string>();
   const missing: string[] = [];
   for (const ch of CANDIDATES) {
-    const g = font.charToGlyph(ch);
+    let g = font.charToGlyph(ch);
     if (!g || g.index === 0) {
-      missing.push(ch);
-      continue;
+      g = extended.charToGlyph(ch); // same family, metrics and units: only the subset differs
+      if (!g || g.index === 0) {
+        missing.push(ch);
+        continue;
+      }
+    } else {
+      fromLatin.add(ch);
     }
     // getPath flips y so outlines are y-down with the baseline at y = 0.
     const d = glyphPathData(g.getPath(0, 0, upm).commands);
     glyphs[ch] = { a: Math.round(g.advanceWidth ?? 0), d };
   }
   const kern: Record<string, number> = {};
-  const chars = Object.keys(glyphs).filter((c) => c !== " ");
+  // Kerning pairs from the Latin subset only (a pair across the two subset files has none).
+  const chars = Object.keys(glyphs).filter((c) => c !== " " && fromLatin.has(c));
   for (const l of chars) {
     for (const r of chars) {
       const v = font.getKerningValue(font.charToGlyph(l), font.charToGlyph(r));

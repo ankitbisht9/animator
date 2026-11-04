@@ -8,15 +8,18 @@ recordings depend on: replay fixtures are keyed by the full prompt text.
 `load_prompt` picks the newest version of each pack, except where a pipeline pins one. There are two
 pipelines (`ANIMATOR_PIPELINE`).
 
-### The teaching pipeline (the default, ADR-044; lessons that fit their length, ADR-063; lessons that flow, ADR-071)
+### The teaching pipeline (the default, ADR-044; lessons that fit their length, ADR-063; lessons that flow, ADR-071; content first, ADR-072)
+
+Why the teaching prompts say what they say (the research, by finding): `docs/TEACHING.md`.
 
 | Stage | File | Output (strict JSON schema) | Model setting |
 |---|---|---|---|
 | Lesson map | `coverage.v2.md` | `LessonMap` (what the learner asked for, the lesson's shape: process, comparison, problem, procedure or concept, the one example every scene follows, the opening, the big idea, the teaching units, and the spine: the units of the one path through the request, in order) | the teacher's model, at `ANIMATOR_EFFORT_COVERAGE` (low) |
-| Teacher | `teacher.v3.md` | `TeachingScript` (the whole explanation: every spoken sentence and what is seen, with the core idea, intuition, misconception and worked example) | `ANIMATOR_MODEL_TEACHER` (medium) |
-| Reviewer | `review.v3.md` | `ScriptReview` (what was fixed, and the improved script) | `ANIMATOR_MODEL_REVIEWER` (low) |
-| Edit (only a script still well over its budget, or asking more questions than it may) | `trim.v2.md` | `ScriptTrim` (those scenes' beats, shortened, the extra questions turned into statements) | the reviewer's model, low |
-| Visual director | `director.v3.md` | `Direction` (the lesson's look and the set that stays, then each scene's composition, opening with the picture the last scene ended on, and what each beat shows), streamed | `ANIMATOR_MODEL_DIRECTOR` (medium) |
+| Content brief | `content.v1.md` + `playbooks.v1.md` (every subject family) | `ContentBrief` (the subject family, what the learner starts from, the takeaway, the new terms with everyday meanings and their scenes, and for each planned scene its point, reason, example, analogy, misconception and picture; a problem's labelled worked steps; a comparison's features) | the teacher's model, at `ANIMATOR_EFFORT_CONTENT` (medium) |
+| Teacher | `teacher.v4.md` | `TeachingScript` (the whole explanation: every spoken sentence and what is seen, with the core idea, intuition, misconception and worked example) | `ANIMATOR_MODEL_TEACHER` (medium) |
+| Reviewer | `review.v4.md` | `ScriptReview` (what was fixed, and the improved script) | `ANIMATOR_MODEL_REVIEWER` (low) |
+| Edit (only a script still well over its budget, asking more questions than it may, or with sentences too long to follow by ear) | `trim.v3.md` | `ScriptTrim` (those scenes' beats, shortened, the extra questions made statements, the long sentences split) | the reviewer's model, low |
+| Visual director | `director.v4.md` | `Direction` (the lesson's look and the set that stays, then each scene's composition, opening with the picture the last scene ended on, and what each beat shows), streamed | `ANIMATOR_MODEL_DIRECTOR` (medium) |
 | Scenes | `animation.v8.md` + DSL reference + component catalog + exemplars | the engine's LLM-facing Scene schema | `ANIMATOR_MODEL_ANIMATION_PLANNER`, at `ANIMATOR_EFFORT_TEACHING_SCENE` (medium) |
 | Correction | same instructions as the scenes | `ScenePatch` | `ANIMATOR_MODEL_CORRECTION`, final attempt `..._CORRECTION_FINAL` |
 | Visual critic | `critic.v2.md` | `CriticReport` | `ANIMATOR_MODEL_VISUAL_CRITIC` |
@@ -43,6 +46,16 @@ pipelines (`ANIMATOR_PIPELINE`).
   The script schema describes the opening as a statement (not "the opening question or surprise").
 - With `ANIMATOR_LESSON_FLOW=false` the teaching pipeline is as in ADR-063: `coverage.v1`, `teacher.v2`,
   `review.v2`, `director.v2`, `trim.v1`.
+- Content first (ADR-072, `ANIMATOR_TEACHING_CONTENT`, on by default, with the flow): after the plan, a subject
+  expert writes the content brief for exactly the planned scenes; its message is the teacher's (the request
+  and the plan, with the most new terms the length holds: 2, 4, 6, 8, 10 by depth). The teacher's message adds
+  the brief and its subject family's playbook; the reviewer's adds the brief and what code measures in the
+  words (sentences over 22 words, terms used before the scene that explains them, more new terms than the
+  length holds); the director's adds each scene's picture, the terms to label as they are said, and the
+  family's guidance for pictures. Sentences still over 22 words are split by the edit call. The lesson map's
+  message says the learner is in India (rupees, Indian names and places). A failed brief leaves the
+  teacher to prepare the content. With `ANIMATOR_TEACHING_CONTENT=false` the flow is as in ADR-071:
+  `teacher.v3`, `review.v3`, `director.v3`, `trim.v2`.
 - The reviewer's message gives every scene's measured word count against its budget. Models cannot count
   words. A script still over 110% of its budget has its scenes that are over 112% of theirs trimmed.
 - The director's message says how many quick checks the lesson has room for (never in the first scene,

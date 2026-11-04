@@ -3470,3 +3470,97 @@ both ways); test_eval (`--set` types). 459 passed, 1 skipped.
 **Rollback:** `ANIMATOR_LESSON_FLOW=false`: the prompts and plan of ADR-063 (`coverage.v1`, `teacher.v2`,
 `review.v2`, `director.v2`, `trim.v1`, its quick checks); proven end to end (two lessons made so). Backup:
 tag `backup/before-lesson-flow` (= v2.16) and `.env.backup-before-lesson-flow`.
+
+
+## ADR-072 Content first: what a lesson teaches is prepared before it is written (2026-11-04)
+
+**Asked.** Better teaching in three parts: good explanatory content, teaching that delivers it so it is
+easily understood, and pictures that relate to it; above all better word selection, for Indian students in
+particular. Research first (the way GeeksforGeeks, BYJU'S and other platforms present content, and what
+teaching guides and research say about explaining), then a plan, then the changes, for any subject
+(chemistry, maths, science, computers, systems, networks...), preparing the best content per topic even
+if that takes longer. Also: the lesson path shown inside the video duplicates the lesson page, which
+already lists the scenes with their times beside the video. Nothing that works may break.
+
+**Research** (`docs/TEACHING.md`, with sources): the platforms share one pattern per part, numbered worked
+examples and side-by-side comparisons, but often start from a definition, leave terms undefined and give no
+"why" (Vedantu's hybridization); NCERT asks for concepts over definitions and terms. Research: the idea
+before its name (concept before jargon); the parts' names and jobs before a process (Mayer, pre-training);
+misconceptions shown and corrected (Muller: about twice the gains, most for weak learners); worked
+examples with steps labelled by their goal (subgoal labels); examples and non-examples (teacher
+clarity); analogies mapped part by part with their limit (Glynn); concrete examples whose link is said;
+conversational wording; no decorative detail (g = -0.33); writing for the ear (short sentences, one name
+per thing); relevance to the learner's life (utility value); subject methods (Johnstone's triangle in
+chemistry, concrete-pictorial-abstract in maths, code tracing in computing); Hinglish with English terms
+and everyday Hindi (Khan Academy India, PW).
+
+**Found** (12 topics across subjects, the planning stages only, ADR-071 prompts; `D:\animation-bench\content-off`):
+- *The lesson path inside the video:* in 9 of 12 lessons the director planned a step card, a stage map or a
+  numbered card of step names (director.v3 asked for a "map of where the learner is on the path").
+- *Content and delivery in one call:* the teacher decided what to teach and how to say it at once; dense
+  scenes ("thylakoid membranes", "ATP and NADPH", "G3P" in two minutes), sentences of 16 words on average in
+  some lessons, 4 sentences over 22 words.
+- *Not the learner's context:* an inflation lesson priced its basket in dollars.
+
+**Decision** (`ANIMATOR_TEACHING_CONTENT`, default on, with the lesson flow; `ANIMATOR_EFFORT_CONTENT`):
+- *A content brief before the teacher* (`content.v1`, schema `ContentBrief`, one call, the teacher's model at
+  medium effort, every subject family's playbook in its instructions): for exactly the planned scenes, each
+  scene's point in plain words, its reason, a concrete example (Indian everyday life, real numbers), an
+  analogy (what maps to what, where it stops) and a misconception correction where they help, and the
+  picture that makes it visible; for the lesson, its subject family, what the learner starts from, the
+  takeaway, the new terms with everyday meanings and their scenes, a problem's worked steps labelled by
+  their goal and checked, a comparison's features with both sides and when to choose which. Sized to the
+  plan: at most one analogy or misconception in a 1-minute lesson, two in two minutes. A failed brief leaves
+  the teacher to prepare the content.
+- *Subject playbooks* (`playbooks.v1`): maths, physics, chemistry, biology, computing, networks and systems,
+  economics and business, history and society, general; each with how its content is taught and which
+  pictures teach it. The teacher gets its family's playbook, the director its pictures part.
+- *Words that make it click* (`teacher.v4`): teach the brief exactly; the idea first, then its name; every new
+  term with an everyday meaning where it first appears, in its own short sentence when the meaning would make
+  a sentence long; one name per thing; short active sentences of one idea (8 to 18 words, never over 22);
+  everyday words; concrete names and numbers; reasons joined with because and so; analogies mapped, mistakes
+  corrected in statements; more content than words means leaving content out, never fragments; varied
+  bridges; the step number said in steps and comparisons only; rupees and Indian names; Hinglish in everyday
+  spoken Hindi, English terms explained once with "yaani".
+- *A term budget:* at most 2 new terms in a Snapshot, 4 in Essentials, 6, 8, 10 by depth (`NEW_TERMS`), told
+  to the content writer and the teacher.
+- *Measured words* (code, for the reviewer, `review.v4`): sentences over 22 words, terms used before the scene
+  that explains them, more new terms than the depth holds; sentences still over 22 words are split by the
+  edit call (`trim.v3`; a scene's edit kept only when it has fewer long sentences and is at most 15% longer).
+  A quoted message ("Reached home?") no longer counts as a question to the learner.
+- *Pictures from the brief* (`director.v4`): each scene's central picture is the brief's; a term's part is
+  labelled as it is said; a process's set is the real place where it happens, labelled with real names, never
+  a row of icons or labels standing for the stages; an analogy's picture only while it is mapped; a
+  misconception shown crossed out, then the right idea. Never the lesson's outline, a step tracker or a
+  progress bar.
+- *India by default:* the lesson map's message says the learner is in India (rupees, Indian names, places and
+  everyday life, unless the request names another country).
+- *The rupee sign in the drawings:* the engine's fonts (a Lexend Latin subset) had no "₹", so every "₹250" on
+  screen and in the captions was drawn as "?250" (older lessons too). The font builder now takes "₹" from
+  Lexend's Latin Extended subset (same family and metrics); every other glyph, kerning pair and metric is
+  byte-identical.
+
+**Measured.**
+- *Planning* (the same 12 requests, ADR-071 against ADR-072; `D:\animation-bench\content-off`,
+  `content-on3`, `content-on4`): words per sentence 12.8 to 10.9; sentences over 22 words 4 to 0; long words
+  1.0 to 0.5 per 100; new terms per lesson up to 8 before, 1 to 4 after (each within its budget); lessons with
+  the lesson path drawn in the video 9 of 12 to 0 (5 process topics checked after the last director fix);
+  dollars 1 lesson to 0; questions 0 and 1 (within the budget). Read side by side: photosynthesis follows
+  one carbon atom from a mango leaf's air into sugar; the circle's area is a rangoli of radius 2 m cut into
+  wedges, with why the area is kept and a checked answer; binary search finds an ₹800 book in sorted prices;
+  UPI follows Neha's ₹250 at a tea stall from a ₹1,000 balance. Planning cost $0.0148 to $0.0188 a lesson
+  (the brief about $0.004), 15 to 35 s more before the first scene.
+- *Full lessons* (the evaluation runner, no voice, visual critic on; `var/eval/content-e2e*`): five 2-minute lessons (the packet journey and UPI in Hinglish with the planned layout; photosynthesis twice and the circle's area in English, classic) all complete, no simplified scene, first drafts valid in 57 to 100% of scenes (the last photosynthesis 100%), the first scene ready after 93 to 149 s, $0.21 to $0.30 a lesson (classic lessons race two drafts a scene, the existing setting; the brief is about $0.004 of it). Contact sheets: no lesson path anywhere; Neha in Pune sends "Hi" to Aman's laptop in Jaipur, the packet gaining its app, IP addresses and Wi-Fi frame, hopping routers and unpacked at the laptop; Riya pays Meera's chai stall ₹250, Debit -₹250 and Credit +₹250 on the accounts (drawn as "?250" before the font fix); a mango leaf's marked carbon followed into sugar and starch; the rangoli's wedges rearranged into a near-rectangle of height r and width πr, the working beside it.
+- *Not solved here:* the classic scene writer draws circle sectors crudely (no sector component); planned
+  scenes sometimes draw the packet as an empty box.
+- Measuring cost about $2.3 in all (planning benches $0.97, five full lessons $1.30).
+
+**Tests:** test_content (playbooks for every family, the brief as the teacher and the director get it, long
+sentences, terms used too early, splitting kept only when it helps, quoted questions); test_teaching (the
+content prepared before the lesson is written, a failed brief, the switch off, long sentences split before
+anything is drawn; ADR-071's own test pinned to the switch off); engine text test (the rupee sign in every
+weight). 459 to 470 passed, 1 skipped; engine 203, components 67, web 14, worker 17.
+
+**Rollback:** `ANIMATOR_TEACHING_CONTENT=false`: ADR-071 exactly (`teacher.v3`, `review.v3`, `director.v3`,
+`trim.v2`, no brief); the rupee glyph stays (it only adds a character). Backup: tag
+`backup/before-teaching-content` (= v2.17) and `.env.backup-before-teaching-content`.

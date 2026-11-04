@@ -4,6 +4,7 @@ import lexend400 from "../src/text/fonts/lexend-400.json";
 import lexend600 from "../src/text/fonts/lexend-600.json";
 import lexend700 from "../src/text/fonts/lexend-700.json";
 import symbols from "../src/text/fonts/symbols.json";
+import { glyph } from "../src/text/layout";
 
 describe("text layout", () => {
   it("is deterministic and proportional to size", () => {
@@ -68,6 +69,18 @@ describe("text layout", () => {
   it("supports Greek letters and arrows through the symbol fallback", () => {
     expect(unsupportedChars("ρ = 1000 kg/m³ → Δh ≈ 2 cm")).toEqual([]);
     expect(unsupportedChars("日本")).toEqual(["日", "本"]);
+  });
+
+  it("draws the rupee sign, in every weight (lessons for Indian learners, ADR-072)", () => {
+    expect(unsupportedChars("₹250 se ₹750 bachte hain")).toEqual([]);
+    for (const weight of [400, 600, 700] as const) {
+      const rupee = glyph("₹", weight);
+      expect(rupee.d.length).toBeGreaterThan(20); // a real outline, not the "?" stand-in
+      expect(rupee.d).not.toEqual(glyph("?", weight).d);
+      const placed = layoutText("₹250", { size: 40, weight }).lines[0]?.glyphs[0];
+      expect(placed?.ch).toBe("₹");
+      expect(placed?.w).toBeGreaterThan(10);
+    }
   });
 
   it("counts glyphs and words for write-on reveals", () => {

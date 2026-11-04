@@ -105,6 +105,31 @@ def lesson_map() -> dict[str, Any]:
     }
 
 
+def content_brief(scenes: int = 3) -> dict[str, Any]:
+    """The lesson's content as the subject expert prepares it (ADR-072): one entry per planned scene."""
+    return {
+        "field": "physics",
+        "learner_start": "They have pushed a ball under water in a bucket.",
+        "takeaway": "Water pushes up with the weight of the water it moves aside.",
+        "terms": [{"term": "buoyant force", "meaning": "the push up that water gives", "scene": 2}],
+        "scenes": [
+            {
+                "scene": k + 1,
+                "point": f"point {k + 1}",
+                "because": "the water pushed aside pushes back",
+                "example": "a 2 kg block lowered into a tank",
+                "analogy": "",
+                "misconception": "Heavy things always sink, but a steel ship floats" if k == 2 else "",
+                "picture": f"the tank and the block, step {k + 1}",
+            }
+            for k in range(scenes)
+        ],
+        "worked": [],
+        "contrast": [],
+        "choose_when": "",
+    }
+
+
 def direction(scenes: int = 3) -> dict[str, Any]:
     return {
         "look": "A glass tank centred on the stage; blue water; the block is orange.",
@@ -140,6 +165,9 @@ class Teaching(Script):
         if label == "coverage plan":
             self.calls.append(req)
             return lesson_map() if req.prompt_version == "coverage.v2" else coverage()
+        if label == "content brief":
+            self.calls.append(req)
+            return content_brief()
         if label == "script timing":
             self.calls.append(req)
             return {"scenes": []}
@@ -174,16 +202,22 @@ async def test_a_lesson_is_taught_reviewed_directed_then_drawn(pool: EngineWorke
     gen, _ = await run(pool, script, teaching(), duration_min=0.5)
     assert gen.status == "complete", gen.error
     labels = [r.label for r in script.calls]
-    assert labels[:4] == ["coverage plan", "lesson script", "script review", "visual direction"]
+    assert labels[:5] == [
+        "coverage plan",
+        "content brief",
+        "lesson script",
+        "script review",
+        "visual direction",
+    ]
     assert "outline" not in labels and not any(r.stage == "educational_planner" for r in script.calls)
     assert [s.status for s in gen.scenes] == ["ready"] * 3
     # The teaching stages use the storyboard's model unless they have their own.
-    assert {r.stage: r.models[0] for r in script.calls[:4]} == {
+    assert {r.stage: r.models[0] for r in script.calls[:5]} == {
         "teacher": "m-board",
         "reviewer": "m-board",
         "director": "m-board",
     }
-    teacher = text_of(script.calls[1])
+    teacher = text_of(call(script, "lesson script"))
     assert "Depth: Snapshot, a 30-second lesson" in teacher and "Plan for this length: exactly" in teacher
     # The narration is the reviewed script's, word for word; the pictures are the director's.
     first = gen.scenes[0].brief
@@ -357,7 +391,7 @@ async def test_a_script_well_over_its_budget_is_trimmed_before_it_is_drawn(
     gen, _ = await run(pool, script, teaching(animator_lesson_flow=flow), duration_min=0.5)
     assert gen.status == "complete", gen.error
     timing = call(script, "script timing")
-    assert timing.prompt_version == ("trim.v2" if flow else "trim.v1")
+    assert timing.prompt_version == ("trim.v3" if flow else "trim.v1")  # flowing: content first too
     assert timing.stage == "reviewer" and timing.effort == "low"
     assert "Scene 1 (concept, 'Scene 1'): 82 words, budget" in text_of(timing)
     assert gen.teaching is not None and gen.teaching["depth"]["trimmed"] == 3
@@ -384,8 +418,9 @@ async def test_a_failed_trim_keeps_the_script(pool: EngineWorkerPool) -> None:
 
 
 async def test_a_flowing_lesson_answers_what_was_asked_along_one_path(pool: EngineWorkerPool) -> None:
+    """ADR-071 as it was (content first, ADR-072, switched off)."""
     script = Teaching(**{"visual direction": checked_direction()})
-    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    gen, _ = await run(pool, script, teaching(animator_teaching_content=False), duration_min=0.5)
     assert gen.status == "complete", gen.error
     cover = call(script, "coverage plan")
     assert cover.prompt_version == "coverage.v2" and cover.schema_name == "LessonMap"
@@ -461,7 +496,7 @@ async def test_questions_over_the_budget_become_statements_before_anything_is_dr
     assert "Questions: the narration asks 3 questions (in scenes 1, 2, 3); at most 1 may stay" in note
     edit = call(script, "script timing")
     told = text_of(edit)
-    assert edit.prompt_version == "trim.v2" and "Scene 1 (" not in told  # the one question allowed stays
+    assert edit.prompt_version == "trim.v3" and "Scene 1 (" not in told  # the one question allowed stays
     assert 'turn into statements: "Why does the **block** sink?"' in told
     assert 'turn into statements: "Can you guess the **tank** number?"' in told
     said = [b.narration for s in gen.scenes for b in s.brief.beats]
@@ -478,6 +513,113 @@ async def test_without_the_flow_scenes_are_not_told_to_continue_each_other(pool:
     assert CARRY_OVER not in text_of(call(script, "scene 2 attempt 1"))
     assert gen.teaching is not None and "flow" not in gen.teaching["depth"]
     assert call(script, "lesson script").schema["properties"]["hook"]["description"] != FLOW_HOOK
+
+
+# ------------------------------------------------------------------------- content first (ADR-072)
+
+
+async def test_the_content_is_prepared_before_the_lesson_is_written(pool: EngineWorkerPool) -> None:
+    script = Teaching()
+    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    content = call(script, "content brief")
+    assert content.prompt_version == "content.v1" and content.schema_name == "ContentBrief"
+    assert content.stage == "teacher" and content.effort == "medium"
+    # Every subject family's playbook is in its instructions; the message gives the request and the plan.
+    assert "## chemistry" in content.instructions and "## networks_systems" in content.instructions
+    told = text_of(content)
+    assert (
+        "What the learner asked for: why a heavy steel ship floats" in told and "Plan for this length" in told
+    )
+    assert gen.teaching is not None
+    n = len(gen.teaching["depth"]["scenes"])  # the plan's scenes
+    assert f"Prepare the content for exactly these {n} scenes, numbered 1 to {n}" in told
+    # The teacher teaches the brief, with its subject family's playbook.
+    teacher = call(script, "lesson script")
+    assert teacher.prompt_version == "teacher.v4"
+    taught = text_of(teacher)
+    assert "Content brief (the lesson's content" in taught and "Scene 1. Point: point 1" in taught
+    assert "buoyant force: the push up that water gives (scene 2)" in taught
+    assert "Misconception: Heavy things always sink" in taught and "How physics is taught best:" in taught
+    # The reviewer checks against the brief and sees what code measured in the words.
+    review = call(script, "script review")
+    checked = text_of(review)
+    assert review.prompt_version == "review.v4" and "Scene 2. Point: point 2" in checked
+    assert "Words: no sentence is longer than 22 words" in checked and "How physics is taught" not in checked
+    # The director draws the brief's pictures, never the lesson's outline.
+    director = call(script, "visual direction")
+    seen = text_of(director)
+    assert director.prompt_version == "director.v4" and "No lesson outline on screen" in director.instructions
+    assert "Scene 1: the tank and the block, step 1" in seen and "Pictures that teach physics best:" in seen
+    assert "Terms to label on the picture as they are first said: buoyant force (scene 2)" in seen
+    assert gen.teaching is not None and gen.teaching["content"]["field"] == "physics"
+    assert gen.teaching["depth"]["content"] is True
+
+
+async def test_a_failed_content_brief_leaves_the_teacher_to_prepare_it(pool: EngineWorkerPool) -> None:
+    script = Teaching(**{"content brief": LLMBadOutput("not a brief")})
+    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    assert sum(r.label.startswith("content brief") for r in script.calls) == 2  # retried once
+    teacher = call(script, "lesson script")
+    assert teacher.prompt_version == "teacher.v4" and "Content brief" not in text_of(teacher)
+    assert "Words:" in text_of(call(script, "script review"))  # the words are still measured
+    assert gen.teaching is not None and "content" not in gen.teaching
+    assert all(s.status == "ready" for s in gen.scenes)
+
+
+async def test_without_content_first_no_brief_is_asked_for(pool: EngineWorkerPool) -> None:
+    script = Teaching()
+    gen, _ = await run(pool, script, teaching(animator_teaching_content=False), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    assert "content brief" not in [r.label for r in script.calls]
+    versions = {
+        r.label: r.prompt_version for r in script.calls if not r.label.startswith(("scene", "critic"))
+    }
+    assert versions["lesson script"] == "teacher.v3" and versions["visual direction"] == "director.v3"
+    assert "Words:" not in text_of(call(script, "script review"))
+    assert (
+        gen.teaching is not None and "content" not in gen.teaching and "content" not in gen.teaching["depth"]
+    )
+
+
+async def test_sentences_too_long_to_follow_by_ear_are_split_before_anything_is_drawn(
+    pool: EngineWorkerPool,
+) -> None:
+    rambling = teacher_script()
+    long = (
+        "The laptop puts the **packet** inside a wrapper for the next local link, which carries it to the "
+        "router at home before anything else."
+    )
+    rambling["scenes"][1]["beats"][0]["say"] = long
+    split = {
+        "scenes": [
+            {
+                "scene": 2,
+                "beats": [
+                    {
+                        "say": "The laptop puts the **packet** in a wrapper. The wrapper goes to the router.",
+                        "show": "x",
+                    },
+                    {"say": "Now the **block** sinks energy energy.", "show": "y"},
+                ],
+            }
+        ]
+    }
+    script = Teaching(
+        **{
+            "lesson script": rambling,
+            "script review": {"changes": [], "script": rambling},
+            "script timing": split,
+        }
+    )
+    gen, _ = await run(pool, script, teaching(), duration_min=0.5)
+    assert gen.status == "complete", gen.error
+    assert "Words: 1 sentences are longer than 22 words" in text_of(call(script, "script review"))
+    edit = text_of(call(script, "script timing"))
+    assert "Some sentences are too long to follow by ear" in edit and "split into short sentences:" in edit
+    said = [b.narration for b in gen.scenes[1].brief.beats]
+    assert said[0] == "The laptop puts the **packet** in a wrapper. The wrapper goes to the router."
 
 
 # ---------------------------------------------------------------------- the critic and the camera

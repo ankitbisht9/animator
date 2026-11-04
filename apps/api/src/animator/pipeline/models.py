@@ -308,6 +308,76 @@ class LessonMap(_Strict):
         return self.opening
 
 
+# ------------------------------------------------------------------ content first (ADR-072)
+
+TeachingField = Literal[
+    "maths",
+    "physics",
+    "chemistry",
+    "biology",
+    "computing",
+    "networks_systems",
+    "economics_business",
+    "history_society",
+    "general",
+]
+
+
+class BriefTerm(_Strict):
+    term: str = Field(description="The one name the lesson uses for this thing, every time")
+    meaning: str = Field(description="What it means, in everyday words a beginner knows, one short sentence")
+    scene: int = Field(description="The planned scene (1-based) that first explains it")
+
+
+class SceneContent(_Strict):
+    scene: int = Field(description="The planned scene (1-based) this content is for")
+    point: str = Field(description="The one idea the learner should understand, in plain words")
+    because: str = Field(description="Why it is so, or how it works, in plain words")
+    example: str = Field(description="The concrete case that shows it, with real names and simple numbers")
+    analogy: str = Field(
+        description="An everyday comparison with what maps to what and where it stops working, or empty"
+    )
+    misconception: str = Field(description="A likely wrong belief here and its correction, or empty")
+    picture: str = Field(description="What the learner should see that makes the point visible")
+
+
+class WorkedStep(_Strict):
+    label: str = Field(description='What the step achieves, named as a goal ("Find the time to the top")')
+    work: str = Field(description="The operation with its numbers and units")
+    reason: str = Field(description="Why this step, in plain words")
+
+
+class Contrast(_Strict):
+    feature: str = Field(description="The feature compared, named plainly")
+    first: str = Field(description="How the first thing does it")
+    second: str = Field(description="How the second thing does it")
+
+
+class ContentBrief(_Strict):
+    """What a lesson teaches, prepared before it is written for the narrator (ADR-072): the subject expert's
+    content for each planned scene; the teacher then decides only how to say it."""
+
+    field: TeachingField = Field(description="The subject family, which decides how the topic is taught")
+    learner_start: str = Field(description="What this learner already knows that the lesson builds on")
+    takeaway: str = Field(description="The one sentence to remember, in plain words")
+    terms: list[BriefTerm] = Field(description="The new terms, each with an everyday meaning and its scene")
+    scenes: list[SceneContent] = Field(description="One entry per planned scene, in order")
+    worked: list[WorkedStep] = Field(
+        description="A problem or procedure: the full solution in labelled steps, checked; otherwise empty"
+    )
+    contrast: list[Contrast] = Field(
+        description="A comparison: the features compared, both sides; otherwise empty"
+    )
+    choose_when: str = Field(description="A comparison: when to choose which; otherwise empty")
+
+    @field_validator("scenes")
+    @classmethod
+    def _has_scenes(cls, v: list[SceneContent]) -> list[SceneContent]:
+        if not v:
+            raise ValueError("the content brief needs at least one scene")
+        return v
+
+
 class TrimmedScene(_Strict):
     scene: int = Field(description="The scene's number in the script (1-based)")
     beats: list[ScriptBeat]

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from animator import REPO_ROOT
+from animator.pipeline.content import playbook_sections
 from animator_contracts.protocol import CatalogResult
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
@@ -89,13 +90,22 @@ class PromptPack:
         self.critic = load_prompt("critic")
         self.animation_fast = load_prompt("animation", FAST_ANIMATION)
         self.critic_fast = load_prompt("critic", FAST_CRITIC)
-        # Lessons that flow (ADR-071): the newest teaching prompts (what was asked, one path in numbered
-        # steps, few questions, pictures that continue each other).
+        # Content first (ADR-072): the newest teaching prompts (a content brief prepared by a subject
+        # expert, then words that make it click, pictures from the brief, no lesson outline on screen), and
+        # the subject playbooks every stage of such a lesson follows.
         self.teacher = load_prompt("teacher")
         self.review = load_prompt("review")
         self.director = load_prompt("director")
+        self.content = load_prompt("content")
+        self.playbooks = load_prompt("playbooks")
+        self.playbook_sections = playbook_sections(self.playbooks.text)
+        # Lessons that flow (ADR-071) with ANIMATOR_TEACHING_CONTENT off: the prompts they were tuned with.
+        self.teacher_v3 = load_prompt("teacher", 3)
+        self.review_v3 = load_prompt("review", 3)
+        self.director_v3 = load_prompt("director", 3)
         self.coverage = load_prompt("coverage")
         self.trim = load_prompt("trim")
+        self.trim_v2 = load_prompt("trim", 2)
         # Lessons that fit their length (ADR-063) with ANIMATOR_LESSON_FLOW off: the prompts they were
         # tuned with. With ANIMATOR_TIME_FIT off too, the teaching pipeline keeps those of ADR-044.
         self.teacher_v2 = load_prompt("teacher", 2)
@@ -236,27 +246,46 @@ class PromptPack:
             )
         return self._animation_text[prompt.version]
 
-    # `fit`: a lesson planned for its length (ADR-063); `flow`: a flowing one (ADR-071, planned too).
-    def teacher_prompt(self, fit: bool = True, flow: bool = False) -> Prompt:
-        return self.teacher if flow else self.teacher_v2 if fit else self.teacher_v1
+    # `fit`: a lesson planned for its length (ADR-063); `flow`: a flowing one (ADR-071, planned too);
+    # `content`: one whose content is prepared first (ADR-072, flowing too).
+    def teacher_prompt(self, fit: bool = True, flow: bool = False, content: bool = False) -> Prompt:
+        if content:
+            return self.teacher
+        return self.teacher_v3 if flow else self.teacher_v2 if fit else self.teacher_v1
 
-    def review_prompt(self, fit: bool = True, flow: bool = False) -> Prompt:
-        return self.review if flow else self.review_v2 if fit else self.review_v1
+    def review_prompt(self, fit: bool = True, flow: bool = False, content: bool = False) -> Prompt:
+        if content:
+            return self.review
+        return self.review_v3 if flow else self.review_v2 if fit else self.review_v1
 
-    def director_prompt(self, fit: bool = True, flow: bool = False) -> Prompt:
-        return self.director if flow else self.director_v2 if fit else self.director_v1
+    def director_prompt(self, fit: bool = True, flow: bool = False, content: bool = False) -> Prompt:
+        if content:
+            return self.director
+        return self.director_v3 if flow else self.director_v2 if fit else self.director_v1
 
     def coverage_prompt(self, flow: bool = False) -> Prompt:
         return self.coverage if flow else self.coverage_v1
 
-    def trim_prompt(self, flow: bool = False) -> Prompt:
-        return self.trim if flow else self.trim_v1
+    def trim_prompt(self, flow: bool = False, content: bool = False) -> Prompt:
+        if content:
+            return self.trim
+        return self.trim_v2 if flow else self.trim_v1
 
-    def teacher_instructions(self, fit: bool = True, flow: bool = False) -> str:
-        return self.teacher_prompt(fit, flow).text.replace("{capabilities}", self.capabilities())
+    def teacher_instructions(self, fit: bool = True, flow: bool = False, content: bool = False) -> str:
+        return self.teacher_prompt(fit, flow, content).text.replace("{capabilities}", self.capabilities())
 
-    def review_instructions(self, fit: bool = True, flow: bool = False) -> str:
-        return self.review_prompt(fit, flow).text
+    def review_instructions(self, fit: bool = True, flow: bool = False, content: bool = False) -> str:
+        return self.review_prompt(fit, flow, content).text
 
-    def director_instructions(self, fit: bool = True, flow: bool = False) -> str:
-        return self.director_prompt(fit, flow).text.replace("{capabilities}", self.capabilities())
+    def director_instructions(self, fit: bool = True, flow: bool = False, content: bool = False) -> str:
+        return self.director_prompt(fit, flow, content).text.replace("{capabilities}", self.capabilities())
+
+    def content_instructions(self) -> str:
+        """The content writer's instructions (ADR-072), with every subject family's playbook."""
+        body = self.playbooks.text.split("\n## ", 1)
+        playbooks = "## " + body[1] if len(body) == 2 else self.playbooks.text
+        return self.content.text.replace("{playbooks}", playbooks.strip())
+
+    def playbook(self, family: str) -> str | None:
+        """One subject family's playbook (its content and pictures), or None for an unknown family."""
+        return self.playbook_sections.get(family)

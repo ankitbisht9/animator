@@ -33,6 +33,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from animator.pipeline.content import longs_in
 from animator.pipeline.models import (
     CoverageKind,
     CoveragePlan,
@@ -265,7 +266,11 @@ LANDINGS: dict[str, str] = {
 }
 LANDING_ANY = LANDINGS["concept"]
 POINT_NAMES: dict[str, str] = {"comparison": "Difference", "concept": "Part"}  # otherwise "Step"
+# Content first (ADR-072): the new terms a lesson of each depth can introduce, at most (a learner holds
+# only a few new words at once; everything else is said in plain words).
+NEW_TERMS: dict[str, int] = {"snapshot": 2, "essentials": 4, "deep_dive": 6, "mastery": 8, "masterclass": 10}
 QUESTION = re.compile(r"[^.!?]*\?+")
+QUOTED = re.compile(r'"[^"]*"|\u201c[^\u201d]*\u201d|\u2018[^\u2019]*\u2019')  # a message quoted, not asked
 
 
 @dataclass(frozen=True)
@@ -296,6 +301,8 @@ class Blueprint:
     asked: str | None = None
     through_line: str | None = None
     spine: tuple[str, ...] = ()
+    # Content first (ADR-072): the lesson's content is prepared before it is written (set by the runner).
+    content: bool = False
 
     @property
     def words(self) -> int:
@@ -316,6 +323,11 @@ class Blueprint:
     def questions(self) -> int:
         """The most questions a flowing lesson's narration asks (ADR-071), the opening included."""
         return self.tier.questions
+
+    @property
+    def new_terms(self) -> int:
+        """The most new terms a lesson of this depth introduces (ADR-072)."""
+        return NEW_TERMS.get(self.tier.id, 4)
 
     @property
     def point_name(self) -> str:
@@ -352,6 +364,8 @@ class Blueprint:
                 "spine": list(self.spine),
                 "questions": self.questions,
             }
+        if self.content:
+            out["content"] = True
         return out
 
 
@@ -804,6 +818,11 @@ def teacher_lines(bp: Blueprint) -> list[str]:
             f"Questions: at most {bp.questions} in the whole narration, the opening included, and fewer is "
             "better. Explain with statements."
         )
+    if bp.content:
+        lines.append(
+            f"New terms: at most {bp.new_terms} in the whole lesson, only ones new to this learner; say "
+            "everything else in plain words."
+        )
     if bp.deeper:
         lines.append(
             "Left for a longer lesson (do not teach these): "
@@ -840,7 +859,7 @@ def questions_in(script: TeachingScript) -> list[tuple[int, str]]:
     out: list[tuple[int, str]] = []
     for i, sc in enumerate(script.scenes):
         for b in sc.beats:
-            for m in QUESTION.finditer(b.say):
+            for m in QUESTION.finditer(QUOTED.sub("", b.say)):
                 q = m.group(0).strip()
                 if q.strip("?"):
                     out.append((i, q))
@@ -849,7 +868,12 @@ def questions_in(script: TeachingScript) -> list[tuple[int, str]]:
 
 def asks(scene: ScriptScene) -> int:
     """How many questions a scene's narration asks."""
-    return sum(1 for b in scene.beats for m in QUESTION.finditer(b.say) if m.group(0).strip().strip("?"))
+    return sum(
+        1
+        for b in scene.beats
+        for m in QUESTION.finditer(QUOTED.sub("", b.say))
+        if m.group(0).strip().strip("?")
+    )
 
 
 def question_note(script: TeachingScript, bp: Blueprint) -> str:
@@ -964,10 +988,16 @@ def trim_lines(script: TeachingScript, bp: Blueprint, scenes: list[int]) -> list
 
 
 def edit_lines(
-    script: TeachingScript, bp: Blueprint, over: list[int], restate: dict[int, list[str]]
+    script: TeachingScript,
+    bp: Blueprint,
+    over: list[int],
+    restate: dict[int, list[str]],
+    split: dict[int, list[str]] | None = None,
 ) -> list[str]:
     """The edit a flowing lesson's script needs (ADR-071): the scenes to shorten to their budgets and the
-    questions to turn into statements, with each scene's beats."""
+    questions to turn into statements, with each scene's beats; with its content prepared first (ADR-072)
+    also the sentences too long to follow by ear, to be split."""
+    split = split or {}
     per = budgets(script, bp)
     lines = []
     if over:
@@ -980,11 +1010,15 @@ def edit_lines(
             f"The narration may ask at most {bp.questions} questions: turn the questions listed into "
             "statements."
         )
-    for i in sorted(set(over) | set(restate)):
+    if split:
+        lines.append("Some sentences are too long to follow by ear: split each one listed into short ones.")
+    for i in sorted(set(over) | set(restate) | set(split)):
         sc = script.scenes[i]
         todo = "shorten it to its budget" if i in over else "keep about its length"
         if i in restate:
             todo += "; turn into statements: " + " | ".join(f'"{q}"' for q in restate[i])
+        if i in split:
+            todo += "; split into short sentences: " + " | ".join(f'"{s}"' for s in split[i])
         beats = [{"say": b.say, "show": b.show} for b in sc.beats]
         lines.append(
             f"Scene {i + 1} ({sc.step}, '{sc.title}'): {scene_words(sc)} words, budget {per[i]} ({todo}). "
@@ -994,12 +1028,18 @@ def edit_lines(
 
 
 def apply_trim(
-    script: TeachingScript, trim: ScriptTrim, allowed: list[int], restate: dict[int, list[str]] | None = None
+    script: TeachingScript,
+    trim: ScriptTrim,
+    allowed: list[int],
+    restate: dict[int, list[str]] | None = None,
+    split: dict[int, list[str]] | None = None,
 ) -> tuple[TeachingScript, int]:
     """The script with the edited scenes' beats in place (only scenes asked for, still spoken): a scene
     to shorten only when shorter; a scene whose questions were to become statements (ADR-071) when it
-    asks fewer and is not much longer. The script and how many scenes changed."""
+    asks fewer, and one whose long sentences were to be split (ADR-072) when it has fewer, either not
+    much longer. The script and how many scenes changed."""
     restate = restate or {}
+    split = split or {}
     scenes = list(script.scenes)
     changed = 0
     for t in trim.scenes:
@@ -1010,8 +1050,12 @@ def apply_trim(
         if not beats or len(beats) > 5:
             continue
         new = scenes[i].model_copy(update={"beats": beats})
-        if i in restate:
-            if asks(new) >= asks(scenes[i]) or scene_words(new) > scene_words(scenes[i]) * 1.15:
+        if i in restate or i in split:
+            if i in restate and asks(new) >= asks(scenes[i]):
+                continue
+            if i in split and longs_in(new) >= longs_in(scenes[i]):
+                continue
+            if scene_words(new) > scene_words(scenes[i]) * 1.15:
                 continue
         elif scene_words(new) >= scene_words(scenes[i]):
             continue

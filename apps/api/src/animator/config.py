@@ -126,6 +126,14 @@ class Settings(BaseSettings):
     # the last (its picture too), asks few questions (1 in a 1-2 minute lesson) and stops for fewer quick
     # checks. Off: the prompts and plan of ADR-063 (coverage.v1, teacher.v2, review.v2, director.v2, trim.v1).
     animator_lesson_flow: bool = True
+    # Content first (ADR-072, with the lesson flow): before the teacher writes, a subject expert prepares
+    # the content brief for the planned scenes (each scene's point in plain words, the reason, a concrete
+    # example, new terms with everyday meanings, an analogy or a misconception where they help, the
+    # picture; a problem's worked solution, a comparison's features), with subject playbooks; the teacher
+    # chooses words that make it click, the director draws the brief's pictures and never the lesson's
+    # outline. One more call (the teacher's model, at ANIMATOR_EFFORT_CONTENT). Off: ADR-071 exactly.
+    animator_teaching_content: bool = True
+    animator_effort_content: ReasoningEffort = "medium"
     # Keep it moving (ADR-067): a stretch of narration longer than 5 s with nothing changing on screen
     # gets a gentle highlight on what the narration names (or what was last shown); engine-checked, no model.
     animator_keep_moving: bool = True
